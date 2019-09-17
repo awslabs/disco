@@ -4,4 +4,4 @@ A suite of tools including a framework for creating Java Agents, for aspect-orie
 
 ## License
 
-This library is licensed under the Amazon Software License.
+This library is licensed under the Apache 2.0 Software License.
