@@ -15,6 +15,7 @@
 
 package com.amazon.disco.agent;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -32,53 +33,9 @@ import static org.mockito.Mockito.doReturn;
 
 @RunWith(MockitoJUnitRunner.class)
 public class UtilsTest {
-
-    @Spy
-    private Utils utils;
-
-    @Rule
-    public TemporaryFolder folder= new TemporaryFolder();
-
-    private Map<String, String> fakeEnv = new HashMap<String, String>();
-
-    private File buildExpectedFolder(File parent) {
-        return new File(new File(new File(new File(parent,
-                "var"),
-                "tmp"),
-                "user"),
-                "com.amazon.disco.agent");
-    }
-
-    @Before
-    public void beforeTest() {
-        doReturn(fakeEnv).when(utils).env();
-    }
-
     @Test
-    public void testApollo() throws Exception {
-        // Let's check if there is no env system temp is used
-        File tmp = utils.getTempFolder();
-        assertEquals(new File(System.getProperty("java.io.tmpdir"), "com.amazon.disco.agent").getAbsolutePath(), tmp.getAbsolutePath());
-    }
-
-    @Test
-    public void testEnvRoot() throws Exception {
-        File fakeRoot = folder.newFolder("envroot");
-        fakeEnv.put("ENVROOT", fakeRoot.getAbsolutePath());
-        assertEquals(buildExpectedFolder(fakeRoot).getAbsolutePath(), utils.getTempFolder().getAbsolutePath());
-    }
-
-    @Test
-    public void testApolloActualEnvRoot() throws Exception {
-        File fakeRoot = folder.newFolder("act1");
-        fakeEnv.put("APOLLO_ACTUAL_ENVIRONMENT_ROOT", fakeRoot.getAbsolutePath());
-        assertEquals(buildExpectedFolder(fakeRoot).getAbsolutePath(), utils.getTempFolder().getAbsolutePath());
-    }
-
-    @Test
-    public void testApolloCanonicalEnvRoot() throws Exception {
-        File fakeRoot = folder.newFolder("cann");
-        fakeEnv.put("APOLLO_CANONICAL_ENVIRONMENT_ROOT", fakeRoot.getAbsolutePath());
-        assertEquals(buildExpectedFolder(fakeRoot).getAbsolutePath(), utils.getTempFolder().getAbsolutePath());
+    public void testFolder() {
+        File fakeRoot = Utils.getInstance().getTempFolder();
+        Assert.assertNotNull(fakeRoot.getAbsolutePath());
     }
 }

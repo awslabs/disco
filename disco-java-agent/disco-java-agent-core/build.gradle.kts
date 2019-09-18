@@ -24,8 +24,8 @@ repositories {
 }
 
 dependencies {
-    compile(project(":disco-java-agent-plugin-api"))
-    compile(project(":disco-java-agent-api"))
+    compile(project(":disco-java-agent:disco-java-agent-plugin-api"))
+    compile(project(":disco-java-agent:disco-java-agent-api"))
 
     testCompile("org.mockito", "mockito-core", "1.+")
     testCompile("junit", "junit", "4.12")
