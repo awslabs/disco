@@ -27,7 +27,9 @@ repositories {
 dependencies {
     //TODO update BB and ASM to latest
     compile("net.bytebuddy", "byte-buddy-dep", "1.9.12")
-    runtime("org.ow2.asm", "asm", "7.1")
+    compile("org.ow2.asm", "asm", "7.1")
+    compile("org.ow2.asm", "asm-commons", "7.1")
+    compile("org.ow2.asm", "asm-tree", "7.1")
 }
 
 configure<JavaPluginConvention> {
