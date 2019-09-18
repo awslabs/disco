@@ -19,7 +19,7 @@ package com.amazon.disco.agent.event;
 /**
  * Base class for service events both Activities (my service is handling a request) and Downstream (I am calling another Service)
  * A 'Service' in the downstream sense may not necessarily be a remote endpoint in the sense of a REST service etc. It
- * could be an in-process client for e.g. a Cache, or Weblabs. It means a service in the sense of anything with an API,
+ * could be an in-process client for e.g. a Cache. It means a service in the sense of anything with an API,
  * whether that is remote or local.
  */
 public abstract class AbstractServiceEvent extends AbstractEvent implements ServiceEvent {
