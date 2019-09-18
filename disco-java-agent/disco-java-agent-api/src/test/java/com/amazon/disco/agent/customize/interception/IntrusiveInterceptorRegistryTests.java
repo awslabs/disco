@@ -22,13 +22,13 @@ import org.mockito.Mockito;
 public class IntrusiveInterceptorRegistryTests {
 
     @Test
-    public void testInstallWhenDiSCoNotLoaded(){
+    public void testInstallWhenDiscoNotLoaded(){
         IntrusiveInterceptorRegistry.install(Mockito.mock(IntrusiveInterceptor.class));
     }
 
 
     @Test
-    public void testUninstallWhenDiSCoNotLoaded(){
+    public void testUninstallWhenDiscoNotLoaded(){
         IntrusiveInterceptorRegistry.uninstall();
     }
 }

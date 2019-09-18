@@ -19,7 +19,7 @@ import org.junit.Test;
 
 public class ConfigTests {
     @Test
-    public void testGetVictimApplicationNameWhenDiSCoNotLoaded() {
+    public void testGetVictimApplicationNameWhenDiscoNotLoaded() {
         Config.getVictimApplicationName();
     }
 }

@@ -35,7 +35,7 @@ public class EventBusTests {
     }
 
     @Test
-    public void testAddListenerAndPublishWhenDiSCoLoaded() {
+    public void testAddListenerAndPublishWhenDiscoLoaded() {
         MyListener listener = new MyListener();
         Event event = Mockito.mock(Event.class);
         EventBus.addListener(listener);
@@ -44,7 +44,7 @@ public class EventBusTests {
     }
 
     @Test
-    public void testRemoveListenerWhenDiSCoLoaded() {
+    public void testRemoveListenerWhenDiscoLoaded() {
         MyListener listener = new MyListener();
         Event event = Mockito.mock(Event.class);
         EventBus.addListener(listener);
@@ -54,7 +54,7 @@ public class EventBusTests {
     }
 
     @Test
-    public void testRemoveAllListenersWhenDiSCoLoaded() {
+    public void testRemoveAllListenersWhenDiscoLoaded() {
         MyListener listener = new MyListener();
         Event event = Mockito.mock(Event.class);
         EventBus.addListener(listener);
@@ -64,7 +64,7 @@ public class EventBusTests {
     }
 
     @Test
-    public void testisListenerPresentWhenDiSCoLoaded() {
+    public void testisListenerPresentWhenDiscoLoaded() {
         MyListener listener = new MyListener();
         Assert.assertFalse(EventBus.isListenerPresent(listener));
         EventBus.addListener(listener);

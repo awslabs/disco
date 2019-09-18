@@ -23,27 +23,27 @@ import org.mockito.Mockito;
 
 public class EventBusTests {
     @Test
-    public void testPublishWhenDiSCoNotLoaded() {
+    public void testPublishWhenDiscoNotLoaded() {
         EventBus.publish(Mockito.mock(Event.class));
     }
 
     @Test
-    public void testAddListenerWhenDiSCoNotLoaded() {
+    public void testAddListenerWhenDiscoNotLoaded() {
         EventBus.addListener(Mockito.mock(Listener.class));
     }
 
     @Test
-    public void testRemoveListenerWhenDiSCoNotLoaded() {
+    public void testRemoveListenerWhenDiscoNotLoaded() {
         EventBus.removeListener(Mockito.mock(Listener.class));
     }
 
     @Test
-    public void testRemoveAllListenersWhenDiSCoNotLoaded() {
+    public void testRemoveAllListenersWhenDiscoNotLoaded() {
         EventBus.removeAllListeners();
     }
 
     @Test
-    public void testIsListenerPresentWhenDiSCoNotLoaded() {
+    public void testIsListenerPresentWhenDiscoNotLoaded() {
         Listener listener = Mockito.mock(Listener.class);
         EventBus.addListener(listener);
         Assert.assertFalse(EventBus.isListenerPresent(listener));

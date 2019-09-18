@@ -34,7 +34,7 @@ public class ConfigTests {
     }
 
     @Test
-    public void testGetVictimApplicationNameWhenDiSCoLoaded() {
+    public void testGetVictimApplicationNameWhenDiscoLoaded() {
         Assert.assertEquals("DummyApplicationName", Config.getVictimApplicationName());
     }
 }

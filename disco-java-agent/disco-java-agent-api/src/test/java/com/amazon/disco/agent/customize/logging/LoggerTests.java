@@ -136,7 +136,7 @@ public class LoggerTests {
     }
 
     @Test
-    public void testInstallLoggerFactoryWhenDiSCoNotLoaded() {
+    public void testInstallLoggerFactoryWhenDiscoNotLoaded() {
         Logger.installLoggerFactory(Mockito.mock(LoggerFactory.class));
     }
 
