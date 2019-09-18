@@ -43,7 +43,7 @@ public class ReflectiveCallTests {
                 .ofMethod("Bar")
                 .withArgTypes(Integer.class);
         Assert.assertEquals(Long.class, call.getReturnType());
-        Assert.assertEquals("com.amazon.alphaone.agent.Foo", call.getClassName());
+        Assert.assertEquals("com.amazon.disco.agent.Foo", call.getClassName());
         Assert.assertEquals("Bar", call.getMethodName());
         Assert.assertEquals(Integer.class, call.getArgTypes()[0]);
         Assert.assertEquals(1, call.getArgTypes().length);
@@ -55,7 +55,7 @@ public class ReflectiveCallTests {
                 .ofClass(".package.Foo")
                 .ofMethod("Bar")
                 .withArgTypes(Integer.class, Boolean.class);
-        Assert.assertEquals("java.lang.Long com.amazon.alphaone.agent.package.Foo::Bar(java.lang.Integer, java.lang.Boolean)", call.toString());
+        Assert.assertEquals("java.lang.Long com.amazon.disco.agent.package.Foo::Bar(java.lang.Integer, java.lang.Boolean)", call.toString());
     }
 
     @Test

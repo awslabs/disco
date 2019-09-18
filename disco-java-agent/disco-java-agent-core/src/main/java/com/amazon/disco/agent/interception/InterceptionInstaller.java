@@ -59,9 +59,11 @@ public class InterceptionInstaller {
      * @param instrumentation - the Instrumentation instance, as passed to 'premain'
      * @param installables - the collection of Installable hooks passed in from the Agent
      * @param config - the command line config passed into the agent.
+     * @param customIgnoreMatcher extra ignore rules to be OR'd with the default
      */
-    public void install(Instrumentation instrumentation, Set<Installable> installables, AgentConfig config) {
-        ElementMatcher<? super TypeDescription> ignoreMatcher = createIgnoreMatcher();
+    public void install(Instrumentation instrumentation, Set<Installable> installables, AgentConfig config,
+                        ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
+        ElementMatcher<? super TypeDescription> ignoreMatcher = createIgnoreMatcher(customIgnoreMatcher);
 
         File bootstrapTemp = Utils.getInstance().getTempFolder();
         //if the folder has remnants from a previous run, remove them
@@ -100,9 +102,10 @@ public class InterceptionInstaller {
     /**
      * Create a matcher to ignore low-level and otherwise problematic namespaces.
      *
+     * @param customIgnoreMatcher an extra ignore rule to be OR'd with the default
      * @return - a matcher suitable for passing to AgentBuilder#ignore
      */
-    public static ElementMatcher.Junction<? super TypeDescription> createIgnoreMatcher() {
+    public static ElementMatcher.Junction<? super TypeDescription> createIgnoreMatcher(ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
         ElementMatcher.Junction<? super TypeDescription> excludedNamespaces =
             //low-level pieces of the JDK and runtime
             nameStartsWith("sun.")
@@ -115,20 +118,11 @@ public class InterceptionInstaller {
             .or(nameStartsWith("org.springframework."))
             .or(nameStartsWith("org.aspectj."))
 
-            //internal libraries
-            .or(nameStartsWith("amazon.actiontrace."))
-            .or(nameStartsWith("amazon.odin."))
-            .or(nameStartsWith("com.amazon.profiler."))
-            .or(nameStartsWith("com.amazon.aaa."))
-            .or(nameStartsWith("com.amazon.coral.spring."))
-            .or(nameStartsWith("com.amazon.coral.reference."))
-            .or(nameStartsWith("com.amazon.coral.reflect."))
+            //disco itself and its internals
+            .or(nameStartsWith("com.amazon.disco.agent.")
+                .and(not(nameStartsWith("com.amazon.disco.agent.tester."))));
 
-            //alphaone itself and its internals
-            .or(nameStartsWith("com.amazon.alphaone.agent.")
-                .and(not(nameStartsWith("com.amazon.alphaone.agent.tester."))));
-
-        return excludedNamespaces;
+        return excludedNamespaces.or(customIgnoreMatcher);
 
     }
 }

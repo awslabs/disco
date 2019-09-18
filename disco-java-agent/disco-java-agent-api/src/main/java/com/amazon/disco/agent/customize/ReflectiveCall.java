@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
  * @param <T> - the return type of the method being called
  */
 public class ReflectiveCall<T> {
-    private static final String ALPHA_ONE_AGENT_PACKAGE_ROOT = "com.amazon.alphaone.agent";
+    private static final String ALPHA_ONE_AGENT_PACKAGE_ROOT = "com.amazon.disco.agent";
     private static Class templateClass = null;
     private String className;
     private String methodName;

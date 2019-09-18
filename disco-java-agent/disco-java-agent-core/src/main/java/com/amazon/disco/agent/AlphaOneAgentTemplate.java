@@ -23,6 +23,9 @@ import com.amazon.disco.agent.interception.InterceptionInstaller;
 import com.amazon.disco.agent.logging.LogManager;
 import com.amazon.disco.agent.logging.Logger;
 import com.amazon.disco.agent.logging.LoggerFactory;
+import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.matcher.ElementMatcher;
+import net.bytebuddy.matcher.ElementMatchers;
 
 import java.lang.instrument.Instrumentation;
 import java.util.Set;
@@ -37,6 +40,7 @@ public class AlphaOneAgentTemplate {
 
     private AgentConfig config;
     private InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
+    private ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher = ElementMatchers.none();
 
     /**
      * Constructs a new AlphaOneAgentTemplate, which is the responsibility of any Agent build on AlphaOne.
@@ -64,6 +68,15 @@ public class AlphaOneAgentTemplate {
     }
 
     /**
+     * Set an extra ignore rule for ByteBuddy, if you know of extra rules beyond the defaults that make sense for your
+     * agent.
+     * @param customIgnoreMatcher - an ignore matcher which will be logically OR'd with the default
+     */
+    public void setCustomIgnoreMatcher(ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
+        this.customIgnoreMatcher = customIgnoreMatcher;
+    }
+
+    /**
      * This method wraps installation of hooks on behalf of agents, performing default
      * boilerplate initialization common to both.
      *
@@ -71,6 +84,18 @@ public class AlphaOneAgentTemplate {
      * @param installables the agent supplies a collection of Installables to be installed.
      */
     public void install(Instrumentation instrumentation, Set<Installable> installables) {
+        install(instrumentation, installables, ElementMatchers.none());
+    }
+
+    /**
+     * This method wraps installation of hooks on behalf of agents, performing default
+     * boilerplate initialization common to both.
+     *
+     * @param instrumentation the Instrumentation object given to every Agent, to transform bytecode
+     * @param installables the agent supplies a collection of Installables to be installed.
+     * @param customIgnoreMatcher an extra ignore rule to be OR'd with the default
+     */
+    public void install(Instrumentation instrumentation, Set<Installable> installables, ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
         if (!config.isInstallDefaultInstallables()) {
             log.info("AlphaOne(Core) removing all default installables as requested");
             installables.clear();
@@ -83,7 +108,7 @@ public class AlphaOneAgentTemplate {
             installable.handleArguments(config.getArgs());
         }
 
-        interceptionInstaller.install(instrumentation, installables, config);
+        interceptionInstaller.install(instrumentation, installables, config, customIgnoreMatcher);
 
         Config.init(config);
     }

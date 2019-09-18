@@ -14,3 +14,4 @@
  */
 
 rootProject.name = "disco"
+include("disco-java-agent")

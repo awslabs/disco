@@ -17,6 +17,7 @@ package com.amazon.disco.agent.interception;
 
 import com.amazon.disco.agent.config.AgentConfig;
 import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.matcher.ElementMatchers;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,13 +42,6 @@ public class InterceptionInstallerTests {
     }
 
     @Test
-    public void testIgnoreMatcherMatchesAmazonInternals() {
-        //todo
-        //matches against amazon.actiontrace, com.amazon.profiler, com.amazon.aaa, com.amazon.coral.spring,
-        //but none are available here
-    }
-
-    @Test
     public void testIgnoreMatcherMatchesAlphaOne() {
         Assert.assertTrue(classMatches(this.getClass()));
     }
@@ -64,10 +58,10 @@ public class InterceptionInstallerTests {
         Installable installable = (agentBuilder)->null;
         Set<Installable> installables = new HashSet<>();
         installables.add(installable);
-        interceptionInstaller.install(null, installables, new AgentConfig(null));
+        interceptionInstaller.install(null, installables, new AgentConfig(null), ElementMatchers.none());
     }
 
     private boolean classMatches(Class clazz) {
-        return InterceptionInstaller.createIgnoreMatcher().matches(new TypeDescription.ForLoadedType(clazz));
+        return InterceptionInstaller.createIgnoreMatcher(ElementMatchers.none()).matches(new TypeDescription.ForLoadedType(clazz));
     }
 }

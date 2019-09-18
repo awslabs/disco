@@ -36,7 +36,7 @@ public class IntrusiveInterceptorRegistryTests {
     public void testInstall() {
         IntrusiveInterceptor i = Mockito.mock(IntrusiveInterceptor.class);
         IntrusiveInterceptor old = IntrusiveInterceptorRegistry.install(i);
-        Assert.assertEquals(old.getClass().getName(), "com.amazon.alphaone.agent.interception.IntrusiveInterceptorRegistry$DefaultIntrusiveInterceptor");
+        Assert.assertEquals(old.getClass().getName(), "com.amazon.disco.agent.interception.IntrusiveInterceptorRegistry$DefaultIntrusiveInterceptor");
         old = IntrusiveInterceptorRegistry.uninstall();
         Assert.assertEquals(i, old);
     }

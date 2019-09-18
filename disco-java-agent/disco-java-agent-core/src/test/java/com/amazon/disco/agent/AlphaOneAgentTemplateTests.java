@@ -70,7 +70,7 @@ public class AlphaOneAgentTemplateTests {
         Set<Installable> installables = new HashSet<>();
         installables.add(mockInstallable);
         install(createAlphaOneAgentTemplate(), installables);
-        Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any());
+        Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any(), Mockito.any());
         Assert.assertTrue(installableSetArgumentCaptor.getValue().contains(mockInstallable));
     }
 
@@ -80,14 +80,14 @@ public class AlphaOneAgentTemplateTests {
         Set<Installable> installables = new HashSet<>();
         installables.add(mockInstallable);
         install(createAlphaOneAgentTemplate("noDefaultInstallables"), installables);
-        Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any());
+        Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any(), Mockito.any());
         Assert.assertTrue(installableSetArgumentCaptor.getValue().isEmpty());
     }
 
     @Test
     public void testCorrectCustomInstallables() {
         install(createAlphaOneAgentTemplate("installables="+MockInstallable.class.getName()));
-        Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any());
+        Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any(), Mockito.any());
         assertEquals(MockInstallable.class.getName(), installableSetArgumentCaptor.getValue().iterator().next().getClass().getName());
     }
 
@@ -105,7 +105,7 @@ public class AlphaOneAgentTemplateTests {
         };
 
         install(createAlphaOneAgentTemplate("installables="+String.join(",", installableNames)));
-        Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any());
+        Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any(), Mockito.any());
         Assert.assertTrue(installableSetArgumentCaptor.getValue().isEmpty());
     }
 
