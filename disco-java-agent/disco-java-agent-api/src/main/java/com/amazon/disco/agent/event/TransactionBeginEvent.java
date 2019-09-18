@@ -22,7 +22,7 @@ public class TransactionBeginEvent extends AbstractTransactionEvent {
 
     /**
      * Create a TransactionBeginEvent
-     * @param origin the origin of the event e.g. Coral
+     * @param origin the origin of the event e.g. Web
      */
     public TransactionBeginEvent(String origin) {
         super(origin);

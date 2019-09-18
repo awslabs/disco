@@ -22,13 +22,13 @@ import java.util.Map;
  * All Events inherit from this base class. It contains a Map of data which can be inspected by Listeners
  */
 public abstract class AbstractEvent implements Event {
-    protected final String origin; //e.g. Coral
+    protected final String origin;
     protected final Map<String, Object> data; //needed at all, or should model more concretely in subclasses?
 
     /**
      * Construct a new AbstractEvent
-     * @param origin a string indicating the origin of the Event such as 'Coral' or 'Concurrency'. Designed to agree
-     * with the AlphaOne support package names, and may be used for logging or decision making in Listeners.
+     * @param origin a string indicating the origin of the Event such as 'Concurrency'. Designed to agree
+     * with the DiSCo support package names, and may be used for logging or decision making in Listeners.
      */
     public AbstractEvent(String origin) {
         this.origin = origin;

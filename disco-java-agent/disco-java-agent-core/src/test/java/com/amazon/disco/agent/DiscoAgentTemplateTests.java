@@ -41,7 +41,7 @@ import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 
-public class AlphaOneAgentTemplateTests {
+public class DiscoAgentTemplateTests {
     @Mock
     private InterceptionInstaller mockInterceptionInstaller;
     @Captor
@@ -60,7 +60,7 @@ public class AlphaOneAgentTemplateTests {
 
     @Test
     public void testApplicationName() {
-        install(createAlphaOneAgentTemplate());
+        install(createDiscoAgentTemplate());
         Assert.assertEquals("TestApp", Config.getVictimApplicationName());
     }
 
@@ -69,7 +69,7 @@ public class AlphaOneAgentTemplateTests {
         Installable mockInstallable = Mockito.mock(Installable.class);
         Set<Installable> installables = new HashSet<>();
         installables.add(mockInstallable);
-        install(createAlphaOneAgentTemplate(), installables);
+        install(createDiscoAgentTemplate(), installables);
         Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any(), Mockito.any());
         Assert.assertTrue(installableSetArgumentCaptor.getValue().contains(mockInstallable));
     }
@@ -79,14 +79,14 @@ public class AlphaOneAgentTemplateTests {
         Installable mockInstallable = Mockito.mock(Installable.class);
         Set<Installable> installables = new HashSet<>();
         installables.add(mockInstallable);
-        install(createAlphaOneAgentTemplate("noDefaultInstallables"), installables);
+        install(createDiscoAgentTemplate("noDefaultInstallables"), installables);
         Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any(), Mockito.any());
         Assert.assertTrue(installableSetArgumentCaptor.getValue().isEmpty());
     }
 
     @Test
     public void testCorrectCustomInstallables() {
-        install(createAlphaOneAgentTemplate("installables="+MockInstallable.class.getName()));
+        install(createDiscoAgentTemplate("installables="+MockInstallable.class.getName()));
         Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any(), Mockito.any());
         assertEquals(MockInstallable.class.getName(), installableSetArgumentCaptor.getValue().iterator().next().getClass().getName());
     }
@@ -104,48 +104,48 @@ public class AlphaOneAgentTemplateTests {
                 Installable.class.getName()
         };
 
-        install(createAlphaOneAgentTemplate("installables="+String.join(",", installableNames)));
+        install(createDiscoAgentTemplate("installables="+String.join(",", installableNames)));
         Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any(), Mockito.any());
         Assert.assertTrue(installableSetArgumentCaptor.getValue().isEmpty());
     }
 
     @Test
     public void testVerboseLogging() {
-        install(createAlphaOneAgentTemplate("verbose"));
+        install(createDiscoAgentTemplate("verbose"));
         assertEquals(Logger.Level.DEBUG, LogManager.getMinimumLevel());
     }
 
     @Test
     public void testExtraVerboseLogging() {
-        install(createAlphaOneAgentTemplate("extraverbose"));
+        install(createDiscoAgentTemplate("extraverbose"));
         assertEquals(Logger.Level.TRACE, LogManager.getMinimumLevel());
     }
 
     @Test
     public void testArgumentHandlerCalled() {
         Installable mock = Mockito.mock(Installable.class);
-        install(createAlphaOneAgentTemplate("key=value"), new HashSet<>(Arrays.asList(Installable.class.cast(mock))));
+        install(createDiscoAgentTemplate("key=value"), new HashSet<>(Arrays.asList(Installable.class.cast(mock))));
         List<String> args = new LinkedList<>(Arrays.asList("key=value", "applicationName=TestApp", "domain=DOMAIN", "realm=REALM"));
         Mockito.verify(mock).handleArguments(Mockito.eq(args));
     }
 
-    private AlphaOneAgentTemplate createAlphaOneAgentTemplate(String... args) {
+    private DiscoAgentTemplate createDiscoAgentTemplate(String... args) {
         List<String> argsList = new LinkedList<>(Arrays.asList(args));
         argsList.add("applicationName=TestApp");
         argsList.add("domain=DOMAIN");
         argsList.add("realm=REALM");
-        AlphaOneAgentTemplate alphaOneAgentTemplate = new AlphaOneAgentTemplate(String.join(":", argsList));
-        alphaOneAgentTemplate.setInterceptionInstaller(mockInterceptionInstaller);
-        return alphaOneAgentTemplate;
+        DiscoAgentTemplate discoAgentTemplate = new DiscoAgentTemplate(String.join(":", argsList));
+        discoAgentTemplate.setInterceptionInstaller(mockInterceptionInstaller);
+        return discoAgentTemplate;
     }
 
-    private AlphaOneAgentTemplate install(AlphaOneAgentTemplate alphaOneAgentTemplate, Set<Installable> installables) {
-        alphaOneAgentTemplate.install(Mockito.mock(Instrumentation.class), installables);
-        return alphaOneAgentTemplate;
+    private DiscoAgentTemplate install(DiscoAgentTemplate discoAgentTemplate, Set<Installable> installables) {
+        discoAgentTemplate.install(Mockito.mock(Instrumentation.class), installables);
+        return discoAgentTemplate;
     }
 
-    private AlphaOneAgentTemplate install(AlphaOneAgentTemplate alphaOneAgentTemplate) {
-        return install(alphaOneAgentTemplate, new HashSet<>());
+    private DiscoAgentTemplate install(DiscoAgentTemplate discoAgentTemplate) {
+        return install(discoAgentTemplate, new HashSet<>());
     }
 
     //not genuinely using this object, just using it to produce a classname which implements Installable

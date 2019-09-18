@@ -16,12 +16,12 @@
 package com.amazon.disco.agent.logging;
 
 /**
- * In a manner similar to Java logging frameworks such as log4j, AlphaOne provides a pluggable interface for attaching
+ * In a manner similar to Java logging frameworks such as log4j, DiSCo provides a pluggable interface for attaching
  * named loggers e.g. by following the convention of a named logger per named Class, or by electing arbitrary names.
- * Internally AlphaOne constructs instances of Loggers named after its Class names, and by default the logging implementation
+ * Internally DiSCo constructs instances of Loggers named after its Class names, and by default the logging implementation
  * is a Null Logger which has no-op behaviors.
  *
- * Clients may instantiate an instance of the Logger interface, to direct AlphaOne's log to a real logging implementation
+ * Clients may instantiate an instance of the Logger interface, to direct DiSCo's log to a real logging implementation
  * of their choosing - e.g. a simple wrapper around System.out (provided in the Customization package as a courtesy) or
  * by smarter implementations which use the desired logging framework supplied within the service-under-test.
  */
@@ -32,14 +32,14 @@ public interface Logger {
     enum Level {
         /**
          * The lowest and least useful form of Logging in most circumstances. Can tend to be extremely verbose, and is
-         * unlikely to be useful except for AlphaOne developers, or under rare debugging scenarios. Enabled by the AlphaOne
+         * unlikely to be useful except for DiSCo developers, or under rare debugging scenarios. Enabled by the DiSCo
          * 'extraverbose' command line argument.
          */
         TRACE,
 
         /**
          * A very low and rarely useful form of Logging. Can tend to be somewhat verbose, and is unlikely to be useful
-         * except for AlphaOne developers, or under rare debugging scenarios. Enabled by the AlphaOne 'verbose' command
+         * except for DiSCo developers, or under rare debugging scenarios. Enabled by the DiSCo 'verbose' command
          * line argument.
          */
         DEBUG,
@@ -57,7 +57,7 @@ public interface Logger {
         WARN,
 
         /**
-         * An error is an indication that AlphaOne has detected a serious problem, and was unable to proceed as requested.
+         * An error is an indication that DiSCo has detected a serious problem, and was unable to proceed as requested.
          * There is a possibility or likelihood that the service-under-test will encounter its own problems or failures
          */
         ERROR,
@@ -71,7 +71,7 @@ public interface Logger {
 
     /**
      * Log the given message of the given severity.
-     * @param level the Level of severity of the log content. Can be ignored by implementers as desired, since AlphaOne
+     * @param level the Level of severity of the log content. Can be ignored by implementers as desired, since DiSCo
      *              internally will manage aspects of verbosity
      * @param message the message to be logged
      */
@@ -79,7 +79,7 @@ public interface Logger {
 
     /**
      * Log the given Throwable object with the given message severity.
-     * @param level the Level of severity of the log content. Can be ignored by implementers as desired, since AlphaOne
+     * @param level the Level of severity of the log content. Can be ignored by implementers as desired, since DiSCo
      *              internally will manage aspects of verbosity
      * @param t the Throwable object to be logged
      */
@@ -87,7 +87,7 @@ public interface Logger {
 
     /**
      * Log the given Throwable object with the given Message at the given severity.
-     * @param level the Level of severity of the log content. Can be ignored by implementers as desired, since AlphaOne
+     * @param level the Level of severity of the log content. Can be ignored by implementers as desired, since DiSCo
      *              internally will manage aspects of verbosity
      * @param message the message to be logged
      * @param t the Throwable object to be logged

@@ -19,7 +19,7 @@ import java.util.concurrent.Callable;
 
 /**
  * Given a Callable object used for thread hand-off, decorate it with thread-info metadata, to allow propagation
- * of AlphaOne TransactionContext.
+ * of DiSCo TransactionContext.
  */
 public class DecoratedCallable extends Decorated implements Callable {
     Callable target;
@@ -51,7 +51,7 @@ public class DecoratedCallable extends Decorated implements Callable {
     }
 
     /**
-     * When the DecoratedCallable is executed, perform AlphaOne TransactionContext propagation, as necessary
+     * When the DecoratedCallable is executed, perform DiSCo TransactionContext propagation, as necessary
      * {@inheritDoc}
      */
     @Override

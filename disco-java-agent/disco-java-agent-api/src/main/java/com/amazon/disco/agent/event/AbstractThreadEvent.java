@@ -16,7 +16,7 @@
 package com.amazon.disco.agent.event;
 
 /**
- * Abstract Event to encapsulate information when execution crosses a thread boundary, within an AlphaOne transaction
+ * Abstract Event to encapsulate information when execution crosses a thread boundary, within an DiSCo transaction
  */
 public abstract class AbstractThreadEvent extends AbstractEvent implements ThreadEvent {
     /**

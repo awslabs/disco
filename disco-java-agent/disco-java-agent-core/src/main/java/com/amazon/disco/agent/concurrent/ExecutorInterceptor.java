@@ -48,7 +48,7 @@ class ExecutorInterceptor implements Installable {
         return agentBuilder
                 //As with the similar code in ThreadInterceptor, we handle situations where given Executors
                 //may already have been used e.g. we know for sure that AspectJ has use-cases where it instantiates
-                //a ThreadPoolExecutor. This gives AlphaOne a responsibility to adopt an interception strategy where
+                //a ThreadPoolExecutor. This gives DiSCo a responsibility to adopt an interception strategy where
                 //we can transform a class that is already loaded. The code below achieves that.
                 .with(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
                 .with(AgentBuilder.RedefinitionStrategy.REDEFINITION)
@@ -98,7 +98,7 @@ class ExecutorInterceptor implements Installable {
          * @param t the throwable which was thrown by the advice
          */
         public static void captureThrowableForDebugging (Throwable t) {
-            log.error("AlphaOne(Concurrency) failed to decorate Runnable for Executor", t);
+            log.error("DiSCo(Concurrency) failed to decorate Runnable for Executor", t);
         }
     }
 

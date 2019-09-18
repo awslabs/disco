@@ -69,12 +69,12 @@ public class TransactionContextTests {
 
     @Test
     public void testPutMetadataDoesNotThrowIfReservedIdentifierWhenAgentNotLoaded() {
-        TransactionContext.putMetadata("alphaOneIdentifier", "value");
+        TransactionContext.putMetadata("discoIdentifier", "value");
     }
 
     @Test
     public void testGetMetadataDoesNotThrowIfReservedIdentifierWhenAgentNotLoaded() {
-        TransactionContext.getMetadata("alphaOneIdentifier");
+        TransactionContext.getMetadata("discoIdentifier");
     }
 
     @Test
@@ -89,7 +89,7 @@ public class TransactionContextTests {
             caught.set(thrown);
         });
 
-        TransactionContext.putMetadata("alphaOneIdentifier", new Object());
+        TransactionContext.putMetadata("discoIdentifier", new Object());
 
         UncaughtExceptionHandler.install(null);
         Assert.assertTrue(caught.get() instanceof IllegalArgumentException);
@@ -102,7 +102,7 @@ public class TransactionContextTests {
             caught.set(thrown);
         });
 
-        TransactionContext.getMetadata("alphaOneIdentifier");
+        TransactionContext.getMetadata("discoIdentifier");
 
         UncaughtExceptionHandler.install(null);
         Assert.assertTrue(caught.get() instanceof IllegalArgumentException);

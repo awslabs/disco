@@ -38,7 +38,7 @@ import static net.bytebuddy.matcher.ElementMatchers.*;
  * method called to actually perform the work, and the method which may therefore be in a different thread than that
  * in which fork() was invoked.
  *
- * We hook the fork() method, to populate the AlphaOne metadata fields, and the exec() method to consider them
+ * We hook the fork() method, to populate the DiSCo metadata fields, and the exec() method to consider them
  * for propagation into the new thread context.
  */
 class ForkJoinTaskInterceptor implements Installable {
@@ -59,7 +59,7 @@ class ForkJoinTaskInterceptor implements Installable {
                 //for methods on ForkJoinTask, and elsewhere for methods on ForkJoinPool.
                 .type(createForkJoinTaskTypeMatcher())
                 .transform((builder, typeDescription, classLoader, module) -> builder
-                        .defineField(DecoratedForkJoinTask.ALPHA_ONE_DECORATION_FIELD_NAME, DecoratedForkJoinTask.class, Modifier.PROTECTED)
+                        .defineField(DecoratedForkJoinTask.DISCO_DECORATION_FIELD_NAME, DecoratedForkJoinTask.class, Modifier.PROTECTED)
                         .method(createForkMethodMatcher())
                         .intercept(Advice.to(ForkAdvice.class))
                 )
@@ -117,10 +117,10 @@ class ForkJoinTaskInterceptor implements Installable {
          */
         public static void methodEnter(Object task) {
             try {
-                DecoratedForkJoinTask alphaOneDecoration = DecoratedForkJoinTask.get(task);
-                alphaOneDecoration.before();
+                DecoratedForkJoinTask discoDecoration = DecoratedForkJoinTask.get(task);
+                discoDecoration.before();
             } catch (Exception e) {
-                log.error("AlphaOne(Concurrency) unable to propagate context in ForkJoinTask " + task);
+                log.error("DiSCo(Concurrency) unable to propagate context in ForkJoinTask " + task);
             }
         }
 
@@ -140,8 +140,8 @@ class ForkJoinTaskInterceptor implements Installable {
          */
         public static void methodExit(Object task) {
             try {
-                DecoratedForkJoinTask alphaOneDecoration = DecoratedForkJoinTask.get(task);
-                alphaOneDecoration.after();
+                DecoratedForkJoinTask discoDecoration = DecoratedForkJoinTask.get(task);
+                discoDecoration.after();
             } catch (Exception e) {
                 //swallow
             }

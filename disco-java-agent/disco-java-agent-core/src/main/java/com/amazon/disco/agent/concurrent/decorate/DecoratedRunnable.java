@@ -17,7 +17,7 @@ package com.amazon.disco.agent.concurrent.decorate;
 
 /**
  * Given a Runnable object used for thread hand-off, decorate it with thread-info metadata, to allow propagation
- * of AlphaOne TransactionContext.
+ * of DiSCo TransactionContext.
  */
 public class DecoratedRunnable extends Decorated implements Runnable {
     Runnable target;
@@ -49,7 +49,7 @@ public class DecoratedRunnable extends Decorated implements Runnable {
     }
 
     /**
-     * When the DecoratedRunnable is executed, perform AlphaOne TransactionContext propagation, as necessary
+     * When the DecoratedRunnable is executed, perform DiSCo TransactionContext propagation, as necessary
      *
      * {@inheritDoc}
      */

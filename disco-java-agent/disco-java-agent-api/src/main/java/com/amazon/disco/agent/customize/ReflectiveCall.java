@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
  * @param <T> - the return type of the method being called
  */
 public class ReflectiveCall<T> {
-    private static final String ALPHA_ONE_AGENT_PACKAGE_ROOT = "com.amazon.disco.agent";
+    private static final String DISCO_AGENT_PACKAGE_ROOT = "com.amazon.disco.agent";
     private static Class templateClass = null;
     private String className;
     private String methodName;
@@ -71,7 +71,7 @@ public class ReflectiveCall<T> {
     }
 
     /**
-     * Set the default value to return in case the AlphaOne agent is not present. If none is provided, then null it
+     * Set the default value to return in case no DiSCo agent is present. If none is provided, then null it
      * returns null.
      * @param defaultValue The default value
      * @return the ReflectiveCall to continue building/calling
@@ -82,7 +82,7 @@ public class ReflectiveCall<T> {
     }
 
     /**
-     * Set the partial class name which declares the method to be called as it appears after com.amazon.alphaone.agent
+     * Set the partial class name which declares the method to be called as it appears after com.amazon.disco.agent
      * e.g. '.config.Config' including the prefixing '.'
      * @param className the class name which declares the method
      * @return the ReflectiveCall to continue building/calling
@@ -134,14 +134,14 @@ public class ReflectiveCall<T> {
     }
 
     /**
-     * Invoke the given method with the given args. If the AlphaOne agent is present the call
+     * Invoke the given method with the given args. If a DiSCo agent is present the call
      * will proceed. In the case that building the method was not possible, due to the agent being
      * absent, this method will have no side effects.
      * @param args any arguments to pass to the method invocation.
      * @return any value which the method returns, or null if the call could not be made
      */
     public T call(Object... args) {
-        String fullClassName = ALPHA_ONE_AGENT_PACKAGE_ROOT + className;
+        String fullClassName = DISCO_AGENT_PACKAGE_ROOT + className;
         try {
             Logger.debug("Trying to reflectively call " + fullClassName + ":" + methodName + " with parameter types:");
             Logger.debug("with arguments:");
@@ -173,13 +173,13 @@ public class ReflectiveCall<T> {
     }
 
     /**
-     * Test if an AlphaOne agent is present
-     * @return true if an AlphaOne agent is present
+     * Test if a DiSCo agent is present
+     * @return true if a DiSCo agent is present
      */
     public static boolean isAgentPresent() {
         try {
             if (templateClass == null) {
-                templateClass = Class.forName(ALPHA_ONE_AGENT_PACKAGE_ROOT + ".AlphaOneAgentTemplate");
+                templateClass = Class.forName(DISCO_AGENT_PACKAGE_ROOT + ".DiscoAgentTemplate");
             }
             return true;
         } catch(ClassNotFoundException e) {
@@ -189,7 +189,7 @@ public class ReflectiveCall<T> {
 
     /**
      * Install an UncaughtExceptionHandler, to receive a notification whe any exception is thrown by any method in the
-     * AlphaOne Customization APIs. Without such a handler installed, all exceptions - even unchecked ones - will be suppressed
+     * DiSCo 'Customization' APIs. Without such a handler installed, all exceptions - even unchecked ones - will be suppressed
      * @param handler
      */
     public static void installUncaughtExceptionHandler(UncaughtExceptionHandler handler) {
@@ -214,7 +214,7 @@ public class ReflectiveCall<T> {
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
-        builder.append(returnType.getName()+" "+ALPHA_ONE_AGENT_PACKAGE_ROOT+className+"::"+methodName+"(");
+        builder.append(returnType.getName()+" "+ DISCO_AGENT_PACKAGE_ROOT +className+"::"+methodName+"(");
         List<String> argTypeNames = Arrays.stream(argTypes).map((x)->x.getName()).collect(Collectors.toList());
         builder.append(String.join(", ", argTypeNames));
         builder.append(")");
@@ -226,7 +226,7 @@ public class ReflectiveCall<T> {
      * @return the class name
      */
     public String getClassName() {
-        return ALPHA_ONE_AGENT_PACKAGE_ROOT + className;
+        return DISCO_AGENT_PACKAGE_ROOT + className;
     }
 
     /**
@@ -257,7 +257,7 @@ public class ReflectiveCall<T> {
      * Using the supplied class, method name and argument types information, create a callable Method.
      */
     private void createMethod() {
-        String fullClassName = ALPHA_ONE_AGENT_PACKAGE_ROOT + className;
+        String fullClassName = DISCO_AGENT_PACKAGE_ROOT + className;
         try {
             Logger.debug("Trying to reflectively create " + fullClassName + ":" + methodName + " with parameter types:");
             if (argTypes != null) for (Class clazz: argTypes) {

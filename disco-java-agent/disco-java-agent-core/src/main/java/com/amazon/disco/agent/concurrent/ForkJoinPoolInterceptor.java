@@ -230,7 +230,7 @@ class ForkJoinPoolInterceptor implements Installable {
             try {
                 DecoratedForkJoinTask.create(task);
             } catch (Exception e ) {
-                log.error("AlphaOne(Concurrency) could not propagate context into " + task);
+                log.error("DiSCo(Concurrency) could not propagate context into " + task);
             }
         }
     }

@@ -84,9 +84,9 @@ public class InterceptionInstaller {
                 agentBuilder = agentBuilder.with(InterceptionListener.INSTANCE);
             }
 
-            log.info("AlphaOne(Core) attempting to install "+installable.getClass().getName());
+            log.info("DiSCo(Core) attempting to install "+installable.getClass().getName());
             if (alreadyInstalled.contains(installable.getClass())) {
-                log.info("AlphaOne(Core)" + installable.getClass().getName() + " already installed; skipping.");
+                log.info("DiSCo(Core)" + installable.getClass().getName() + " already installed; skipping.");
                 continue;
             }
 

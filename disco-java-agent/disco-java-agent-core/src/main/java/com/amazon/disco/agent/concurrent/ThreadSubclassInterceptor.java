@@ -32,7 +32,7 @@ import static net.bytebuddy.matcher.ElementMatchers.*;
  * target during construction. Here we intercept subclasses of Thread, to instrument their run() method accordingly.
  */
 class ThreadSubclassInterceptor implements Installable {
-    public static final String ALPHA_ONE_DECORATION_FIELD_NAME = "alphaOneDecoration";
+    public static final String DISCO_DECORATION_FIELD_NAME = "discoDecoration";
 
     /**
      * {@inheritDoc}
@@ -42,7 +42,7 @@ class ThreadSubclassInterceptor implements Installable {
         return agentBuilder
                 .type(createThreadSubclassTypeMatcher())
                 .transform((builder, typeDescription, classLoader, module) -> builder
-                        .defineField(ALPHA_ONE_DECORATION_FIELD_NAME, DecoratedThread.class, Modifier.PROTECTED)
+                        .defineField(DISCO_DECORATION_FIELD_NAME, DecoratedThread.class, Modifier.PROTECTED)
                         .method(createStartMethodMatcher())
                         .intercept(Advice.to(StartAdvice.class))
                         .method(createRunMethodMatcher())
@@ -55,12 +55,12 @@ class ThreadSubclassInterceptor implements Installable {
      */
     public static class StartAdvice {
         /**
-         * Advice OnMethodEnter to populate the AlphaOne context metadata
-         * @param alphaOneDecoration
+         * Advice OnMethodEnter to populate the DiSCo context metadata
+         * @param discoDecoration
          */
         @Advice.OnMethodEnter
-        public static void onMethodEnter(@Advice.FieldValue(readOnly=false, value=ALPHA_ONE_DECORATION_FIELD_NAME) DecoratedThread alphaOneDecoration) {
-            alphaOneDecoration = methodEnter();
+        public static void onMethodEnter(@Advice.FieldValue(readOnly=false, value= DISCO_DECORATION_FIELD_NAME) DecoratedThread discoDecoration) {
+            discoDecoration = methodEnter();
         }
 
         /**
@@ -82,41 +82,41 @@ class ThreadSubclassInterceptor implements Installable {
     public static class RunAdvice {
         /**
          *
-         * @param alphaOneDecoration
+         * @param discoDecoration
          */
         @Advice.OnMethodEnter
-        public static void onMethodEnter(@Advice.FieldValue(value=ALPHA_ONE_DECORATION_FIELD_NAME) DecoratedThread alphaOneDecoration) {
-            methodEnter(alphaOneDecoration);
+        public static void onMethodEnter(@Advice.FieldValue(value= DISCO_DECORATION_FIELD_NAME) DecoratedThread discoDecoration) {
+            methodEnter(discoDecoration);
         }
 
         /**
          * Trampoline method to allow debugging Advice method
-         * @param alphaOneDecoration the AlphaOne context metadata if it exists
+         * @param discoDecoration the DiSCo context metadata if it exists
          */
-        public static void methodEnter(DecoratedThread alphaOneDecoration) {
+        public static void methodEnter(DecoratedThread discoDecoration) {
             try {
-                alphaOneDecoration.before();
+                discoDecoration.before();
             } catch (Exception e) {
 
             }
         }
 
         /**
-         * Advice OnMethodExit to clear the AlphaOne context metadata once run() has finished.
-         * @param alphaOneDecoration
+         * Advice OnMethodExit to clear the DiSCo context metadata once run() has finished.
+         * @param discoDecoration
          */
         @Advice.OnMethodExit(onThrowable = Throwable.class)
-        public static void onMethodExit(@Advice.FieldValue(value=ALPHA_ONE_DECORATION_FIELD_NAME) DecoratedThread alphaOneDecoration) {
-            methodExit(alphaOneDecoration);
+        public static void onMethodExit(@Advice.FieldValue(value= DISCO_DECORATION_FIELD_NAME) DecoratedThread discoDecoration) {
+            methodExit(discoDecoration);
         }
 
         /**
          * Trampoline method to allow debugging Advice method
-         * @param alphaOneDecoration the AlphaOne context metadata if it exists
+         * @param discoDecoration the DiSCo context metadata if it exists
          */
-        public static void methodExit(DecoratedThread alphaOneDecoration) {
+        public static void methodExit(DecoratedThread discoDecoration) {
             try {
-                alphaOneDecoration.after();
+                discoDecoration.after();
             } catch (Exception e) {
 
             }

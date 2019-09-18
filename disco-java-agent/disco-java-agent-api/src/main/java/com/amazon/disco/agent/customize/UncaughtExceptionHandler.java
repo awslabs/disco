@@ -18,13 +18,13 @@ package com.amazon.disco.agent.customize;
 /**
  * Modeled after Thread#UncaughtExceptionHandler
  * Install an implementation of this via the provided install() method, to receive a notification when
- * any exception is thrown by any method in the AlphaOne Customization APIs. Without such a handler installed,
+ * any exception is thrown by any method in the DiSCo 'Customization' APIs. Without such a handler installed,
  * all exceptions - even unchecked ones - will be suppressed
  */
 @FunctionalInterface
 public interface UncaughtExceptionHandler {
     /**
-     * Receive any exception thrown as part of calling an AlphaOne method. In an agent-not-present scenario,
+     * Receive any exception thrown as part of calling a DiSCo agent method. In an agent-not-present scenario,
      * calls via the Customization APIs will always be safe
      *
      * If an agent is not present, Exceptions will be dispatched to the UncaughtExceptionHandle if they are produced as

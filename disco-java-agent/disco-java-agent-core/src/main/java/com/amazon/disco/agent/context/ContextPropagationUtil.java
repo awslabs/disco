@@ -49,10 +49,14 @@ public class ContextPropagationUtil {
     private static final String DELIMITER_KEY = "=";
     private static final String DELIMITER_PAIR = "&";
     private static final String UTF_8 = "UTF-8";
-    public static final String CONTEXT_PROPAGATION_HEADER = "x-amzn-ctxt-prop-data";
     public static final Set<String> EMPTY_WHITELIST = new HashSet<String>();
 
 
+    /**
+     * Retrieve the whitelisted attributes set in the TransactionContext
+     * @param whitelist
+     * @return
+     */
     public static Map<String, Object> getWhiteListAttributesFromContext(Set<String> whitelist) {
         Map<String, Object> keyValuesToPropagate = TransactionContext.getMetadataWithTag(PROPAGATE_IN_REQUEST_TAG);
         keyValuesToPropagate.keySet().retainAll(whitelist);
@@ -61,7 +65,7 @@ public class ContextPropagationUtil {
 
 
     /**
-     * This method serializes the attributes to be propagated from the AlphaOne
+     * This method serializes the attributes to be propagated from the DiSCo
      * TransactionContext and packs them into a single attribute string. This
      * string can be sent out as a HTTP attribute.  The downstream can then
      * unpack the attributes, inserting them back into the TransactionContext.
@@ -73,7 +77,7 @@ public class ContextPropagationUtil {
     }
 
     /**
-     * This method serializes the attributes to be propagated from the AlphaOne
+     * This method serializes the attributes to be propagated from the DiSCo
      * TransactionContext and packs them into a single attribute string. This
      * string can be sent out as a HTTP attribute.  The downstream can then
      * unpack the attributes, inserting them back into the TransactionContext.
@@ -97,7 +101,7 @@ public class ContextPropagationUtil {
                     sb.append(URLEncoder.encode((String) attribute.getValue(), UTF_8));
                 }
                 catch (UnsupportedEncodingException e) {
-                    log.error("AlphaOne(ContextPropagationUtil) threw exception" + e);
+                    log.error("DiSCo(ContextPropagationUtil) threw exception" + e);
                 }
             }
             return sb.toString();
@@ -125,7 +129,7 @@ public class ContextPropagationUtil {
                 TransactionContext.putMetadata(URLDecoder.decode(keyValue[0], UTF_8), (Object) URLDecoder.decode(keyValue[1], UTF_8));
             }
             catch (UnsupportedEncodingException e) {
-                log.error("AlphaOne(ContextPropagationUtil) threw exception" + e);
+                log.error("DiSCo(ContextPropagationUtil) threw exception" + e);
             }
         }
     }

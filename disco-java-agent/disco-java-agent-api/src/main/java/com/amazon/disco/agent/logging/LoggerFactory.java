@@ -16,9 +16,9 @@
 package com.amazon.disco.agent.logging;
 
 /**
- * By default AlphaOne has a null logging implementation, to ensure it is free of hazards and optimal by default. For
+ * By default DiSCo has a null logging implementation, to ensure it is free of hazards and optimal by default. For
  * service owners wishing to have visible Logging, implement this class, and instances of Loggers which the LoggerFactory
- * is responsible for producing to e.g. redirect AlphaOne logging to the service-under-test's logging solution such as
+ * is responsible for producing to e.g. redirect DiSCo logging to the service-under-test's logging solution such as
  * log4j.
  */
 public interface LoggerFactory {

@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * AlphaOne supplies informative logging information, if needed or required by service owners. By default, AlphaOne logs
+ * DiSCo supplies informative logging information, if needed or required by service owners. By default, DiSCo logs
  * to a null/no-op implementation of a Logger, but clients may supply a LoggerFactory which produces more useful/visible
  * implementations.
  */

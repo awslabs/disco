@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * AlphaOne provides an event bus for various events such as Activities being called, threads being entered, and downstream
+ * DiSCo provides an event bus for various events such as Activities being called, threads being entered, and downstream
  * services being called.
  */
 public class EventBus {
@@ -58,7 +58,7 @@ public class EventBus {
         }
 
         if (LogManager.isDebugEnabled()) {
-            log.debug("AlphaOne(Core) publishing event " + e + " from origin " + e.getOrigin());
+            log.debug("DiSCo(Core) publishing event " + e + " from origin " + e.getOrigin());
         }
 
         for (Set<Listener> listenerSet : listeners.values()) {

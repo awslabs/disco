@@ -35,20 +35,20 @@ import java.util.Set;
  * This class acts as a Template Method pattern implementation, to perform the constant initialization, but with each
  * agent able to customize which actual Installable hooks are present in the Agent instance.
  */
-public class AlphaOneAgentTemplate {
-    private static Logger log = LogManager.getLogger(AlphaOneAgentTemplate.class);
+public class DiscoAgentTemplate {
+    private static Logger log = LogManager.getLogger(DiscoAgentTemplate.class);
 
     private AgentConfig config;
     private InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
     private ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher = ElementMatchers.none();
 
     /**
-     * Constructs a new AlphaOneAgentTemplate, which is the responsibility of any Agent build on AlphaOne.
+     * Constructs a new DiSCoAgentTemplate, which is the responsibility of any Agent build on DiSCo.
      * Parses the arguments given to the 'premain' method. Should be called immediately once inside premain.
      *
      * @param agentArgs any arguments passed as part of the -javaagent argument string
      */
-    public AlphaOneAgentTemplate(String agentArgs) {
+    public DiscoAgentTemplate(String agentArgs) {
         this.config = new AgentConfigParser().parseCommandLine(agentArgs);
         if (config.getLoggerFactoryClass() != null) {
             try {
@@ -59,7 +59,7 @@ public class AlphaOneAgentTemplate {
             }
         }
 
-        log.info("AlphaOne(Core) finished parsing argument list: " + agentArgs);
+        log.info("DiSCo(Core) finished parsing argument list: " + agentArgs);
         if (config.isExtraverbose()) {
             LogManager.setMinimumLevel(Logger.Level.TRACE);
         } else if (config.isVerbose()) {
@@ -97,14 +97,14 @@ public class AlphaOneAgentTemplate {
      */
     public void install(Instrumentation instrumentation, Set<Installable> installables, ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
         if (!config.isInstallDefaultInstallables()) {
-            log.info("AlphaOne(Core) removing all default installables as requested");
+            log.info("DiSCo(Core) removing all default installables as requested");
             installables.clear();
         }
         addCustomInstallables(installables);
 
         //give each installable the chance to handle command line args
         for (Installable installable: installables) {
-            log.info("AlphaOne(Core) passing arguments to " + installable.getClass().getSimpleName() + " to process");
+            log.info("DiSCo(Core) passing arguments to " + installable.getClass().getSimpleName() + " to process");
             installable.handleArguments(config.getArgs());
         }
 
@@ -124,7 +124,7 @@ public class AlphaOneAgentTemplate {
             try {
                 clazz = Class.forName(className, true, ClassLoader.getSystemClassLoader());
             } catch (ClassNotFoundException e) {
-                log.error("AlphaOne(Core) Custom installable " + className + " not found (is it on the classpath?), skipping");
+                log.error("DiSCo(Core) Custom installable " + className + " not found (is it on the classpath?), skipping");
                 continue;
             }
 
@@ -132,17 +132,17 @@ public class AlphaOneAgentTemplate {
             try {
                  installable = (Installable) clazz.newInstance();
             } catch (IllegalAccessException e) {
-                log.error("AlphaOne(Core) Custom installable " + className + " could not be instantiated - non-public or inaccessible default ctor, skipping");
+                log.error("DiSCo(Core) Custom installable " + className + " could not be instantiated - non-public or inaccessible default ctor, skipping");
                 continue;
             } catch (InstantiationException e) {
-                log.error("AlphaOne(Core) Custom installable " + className + " could not be instantiated - either no default ctor, or a non-concrete class, skipping");
+                log.error("DiSCo(Core) Custom installable " + className + " could not be instantiated - either no default ctor, or a non-concrete class, skipping");
                 continue;
             } catch (ClassCastException e) {
-                log.error("AlphaOne(Core) Custom installable " + className + " could not be instantiated - does not inherit from Installable, skipping");
+                log.error("DiSCo(Core) Custom installable " + className + " could not be instantiated - does not inherit from Installable, skipping");
                 continue;
             }
 
-            log.info("AlphaOne(Core) Adding Custom Installable " + className);
+            log.info("DiSCo(Core) Adding Custom Installable " + className);
             installables.add(installable);
         }
     }

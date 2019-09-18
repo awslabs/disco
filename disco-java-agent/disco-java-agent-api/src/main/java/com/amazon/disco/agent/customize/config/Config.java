@@ -19,12 +19,12 @@ import com.amazon.disco.agent.customize.ReflectiveCall;
 
 
 /**
- * Global configuration of AlphaOne
+ * Global configuration of DiSCo
  */
 @Deprecated
 public class Config {
     /**
-     * Config class name to append after ALPHA_ONE_AGENT_PACKAGE_ROOT
+     * Config class name to append after DISCO_AGENT_PACKAGE_ROOT
      */
     private static final String CONFIG_CLASS = ".config.Config";
 

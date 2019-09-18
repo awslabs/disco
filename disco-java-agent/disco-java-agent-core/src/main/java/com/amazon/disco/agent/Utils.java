@@ -29,7 +29,7 @@ public class Utils {
     private final static Utils INSTANCE = new Utils();
 
     private File getSystemTemporaryFolder() {
-        File tmpFolder = new File(System.getProperty("java.io.tmpdir"), "alphaone");
+        File tmpFolder = new File(System.getProperty("java.io.tmpdir"), "com.amazon.disco.agent");
         if (!tmpFolder.exists())
             tmpFolder.mkdirs();
         return tmpFolder;
@@ -100,7 +100,7 @@ public class Utils {
                     "var"),
                     "tmp"),
                     "user"),
-                    "alphaone");
+                    "com.amazon.disco.agent");
             if (!tmpFolder.exists() && !tmpFolder.mkdirs())
                 return getSystemTemporaryFolder();
 

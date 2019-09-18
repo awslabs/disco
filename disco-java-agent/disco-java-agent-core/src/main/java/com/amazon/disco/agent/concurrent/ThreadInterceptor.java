@@ -66,7 +66,7 @@ class ThreadInterceptor implements Installable {
      */
     static ElementMatcher.Junction<? super TypeDescription> createThreadTypeMatcher() {
         //Usually we would match by name, to avoid initializing the target class, but Thread has already been loaded
-        //hence why the install() method is a little different to most others throughout AlphaOne
+        //hence why the install() method is a little different to most others throughout DiSCo
         return is(Thread.class);
     }
 
@@ -104,7 +104,7 @@ class ThreadInterceptor implements Installable {
                 //and set this decorated object back into the Thread object
                 return decorated;
             } catch (Exception e) {
-                log.error("AlphaOne(Concurrency) unable to redirect Thread subclass to a DecoratedRunnable");
+                log.error("DiSCo(Concurrency) unable to redirect Thread subclass to a DecoratedRunnable");
                 return target;
             }
         }

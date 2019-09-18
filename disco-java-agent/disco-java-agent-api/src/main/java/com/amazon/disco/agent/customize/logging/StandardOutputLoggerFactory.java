@@ -19,7 +19,7 @@ import com.amazon.disco.agent.logging.Logger;
 import com.amazon.disco.agent.logging.LoggerFactory;
 
 /**
- * By default, AlphaOne has a null implementation of logging, to ensure that its behavior is safe and optimal by default.
+ * By default, DiSCo has a null implementation of logging, to ensure that its behavior is safe and optimal by default.
  * Service owners may want to install a LoggerFactory of their own which redirects to e.g. their own logging solution such
  * as log4j, but as an example LoggerFactory, or as a quick way to get logging visible during tests or debugging, this
  * implementation can be installed, which will just direct all output to System.out.

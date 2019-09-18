@@ -22,7 +22,7 @@ import java.util.function.Consumer;
 
 /**
  * Clients of the Customization package may supply logging callbacks for better visibility what is happening
- * when they call the methods provided by the package, and to enable Logging from the AlphaOne agent itself, using
+ * when they call the methods provided by the package, and to enable Logging from the DiSCo agent itself, using
  * a supplied LoggerFactory
  */
 public class Logger {
@@ -32,7 +32,7 @@ public class Logger {
     private static Consumer<String> info = null;
     private static Consumer<String> warn = null;
     private static Consumer<String> error = null;
-    private static final String prefix = "AlphaOne(Customization) ";
+    private static final String prefix = "DiSCo(Customization) ";
     static com.amazon.disco.agent.logging.Logger log;
 
     static {
@@ -80,7 +80,7 @@ public class Logger {
     }
 
     /**
-     * Install a LoggerFactory to be used throughout the AlphaOne agent.
+     * Install a LoggerFactory to be used throughout the DiSCo agent.
      * @param loggerFactory the client-supplied LoggerFactory instance to be used
      */
     public static void installLoggerFactory(LoggerFactory loggerFactory) {

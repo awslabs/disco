@@ -46,7 +46,7 @@ public class UtilsTest {
                 "var"),
                 "tmp"),
                 "user"),
-                "alphaone");
+                "com.amazon.disco.agent");
     }
 
     @Before
@@ -58,7 +58,7 @@ public class UtilsTest {
     public void testApollo() throws Exception {
         // Let's check if there is no env system temp is used
         File tmp = utils.getTempFolder();
-        assertEquals(new File(System.getProperty("java.io.tmpdir"), "alphaone").getAbsolutePath(), tmp.getAbsolutePath());
+        assertEquals(new File(System.getProperty("java.io.tmpdir"), "com.amazon.disco.agent").getAbsolutePath(), tmp.getAbsolutePath());
     }
 
     @Test

@@ -19,7 +19,7 @@ package com.amazon.disco.agent.config;
 import java.util.Arrays;
 
 /**
- * Parses command line arguments passed to Alpha One agent via command line
+ * Parses command line arguments passed to the DiSCo agent via command line
  */
 public class AgentConfigParser {
 

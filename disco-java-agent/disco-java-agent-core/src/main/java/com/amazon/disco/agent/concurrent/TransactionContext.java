@@ -36,9 +36,9 @@ import java.util.stream.Collectors;
 public class TransactionContext {
     private static Logger log = LogManager.getLogger(TransactionContext.class);
 
-    static final String TRANSACTION_ID_KEY = "alphaOneTransactionId";
-    public static final String UNINITIALIZED_TRANSACTION_CONTEXT_VALUE = "alpha1_null_id";
-    public static final String REFERENCE_COUNTER_KEY = "alphaOneRefCounterKey";
+    static final String TRANSACTION_ID_KEY = "discoTransactionId";
+    public static final String UNINITIALIZED_TRANSACTION_CONTEXT_VALUE = "disco_null_id";
+    public static final String REFERENCE_COUNTER_KEY = "discoRefCounterKey";
 
     public static final String PROPAGATE_IN_REQUEST_TAG = "PROPAGATE_IN_REQUEST";
 
@@ -110,7 +110,7 @@ public class TransactionContext {
 
     /**
      * Place an arbitrary value into the map
-     * @param key a String to identify the data. May not begin with "alphaOne" - this prefix is reserved for internal use.
+     * @param key a String to identify the data. May not begin with "disco" - this prefix is reserved for internal use.
      * @param value the metadata value
      */
     public static void putMetadata(String key, Object value) {
@@ -123,7 +123,7 @@ public class TransactionContext {
 
     /**
      * Get data from the metadata map
-     * @param key a String to identify the data. May not be "alphaOneTransactionId" which is reserved internally.
+     * @param key a String to identify the data. May not be "discoTransactionId" which is reserved internally.
      * @return the metadata value
      */
     public static Object getMetadata(String key) {
@@ -203,7 +203,7 @@ public class TransactionContext {
 
     /**
      * Get the default uninitialized Transaction Context value
-     * @return - "alpha1_null_id"
+     * @return - "disco_null_id"
      */
     public static String getUninitializedTransactionContextValue() {
         return UNINITIALIZED_TRANSACTION_CONTEXT_VALUE;

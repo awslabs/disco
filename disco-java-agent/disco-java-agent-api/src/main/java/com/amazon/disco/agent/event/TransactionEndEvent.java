@@ -22,7 +22,7 @@ public class TransactionEndEvent extends AbstractTransactionEvent {
 
     /**
      * Create a TransactionEndEvent
-     * @param origin the origin of the event e.g. Coral
+     * @param origin the origin of the event e.g. Web
      */
     public TransactionEndEvent(String origin) {
         super(origin);

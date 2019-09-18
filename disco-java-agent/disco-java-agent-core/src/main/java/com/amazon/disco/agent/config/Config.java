@@ -29,10 +29,10 @@ public class Config {
     /**
      * Initialize Config
      *
-     * @param config the startup config used by AlphaOne
+     * @param config the startup config used by DiSCo
      */
     public static void init(AgentConfig config) {
-        log.debug("AlphaOne(Core) initializing for " + config.getApplicationName());
+        log.debug("DiSCo(Core) initializing for " + config.getApplicationName());
         victimApplicationName = config.getApplicationName();
     }
 

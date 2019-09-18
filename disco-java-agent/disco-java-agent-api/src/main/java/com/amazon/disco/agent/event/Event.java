@@ -16,11 +16,11 @@
 package com.amazon.disco.agent.event;
 
 /**
- * An Event published to the AlphaOne event bus
+ * An Event published to the DiSCo event bus
  */
 public interface Event {
     /**
-     * Getter for the Event's origin. This is named for the AlphaOne support package name e.g. 'Coral'
+     * Getter for the Event's origin. This is named for the DiSCo support package name e.g. 'Web'
      * @return the origin of this event
      */
     String getOrigin();

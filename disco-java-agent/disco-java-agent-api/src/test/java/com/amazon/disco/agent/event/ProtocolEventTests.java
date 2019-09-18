@@ -34,7 +34,7 @@ public class ProtocolEventTests {
                 .withDate("Tue, 24 Oct 1995 08:12:31 GMT")
                 .withHost("amazon.com")
                 .withHTTPOrigin("http://aws.amazon.com")
-                .withURL("http://amazon.com/alphaone")
+                .withURL("http://amazon.com/disco")
                 .withUserAgent("Mozilla/5.0 (X11; Linux x86_64; rv:12.0) Gecko/20100101 Firefox/12.0")
                 .withMethod("POST")
                 .withReferer("http://amazon.com/explore/something")
@@ -46,7 +46,7 @@ public class ProtocolEventTests {
         Assert.assertEquals("Tue, 24 Oct 1995 08:12:31 GMT", event.getDate());
         Assert.assertEquals("amazon.com", event.getHost());
         Assert.assertEquals("http://aws.amazon.com", event.getHTTPOrigin());
-        Assert.assertEquals("http://amazon.com/alphaone", event.getURL());
+        Assert.assertEquals("http://amazon.com/disco", event.getURL());
         Assert.assertEquals("Mozilla/5.0 (X11; Linux x86_64; rv:12.0) Gecko/20100101 Firefox/12.0", event.getUserAgent());
         Assert.assertEquals("POST", event.getMethod());
         Assert.assertEquals("http://amazon.com/explore/something", event.getReferer());

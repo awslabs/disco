@@ -23,7 +23,7 @@ package com.amazon.disco.agent.event;
 public abstract class AbstractTransactionEvent extends AbstractEvent implements TransactionEvent {
     /**
      * Create a new TransactionEvent
-     * @param origin the origin e.g. 'Coral'
+     * @param origin the origin e.g. the name of a service framework plugin
      */
     public AbstractTransactionEvent(String origin) {
         super(origin);

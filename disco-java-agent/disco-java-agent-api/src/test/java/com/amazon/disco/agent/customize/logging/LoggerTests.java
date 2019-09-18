@@ -66,7 +66,7 @@ public class LoggerTests {
         ResultHolder resultHolder = testCoreLoggerHelper();
         Logger.debug("test");
         Assert.assertEquals(com.amazon.disco.agent.logging.Logger.Level.DEBUG, resultHolder.wasCalledWithLevel);
-        Assert.assertEquals("AlphaOne(Customization) test", resultHolder.wasCalledWithMessage);
+        Assert.assertEquals("DiSCo(Customization) test", resultHolder.wasCalledWithMessage);
     }
 
     @Test
@@ -74,7 +74,7 @@ public class LoggerTests {
         ResultHolder resultHolder = testCoreLoggerHelper();
         Logger.info("test");
         Assert.assertEquals(com.amazon.disco.agent.logging.Logger.Level.INFO, resultHolder.wasCalledWithLevel);
-        Assert.assertEquals("AlphaOne(Customization) test", resultHolder.wasCalledWithMessage);
+        Assert.assertEquals("DiSCo(Customization) test", resultHolder.wasCalledWithMessage);
     }
 
     @Test
@@ -82,7 +82,7 @@ public class LoggerTests {
         ResultHolder resultHolder = testCoreLoggerHelper();
         Logger.warn("test");
         Assert.assertEquals(com.amazon.disco.agent.logging.Logger.Level.WARN, resultHolder.wasCalledWithLevel);
-        Assert.assertEquals("AlphaOne(Customization) test", resultHolder.wasCalledWithMessage);
+        Assert.assertEquals("DiSCo(Customization) test", resultHolder.wasCalledWithMessage);
     }
 
     @Test
@@ -90,7 +90,7 @@ public class LoggerTests {
         ResultHolder resultHolder = testCoreLoggerHelper();
         Logger.error("test");
         Assert.assertEquals(com.amazon.disco.agent.logging.Logger.Level.ERROR, resultHolder.wasCalledWithLevel);
-        Assert.assertEquals("AlphaOne(Customization) test", resultHolder.wasCalledWithMessage);
+        Assert.assertEquals("DiSCo(Customization) test", resultHolder.wasCalledWithMessage);
     }
 
     @Test
@@ -136,7 +136,7 @@ public class LoggerTests {
     }
 
     @Test
-    public void testInstallLoggerFactoryWhenAlphaOneNotLoaded() {
+    public void testInstallLoggerFactoryWhenDiSCoNotLoaded() {
         Logger.installLoggerFactory(Mockito.mock(LoggerFactory.class));
     }
 

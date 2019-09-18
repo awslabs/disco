@@ -25,13 +25,13 @@ import java.util.Map;
 
 /**
  * Manipulation/overriding of the current TransactionContext, which identifies the current service interaction i.e.
- * the entire enclosure of operations between the service Request and Response. By default, AlphaOne chooses a GUID for
- * this, but services consuming AlphaOne may elect a different strategy for calculating this value, perhaps to give it
+ * the entire enclosure of operations between the service Request and Response. By default, DiSCo chooses a GUID for
+ * this, but services consuming DiSCo may elect a different strategy for calculating this value, perhaps to give it
  * semantics more nuanced than just 'random'. The idea is that at the earliest opportunity during the service's Activity
  * this TransactionContext should be set. This must be before ANY downstream dependency interactions have occurred.
  */
 public class TransactionContext {
-    static final String ALPHA_ONE_PREFIX = "alphaOne";
+    static final String DISCO_PREFIX = "disco";
     static final String TRANSACTIONCONTEXT_CLASS = ".concurrent.TransactionContext";
 
     /**
@@ -45,7 +45,7 @@ public class TransactionContext {
                 .call();
     }
     /**
-     * Set the AlphaOne Transaction ID to a specific value.
+     * Set the DiSCo Transaction ID to a specific value.
      * @param value - the value to set
      */
     public static void set(String value) {
@@ -58,7 +58,7 @@ public class TransactionContext {
     }
 
     /**
-     * Get the AlphaOne Transaction ID, or null if the agent is not loaded
+     * Get the DiSCo Transaction ID, or null if the agent is not loaded
      * @return - the TransactionContext value
      */
     public static String get() {
@@ -69,7 +69,7 @@ public class TransactionContext {
     }
 
     /**
-     * Set a value in the AlphaOne metadata map, or do nothing if the agent is not loaded
+     * Set a value in the DiSCo metadata map, or do nothing if the agent is not loaded
      * @param key the key of the metadata
      * @param value the metadata value
      */
@@ -86,7 +86,7 @@ public class TransactionContext {
     }
 
     /**
-     * Get a value from the AlphaOne metadata map, or null if the agent is not loaded
+     * Get a value from the DiSCo metadata map, or null if the agent is not loaded
      * @param key the key of the metadata
      * @return the metadata value
      */
@@ -129,7 +129,7 @@ public class TransactionContext {
     }
 
     /**
-     * Clear the AlphaOne TransactionContext to revert to its default value, or a no-op if Agent not loaded
+     * Clear the DiSCo TransactionContext to revert to its default value, or a no-op if Agent not loaded
      */
     public static void clear() {
         Logger.info("Clearing transaction context");
@@ -141,7 +141,7 @@ public class TransactionContext {
 
     /**
      * Get the default uninitialized Transaction Context value
-     * @return - "alpha1_null_id"
+     * @return - "disco_null_id"
      */
     public static String getUninitializedTransactionContextValue() {
         return ReflectiveCall.returning(String.class)
@@ -181,8 +181,8 @@ public class TransactionContext {
      * @param key the offending key
      */
     private static void checkMetadataKey(ReflectiveCall call, String key) {
-        if (key.startsWith(ALPHA_ONE_PREFIX)) {
-            String message = key + " may not be used as a metadata key as the prefix " + ALPHA_ONE_PREFIX + " is reserved for internal use";
+        if (key.startsWith(DISCO_PREFIX)) {
+            String message = key + " may not be used as a metadata key as the prefix " + DISCO_PREFIX + " is reserved for internal use";
             Logger.warn(message);
             call.dispatchException(new IllegalArgumentException(message));
         }

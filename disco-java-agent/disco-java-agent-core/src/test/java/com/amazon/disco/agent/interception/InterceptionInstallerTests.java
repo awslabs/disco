@@ -42,7 +42,7 @@ public class InterceptionInstallerTests {
     }
 
     @Test
-    public void testIgnoreMatcherMatchesAlphaOne() {
+    public void testIgnoreMatcherMatchesDiSCo() {
         Assert.assertTrue(classMatches(this.getClass()));
     }
 

@@ -21,7 +21,7 @@ package com.amazon.disco.agent.event;
 public class ServiceActivityResponseEvent extends AbstractServiceResponseEvent {
     /**
      * Construct a ServiceActivityResponseEvent
-     * @param origin the origin of the activity e.g. 'Coral' or 'gRPC'
+     * @param origin the origin of the activity e.g. 'Web' or 'gRPC'
      * @param service the service name e.g. 'WeatherService'
      * @param operation the operation name e.g. 'getWeather'
      * @param requestEvent the associated request event

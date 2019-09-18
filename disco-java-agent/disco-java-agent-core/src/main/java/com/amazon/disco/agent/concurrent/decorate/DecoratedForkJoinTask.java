@@ -24,10 +24,10 @@ import java.lang.reflect.Field;
  * augment the ForkJoinTask abstract class itself, with the addition threadId and transactionContext fields
  */
 public class DecoratedForkJoinTask extends Decorated {
-    public static final String ALPHA_ONE_DECORATION_FIELD_NAME = "alphaOneDecoration";
+    public static final String DISCO_DECORATION_FIELD_NAME = "discoDecoration";
 
     /**
-     * Create AlphaOne propagation metadata on the supplied object, assumed to be a ForkJoinTask
+     * Create DiSCo propagation metadata on the supplied object, assumed to be a ForkJoinTask
      * @param task the task to decorate
      * @throws Exception reflection exceptions may be thrown
      */
@@ -36,8 +36,8 @@ public class DecoratedForkJoinTask extends Decorated {
     }
 
     /**
-     * Retreive AlphaOne propagation metadata from the supplied object, assumed to be a ForkJoinTask
-     * @param task the task from which to obtain the AlphaOne propagation data
+     * Retreive DiSCo propagation metadata from the supplied object, assumed to be a ForkJoinTask
+     * @param task the task from which to obtain the DiSCo propagation data
      * @return an instance of a 'Decorated'
      * @throws Exception relection exceptions may be thrown
      */
@@ -46,15 +46,15 @@ public class DecoratedForkJoinTask extends Decorated {
     }
 
     /**
-     * Helper method to lookup the AlphaOne decoration field, which was added to ForkJoinTask during interception
+     * Helper method to lookup the DiSCo decoration field, which was added to ForkJoinTask during interception
      * by the treatment in ForkJoinTaskInterceptor
-     * @return a read/write Field representing the added AlphaOne decoration field
+     * @return a read/write Field representing the added DiSCo decoration field
      * @throws Exception reflection exceptions may be thrown
      */
     static Field lookup() throws Exception {
         //have to reflectively lookup the Decorated which exists inside the ForkJoinTask.
         Class fjtClass = Class.forName("java.util.concurrent.ForkJoinTask", true, ClassLoader.getSystemClassLoader());
-        Field decoratedField = fjtClass.getDeclaredField(ALPHA_ONE_DECORATION_FIELD_NAME);
+        Field decoratedField = fjtClass.getDeclaredField(DISCO_DECORATION_FIELD_NAME);
         decoratedField.setAccessible(true);
         return decoratedField;
     }

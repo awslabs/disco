@@ -151,7 +151,7 @@ public interface IntrusiveInterceptor  {
      * @throws Throwable any kind of Throwable could conceivably be thrown
      */
     default Object replace(ContinuationContext context) throws Throwable {
-        throw new IllegalStateException("AlphaOne(Interfaces) if your logic allows replace() to be called, you must implement it with a body which makes sense");
+        throw new IllegalStateException("DiSCo(Interfaces) if your logic allows replace() to be called, you must implement it with a body which makes sense");
     }
 
     /**

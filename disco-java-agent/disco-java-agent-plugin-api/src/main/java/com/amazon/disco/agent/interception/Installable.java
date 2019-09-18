@@ -21,12 +21,12 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * AlphaOne interceptions are broken apart by category e.g. Coral, BSF, AWS, concurrency support, etc. This interface
- * describes a hook which can be installed, and all AlphaOne support 'plugins' adhere to it
+ * DiSCo interceptions are broken apart by category e.g. Web, AWS, concurrency support, etc. This interface
+ * describes a hook which can be installed, and all DiSCo support 'plugins' adhere to it
  */
 public interface Installable {
     /**
-     * Install the necessary hooks for this piece of AlphaOne functionality.
+     * Install the necessary hooks for this piece of DiSCo functionality.
      *
      * @param agentBuilder - an AgentBuilder to append instructions to
      * @return - the same AgentBuilder instance, for continuation/chaining, or null to prevent installation of the

@@ -22,7 +22,7 @@ package com.amazon.disco.agent.event;
 public class ServiceDownstreamRequestEvent extends AbstractServiceRequestEvent {
     /**
      * Construct a ServiceDownstreamRequestEvent
-     * @param origin the origin of the downstream call e.g. 'Coral' or 'gRPC'
+     * @param origin the origin of the downstream call e.g. 'Web' or 'gRPC'
      * @param service the service name e.g. 'WeatherService'
      * @param operation the operation name e.g. 'getWeather'
      */

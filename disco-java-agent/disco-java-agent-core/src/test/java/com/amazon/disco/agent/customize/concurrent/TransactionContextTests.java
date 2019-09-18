@@ -28,7 +28,7 @@ import org.junit.Test;
  * Test that the Agent configuration can be overridden when the Agent is present
  */
 public class TransactionContextTests {
-    private static final String ALPHA1_NULL_ID = "alpha1_null_id";
+    private static final String DISCO_NULL_ID = "disco_null_id";
 
     @Before
     public void before() {
@@ -43,7 +43,7 @@ public class TransactionContextTests {
     @Test
     public void testTransactionContextCreate() {
         TransactionContext.create();
-        Assert.assertNotEquals(ALPHA1_NULL_ID, com.amazon.disco.agent.concurrent.TransactionContext.get());
+        Assert.assertNotEquals(DISCO_NULL_ID, com.amazon.disco.agent.concurrent.TransactionContext.get());
     }
 
     @Test
@@ -67,7 +67,7 @@ public class TransactionContextTests {
         TransactionContext.set("foo");
         TransactionContext.putMetadata("metadata", "value");
         TransactionContext.clear();
-        Assert.assertEquals(ALPHA1_NULL_ID, com.amazon.disco.agent.concurrent.TransactionContext.get());
+        Assert.assertEquals(DISCO_NULL_ID, com.amazon.disco.agent.concurrent.TransactionContext.get());
         Assert.assertNull(com.amazon.disco.agent.concurrent.TransactionContext.getMetadata("metadata"));
     }
 
@@ -78,7 +78,7 @@ public class TransactionContextTests {
             caught.set(thrown);
         });
 
-        TransactionContext.putMetadata("alphaOneIdentifier", new Object());
+        TransactionContext.putMetadata("discoIdentifier", new Object());
 
         UncaughtExceptionHandler.install(null);
         Assert.assertTrue(caught.get() instanceof IllegalArgumentException);
@@ -91,7 +91,7 @@ public class TransactionContextTests {
             caught.set(thrown);
         });
 
-        TransactionContext.getMetadata("alphaOneIdentifier");
+        TransactionContext.getMetadata("discoIdentifier");
 
         UncaughtExceptionHandler.install(null);
         Assert.assertTrue(caught.get() instanceof IllegalArgumentException);
@@ -136,7 +136,7 @@ public class TransactionContextTests {
 
     @Test
     public void testGetUninitializedTransactionContextValueWhenAgentLoaded() {
-        Assert.assertEquals("alpha1_null_id", TransactionContext.getUninitializedTransactionContextValue());
+        Assert.assertEquals("disco_null_id", TransactionContext.getUninitializedTransactionContextValue());
     }
 
     @Test

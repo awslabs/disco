@@ -101,7 +101,7 @@ public class IntrusiveInterceptorRegistry {
                 return (T) installed.transform(context, output, thrown);
             }
             default:
-                log.warn("AlphaOne(Core) unknown response from IntrusiveInterceptor");
+                log.warn("DiSCo(Core) unknown response from IntrusiveInterceptor");
                 return call.call();
         }
 
