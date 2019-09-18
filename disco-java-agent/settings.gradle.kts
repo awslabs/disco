@@ -13,8 +13,8 @@
  *   permissions and limitations under the License.
  */
 
-rootProject.name = 'disco-java-agent'
-include 'disco-java-agent-plugin-api'
-include 'disco-java-agent-api'
-include 'disco-java-agent-core'
+rootProject.name = "disco-java-agent"
+include ("disco-java-agent-plugin-api")
+include ("disco-java-agent-api")
+include ("disco-java-agent-core")
 
