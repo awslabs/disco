@@ -22,13 +22,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 public class LoggerTests {
-    boolean methodWasCalled;
-
-    @Before
-    public void before() {
-        methodWasCalled = false;
-    }
-
     @Test
     public void testCoreLoggerDebug() {
         ResultHolder resultHolder = testCoreLoggerHelper();
