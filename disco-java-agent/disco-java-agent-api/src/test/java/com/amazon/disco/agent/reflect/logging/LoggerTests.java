@@ -30,38 +30,6 @@ public class LoggerTests {
     }
 
     @Test
-    public void testDebug() {
-        Logger.setDebugHandler(this::accept);
-        Logger.debug("test");
-        Assert.assertTrue(methodWasCalled);
-        Logger.setDebugHandler(null);
-    }
-
-    @Test
-    public void testInfo() {
-        Logger.setInfoHandler(this::accept);
-        Logger.info("test");
-        Assert.assertTrue(methodWasCalled);
-        Logger.setInfoHandler(null);
-    }
-
-    @Test
-    public void testWarn() {
-        Logger.setWarnHandler(this::accept);
-        Logger.warn("test");
-        Assert.assertTrue(methodWasCalled);
-        Logger.setWarnHandler(null);
-    }
-
-    @Test
-    public void testError() {
-        Logger.setErrorHandler(this::accept);
-        Logger.error("test");
-        Assert.assertTrue(methodWasCalled);
-        Logger.setErrorHandler(null);
-    }
-
-    @Test
     public void testCoreLoggerDebug() {
         ResultHolder resultHolder = testCoreLoggerHelper();
         Logger.debug("test");
@@ -140,16 +108,7 @@ public class LoggerTests {
         Logger.installLoggerFactory(Mockito.mock(LoggerFactory.class));
     }
 
-    private void accept(String s) {
-        methodWasCalled = true;
-    }
-
     private ResultHolder testCoreLoggerHelper() {
-        Logger.setDebugHandler(null);
-        Logger.setInfoHandler(null);
-        Logger.setWarnHandler(null);
-        Logger.setErrorHandler(null);
-
         ResultHolder resultHolder = new ResultHolder();
 
         class TestLogger implements com.amazon.disco.agent.logging.Logger {

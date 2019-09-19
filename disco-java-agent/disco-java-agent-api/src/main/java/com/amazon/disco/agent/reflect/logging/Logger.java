@@ -28,10 +28,6 @@ import java.util.function.Consumer;
 public class Logger {
     private static final String LOGMANAGER_CLASSNAME = ".logging.LogManager";
     private static boolean suppressIfAgentNotPresent = false;
-    private static Consumer<String> debug = null;
-    private static Consumer<String> info = null;
-    private static Consumer<String> warn = null;
-    private static Consumer<String> error = null;
     private static final String prefix = "DiSCo(Reflect) ";
     static com.amazon.disco.agent.logging.Logger log;
 
@@ -41,42 +37,6 @@ public class Logger {
             .ofMethod("getLogger")
             .withArgTypes(Class.class)
             .call(Logger.class);
-    }
-
-    /**
-     * Set a method to receive debug level of log
-     * @param handler a method taking a String to delegate to the client's logging mechanism
-     */
-    @Deprecated
-    public static void setDebugHandler(Consumer<String> handler) {
-        debug = handler;
-    }
-
-    /**
-     * Set a method to receive info level of log
-     * @param handler a method taking a String to delegate to the client's logging mechanism
-     */
-    @Deprecated
-    public static void setInfoHandler(Consumer<String> handler) {
-        info = handler;
-    }
-
-    /**
-     * Set a method to receive warn level of log
-     * @param handler a method taking a String to delegate to the client's logging mechanism
-     */
-    @Deprecated
-    public static void setWarnHandler(Consumer<String> handler) {
-        warn = handler;
-    }
-
-    /**
-     * Set a method to receive error level of log
-     * @param handler a method taking a String to delegate to the client's logging mechanism
-     */
-    @Deprecated
-    public static void setErrorHandler(Consumer<String> handler) {
-        error = handler;
     }
 
     /**
@@ -96,7 +56,7 @@ public class Logger {
      * @param s the message
      */
     public static void debug (String s) {
-        maybeAccept(com.amazon.disco.agent.logging.Logger.Level.DEBUG, debug, s);
+        maybeAccept(com.amazon.disco.agent.logging.Logger.Level.DEBUG, s);
     }
 
     /**
@@ -104,7 +64,7 @@ public class Logger {
      * @param s the message
      */
     public static void info (String s) {
-        maybeAccept(com.amazon.disco.agent.logging.Logger.Level.INFO, info, s);
+        maybeAccept(com.amazon.disco.agent.logging.Logger.Level.INFO, s);
     }
 
     /**
@@ -112,7 +72,7 @@ public class Logger {
      * @param s the message
      */
     public static void warn (String s) {
-        maybeAccept(com.amazon.disco.agent.logging.Logger.Level.WARN, warn, s);
+        maybeAccept(com.amazon.disco.agent.logging.Logger.Level.WARN, s);
     }
 
     /**
@@ -120,7 +80,7 @@ public class Logger {
      * @param s the message
      */
     public static void error(String s) {
-        maybeAccept(com.amazon.disco.agent.logging.Logger.Level.ERROR, error, s);
+        maybeAccept(com.amazon.disco.agent.logging.Logger.Level.ERROR, s);
     }
 
     /**
@@ -134,17 +94,16 @@ public class Logger {
 
     /**
      * Accept the logging of this string if conditions are met
+     * @param level the logging level requested
      * @param s the message
      */
-    static void maybeAccept(com.amazon.disco.agent.logging.Logger.Level level, Consumer<String> handler, String s) {
+    static void maybeAccept(com.amazon.disco.agent.logging.Logger.Level level, String s) {
         boolean suppress = !ReflectiveCall.isAgentPresent() && suppressIfAgentNotPresent;
         if (suppress) {
             return;
         }
 
-        if (handler != null) {
-            handler.accept(prefix + s);
-        } else if (log != null) {
+        if (log != null) {
             log.log(level, prefix + s);
         }
     }
