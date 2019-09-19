@@ -22,7 +22,7 @@ package com.amazon.disco.agent.logging;
  * is a Null Logger which has no-op behaviors.
  *
  * Clients may instantiate an instance of the Logger interface, to direct DiSCo's log to a real logging implementation
- * of their choosing - e.g. a simple wrapper around System.out (provided in the Customization package as a courtesy) or
+ * of their choosing - e.g. a simple wrapper around System.out (provided in the disco.agent.reflect package as a courtesy) or
  * by smarter implementations which use the desired logging framework supplied within the service-under-test.
  */
 public interface Logger {

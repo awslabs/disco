@@ -33,7 +33,7 @@ import java.util.Set;
 /**
  * All agent products have different needs and use-cases, but initialization is super similar between them.
  * This class acts as a Template Method pattern implementation, to perform the constant initialization, but with each
- * agent able to customize which actual Installable hooks are present in the Agent instance.
+ * agent able to configure which actual Installable hooks are present in the Agent instance.
  */
 public class DiscoAgentTemplate {
     private static Logger log = LogManager.getLogger(DiscoAgentTemplate.class);
