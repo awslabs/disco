@@ -17,7 +17,6 @@ package com.amazon.disco.agent;
 
 import com.amazon.disco.agent.config.AgentConfig;
 import com.amazon.disco.agent.config.AgentConfigParser;
-import com.amazon.disco.agent.config.Config;
 import com.amazon.disco.agent.interception.Installable;
 import com.amazon.disco.agent.interception.InterceptionInstaller;
 import com.amazon.disco.agent.logging.LogManager;
@@ -109,8 +108,6 @@ public class DiscoAgentTemplate {
         }
 
         interceptionInstaller.install(instrumentation, installables, config, customIgnoreMatcher);
-
-        Config.init(config);
     }
 
     /**

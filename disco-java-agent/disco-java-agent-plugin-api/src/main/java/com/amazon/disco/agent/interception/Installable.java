@@ -43,14 +43,4 @@ public interface Installable {
      * @param args command line arguments in the form ["key1=value1", "key2=value2,value3", "value4"]
      */
     default void handleArguments(List<String> args) {}
-
-    /**
-     * Specify the classes to the map of allowable interceptions in the Bootstrap classloader, if it necessary
-     * for this Installable to intercept bootstrap classes (e.g. methods in the JDK).
-     *
-     * @return the classes which need to be considered for bootstrap injection
-     * @deprecated this method is deprecated, and its results will be ignored. It will be removed in a future version.
-     */
-    @Deprecated
-    default Collection<Class> getBootstrapClasses() {return null;}
 }

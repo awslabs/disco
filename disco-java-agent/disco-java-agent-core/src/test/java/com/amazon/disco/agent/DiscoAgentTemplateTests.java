@@ -16,7 +16,6 @@
 package com.amazon.disco.agent;
 
 import com.amazon.disco.agent.concurrent.TransactionContext;
-import com.amazon.disco.agent.config.Config;
 import com.amazon.disco.agent.interception.Installable;
 import com.amazon.disco.agent.interception.InterceptionInstaller;
 import com.amazon.disco.agent.logging.LogManager;
@@ -56,12 +55,6 @@ public class DiscoAgentTemplateTests {
     @After
     public void after() {
         TransactionContext.clear();
-    }
-
-    @Test
-    public void testApplicationName() {
-        install(createDiscoAgentTemplate());
-        Assert.assertEquals("TestApp", Config.getVictimApplicationName());
     }
 
     @Test
