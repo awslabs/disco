@@ -27,13 +27,17 @@ repositories {
 }
 
 dependencies {
-    compile(project(":disco-java-agent:disco-java-agent-core"))
+    //prevent Core being accidentally available to tests at compile time
+    compileOnly(project(":disco-java-agent:disco-java-agent-core"))
+    runtime(project(":disco-java-agent:disco-java-agent-core"))
+
+    testCompile("junit", "junit", "4.12")
+    testCompile(project(":disco-java-agent:disco-java-agent-api"))
 }
 
 configure<JavaPluginConvention> {
     sourceCompatibility = JavaVersion.VERSION_1_8
 }
-
 
 tasks.withType<ShadowJar>  {
     //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-example-0.1.jar)
@@ -55,7 +59,13 @@ tasks.withType<ShadowJar>  {
 }
 
 tasks {
-    build {
+    //once gradle has made its default jar, follow up by producing the shadow/uber jar
+    assemble {
         dependsOn(shadowJar)
+    }
+
+    test {
+        //by applying the Agent, we enable DiSCo's thread handoff support. commenting out the below line would cause the test to fail
+        jvmArgs("-javaagent:"+jar.get().archiveFile.get().asFile)
     }
 }
