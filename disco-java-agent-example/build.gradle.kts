@@ -39,7 +39,7 @@ configure<JavaPluginConvention> {
     sourceCompatibility = JavaVersion.VERSION_1_8
 }
 
-tasks.withType<ShadowJar>  {
+tasks.shadowJar  {
     //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-example-0.1.jar)
     archiveClassifier.set(null as String?)
 
