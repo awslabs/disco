@@ -24,10 +24,21 @@ repositories {
     mavenCentral()
 }
 
+/**
+ * Helper function to add the dependency twice to the compileOnly and runtime dependency sets.
+ * The reason for this is so that 1) a normal compile() dependency is not used, which would be transitive onto the test
+ * dependencies. Our test here is an integ test, and ought not to have compile-time visibility of the agent itself, as
+ * a regular installation also would not; 2) the runtime() set is used by shadowJar to determine the agent JAR content
+ *
+ * @param path the project path to the included dependency
+ * @returns a collection of dependencies to be added
+ */
+fun DependencyHandler.agent(path: String): Collection<Dependency?> =
+    mutableListOf(compileOnly(project(path)), runtime(project(path)))
+
 dependencies {
     //prevent Core being accidentally available to tests at compile time
-    compileOnly(project(":disco-java-agent:disco-java-agent-core"))
-    runtime(project(":disco-java-agent:disco-java-agent-core"))
+    agent(":disco-java-agent:disco-java-agent-core")
 
     testCompile("junit", "junit", "4.12")
     testCompile(project(":disco-java-agent:disco-java-agent-api"))
@@ -52,8 +63,8 @@ tasks.shadowJar  {
     }
 
     //Must relocate both of these inner dependencies of the Disco agent, to avoid conflicts in your customer's application
-    relocate ("org.objectweb.asm", "com.amazon.disco.agent.jar.asm")
-    relocate ("net.bytebuddy", "com.amazon.disco.agent.jar.bytebuddy")
+    relocate("org.objectweb.asm", "com.amazon.disco.agent.jar.asm")
+    relocate("net.bytebuddy", "com.amazon.disco.agent.jar.bytebuddy")
 }
 
 tasks {
