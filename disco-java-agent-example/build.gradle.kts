@@ -34,7 +34,7 @@ repositories {
  * @returns a collection of dependencies to be added
  */
 fun DependencyHandler.agent(path: String): Collection<Dependency?> =
-    mutableListOf(compileOnly(project(path)), runtime(project(path)))
+    listOf(compileOnly(project(path)), runtime(project(path)))
 
 dependencies {
     //prevent Core being accidentally available to tests at compile time
