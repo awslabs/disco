@@ -13,12 +13,23 @@
  *   permissions and limitations under the License.
  */
 
-rootProject.name = "com.amazon.disco"
-include("disco-java-agent")
-include("disco-java-agent:disco-java-agent-plugin-api")
-include("disco-java-agent:disco-java-agent-api")
-include("disco-java-agent:disco-java-agent-core")
+plugins {
+    java
+}
 
-include("disco-java-agent-web")
+version = "0.1"
 
-include("disco-java-agent-example")
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile(project(":disco-java-agent:disco-java-agent-core"))
+    testCompile("junit", "junit", "4.12")
+    testCompile("org.mockito", "mockito-core", "1.+")
+    testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
+}
+
+configure<JavaPluginConvention> {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+}
