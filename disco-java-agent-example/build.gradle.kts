@@ -24,24 +24,8 @@ repositories {
     mavenCentral()
 }
 
-/**
- * Helper function to add the dependency twice to the compileOnly and runtime dependency sets.
- * The reason for this is so that 1) a normal compile() dependency is not used, which would be transitive onto the test
- * dependencies. Our test here is an integ test, and ought not to have compile-time visibility of the agent itself, as
- * a regular installation also would not; 2) the runtime() set is used by shadowJar to determine the agent JAR content
- *
- * @param path the project path to the included dependency
- * @returns a collection of dependencies to be added
- */
-fun DependencyHandler.agent(path: String): Collection<Dependency?> =
-    listOf(compileOnly(project(path)), runtime(project(path)))
-
 dependencies {
-    //prevent Core being accidentally available to tests at compile time
-    agent(":disco-java-agent:disco-java-agent-core")
-
-    testCompile("junit", "junit", "4.12")
-    testCompile(project(":disco-java-agent:disco-java-agent-api"))
+    compile(project(":disco-java-agent:disco-java-agent-core"))
 }
 
 configure<JavaPluginConvention> {
@@ -71,10 +55,5 @@ tasks {
     //once gradle has made its default jar, follow up by producing the shadow/uber jar
     assemble {
         dependsOn(shadowJar)
-    }
-
-    test {
-        //by applying the Agent, we enable DiSCo's thread handoff support. commenting out the below line would cause the test to fail
-        jvmArgs("-javaagent:"+jar.get().archiveFile.get().asFile)
     }
 }

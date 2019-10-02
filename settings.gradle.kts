@@ -22,3 +22,4 @@ include("disco-java-agent:disco-java-agent-core")
 include("disco-java-agent-web")
 
 include("disco-java-agent-example")
+include("disco-java-agent-example-test")
