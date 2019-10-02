@@ -17,7 +17,6 @@ plugins {
     java
 }
 
-group = "disco"
 version = "0.1"
 
 repositories {
@@ -25,12 +24,13 @@ repositories {
 }
 
 dependencies {
-    //TODO update BB and ASM to latest
-    compile("net.bytebuddy", "byte-buddy-dep", "1.9.12")
-    compile("net.bytebuddy", "byte-buddy-agent", "1.9.12")
-    compile("org.ow2.asm", "asm", "7.1")
-    compile("org.ow2.asm", "asm-commons", "7.1")
-    compile("org.ow2.asm", "asm-tree", "7.1")
+    //pull in the shadow configuration, so we only get the built jar, and not any transitive deps e.g. core
+    //using the compileOnly config so that the tests do not have it on their classpath
+    compileOnly(project(":disco-java-agent-example", "shadow"))
+    compileOnly(project(":disco-java-agent:disco-java-agent-injector", "shadow"))
+
+    testCompile("junit", "junit", "4.12")
+    testCompile(project(":disco-java-agent:disco-java-agent-api"))
 }
 
 configure<JavaPluginConvention> {

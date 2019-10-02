@@ -18,8 +18,10 @@ include("disco-java-agent")
 include("disco-java-agent:disco-java-agent-plugin-api")
 include("disco-java-agent:disco-java-agent-api")
 include("disco-java-agent:disco-java-agent-core")
+include("disco-java-agent:disco-java-agent-injector")
 
 include("disco-java-agent-web")
 
 include("disco-java-agent-example")
 include("disco-java-agent-example-test")
+include("disco-java-agent-example-injector-test")

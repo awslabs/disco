@@ -25,7 +25,8 @@ repositories {
 
 dependencies {
     //pull in the shadow configuration, so we only get the built jar, and not any transitive deps e.g. core
-    testRuntime(project(":disco-java-agent-example", "shadow"))
+    //using the compileOnly dependency set so that it is invisible to tests
+    compileOnly(project(":disco-java-agent-example", "shadow"))
 
     testCompile("junit", "junit", "4.12")
     testCompile(project(":disco-java-agent:disco-java-agent-api"))

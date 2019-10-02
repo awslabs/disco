@@ -20,14 +20,6 @@ plugins {
 
 version = "0.1"
 
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    compile(project(":disco-java-agent:disco-java-agent-core"))
-}
-
 configure<JavaPluginConvention> {
     sourceCompatibility = JavaVersion.VERSION_1_8
 }
@@ -38,16 +30,11 @@ tasks.shadowJar  {
 
     manifest {
         attributes(mapOf(
-                "Premain-Class" to "com.amazon.disco.agent.example.Agent",
+                "Agent-Class" to "com.amazon.disco.agent.inject.Agent",
                 "Can-Redefine-Classes" to "true",
-                "Can-Retransform-Classes" to "true",
-                "Boot-Class-Path" to archiveFileName.get()
+                "Can-Retransform-Classes" to "true"
         ))
     }
-
-    //Must relocate both of these inner dependencies of the Disco agent, to avoid conflicts in your customer's application
-    relocate("org.objectweb.asm", "com.amazon.disco.agent.jar.asm")
-    relocate("net.bytebuddy", "com.amazon.disco.agent.jar.bytebuddy")
 }
 
 tasks {
