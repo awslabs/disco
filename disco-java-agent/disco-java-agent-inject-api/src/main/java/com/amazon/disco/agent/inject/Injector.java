@@ -27,7 +27,7 @@ import java.util.jar.JarFile;
 
 /**
  * In an already running application, such as in AWS Lambda where users cannot control the JVM arguments, we can instead
- * 'inject' an Agent via the shim Agent disco-java-agent-injector.
+ * 'inject' an Agent into the current virtual machine.
  */
 public class Injector {
     /**
