@@ -15,9 +15,7 @@
 
 package com.amazon.disco.agent.inject;
 
-import com.sun.tools.attach.VirtualMachine;
-
-import java.lang.management.ManagementFactory;
+import java.lang.reflect.Method;
 
 /**
  * In an already running application, such as in AWS Lambda where users cannot control the JVM arguments, we can instead
@@ -29,16 +27,44 @@ public class Injector {
      * In AWS Lambda, only the Java JRE is provided, not the full JDK, so this is missing. Users are responsible for
      * adding it to their runtime, in a layer or by any other mechanism.
      *
+     * This is all handled reflectively, which looks unpleasant, but relieves users of disco-java-agent-api from needing
+     * a compile-time dependency on Java's tools.jar, which may not be present.
+     *
      * @param injectorPath path to the built disco-java-agent-injector JAR file
      * @param agentJarPath path to the 'real' agent desired to be installed
      * @param agentArgs arguments to be passed to the real agent
      * @throws Exception may be thrown
      */
-    public static void loadAgent(String injectorPath, String agentJarPath, String agentArgs) throws Exception {
-        String nameOfRunningVM = ManagementFactory.getRuntimeMXBean().getName();
-        String pid = nameOfRunningVM.substring(0, nameOfRunningVM.indexOf('@'));
-        VirtualMachine vm = VirtualMachine.attach(pid);
-        vm.loadAgent(injectorPath, agentJarPath + "=" + agentArgs);
-        vm.detach();
+    public static void loadAgent(String injectorPath, String agentJarPath, String agentArgs) {
+        try {
+            //get hold of RuntimeMXBean of the running process
+            Class<?> managementFactory = Class.forName("java.lang.management.ManagementFactory");
+            Method getRuntimeMXBean = managementFactory.getDeclaredMethod("getRuntimeMXBean");
+            Object mxBean = getRuntimeMXBean.invoke(null);
+
+            //get the name of the MX bean, which encapsulates the process id
+            Class<?> runtimeMxBean = getRuntimeMXBean.getReturnType();
+            Method getName = runtimeMxBean.getDeclaredMethod("getName");
+            String nameOfRunningVM = (String)getName.invoke(mxBean);
+
+            //extract the pid from the name
+            String pid = nameOfRunningVM.substring(0, nameOfRunningVM.indexOf('@'));
+
+            //create a VirtualMachine instance from the pid
+            Class<?> virtualMachine = Class.forName("com.sun.tools.attach.VirtualMachine");
+            Method attach = virtualMachine.getDeclaredMethod("attach", String.class);
+            Object vm = attach.invoke(null, pid);
+
+            //load the agent onto the running process (i.e. our own process)
+            Method loadAgent = virtualMachine.getDeclaredMethod("loadAgent", String.class, String.class);
+            loadAgent.invoke(vm, injectorPath, agentJarPath + "=" + agentArgs);
+
+            //finally detach from the process after agent load complete
+            Method detach = virtualMachine.getDeclaredMethod("detach");
+            detach.invoke(vm);
+        } catch (Throwable t) {
+            //survive any error
+        }
+
     }
 }

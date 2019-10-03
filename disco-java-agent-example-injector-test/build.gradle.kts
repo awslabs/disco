@@ -31,6 +31,8 @@ dependencies {
 
     testCompile("junit", "junit", "4.12")
     testCompile(project(":disco-java-agent:disco-java-agent-api"))
+
+    testRuntime(files(org.gradle.internal.jvm.Jvm.current().toolsJar))
 }
 
 configure<JavaPluginConvention> {

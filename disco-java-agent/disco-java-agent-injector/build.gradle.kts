@@ -30,6 +30,7 @@ tasks.shadowJar  {
 
     manifest {
         attributes(mapOf(
+                "Premain-Class" to "com.amazon.disco.agent.inject.Agent",
                 "Agent-Class" to "com.amazon.disco.agent.inject.Agent",
                 "Can-Redefine-Classes" to "true",
                 "Can-Retransform-Classes" to "true"

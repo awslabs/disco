@@ -25,10 +25,20 @@ import java.util.jar.JarFile;
 
 public class Agent {
     /**
+     * Entry point when running the Injection agent via a "-javaagent" command line param.
+     *
+     * @param agentArgs any arguments passed as part of the -javaagent argument string
+     * @param instrumentation the Instrumentation object given to every Agent, to transform bytecode
+     */
+    public static void premain(String agentArgs, Instrumentation instrumentation) {
+        agentmain(agentArgs, instrumentation);
+    }
+
+    /**
      * Alternative entry point for when Agent is loaded after application startup. Manifest must declare the Agent-Class
      * attribute accordingly.
      *
-     * @param agentArgs any arguments passed as part of the -javaagent argument string
+     * @param agentArgs any arguments passed during loading e.g. via VirtualMachine.attach()
      * @param instrumentation the Instrumentation object given to every Agent, to transform bytecode
      */
     public static void agentmain(String agentArgs, Instrumentation instrumentation) {

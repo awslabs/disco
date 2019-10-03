@@ -24,8 +24,6 @@ repositories {
 }
 
 dependencies {
-    compile(files(org.gradle.internal.jvm.Jvm.current().toolsJar))
-    
     testCompile("org.mockito", "mockito-core", "1.+")
     testCompile("junit", "junit", "4.12")
 }
