@@ -36,12 +36,6 @@ tasks.shadowJar  {
     //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-injector-0.1.jar)
     archiveClassifier.set(null as String?)
 
-    //TODO would be good to have some include/exclude rules here to really fine-tune what makes it into the injector
-    //agent JAR file. Since it will all be added to the application classpath, it would be courteous to users to minimize.
-    //Currently it will contain the Agent.class itself, along with the disco-java-agent-api contents in full
-    //An alternative would be for the Agent JAR to only include itself, and confer responsibility onto the client, that
-    //they must also have a runtime dependency on the disco-java-agent-api component.
-
     manifest {
         attributes(mapOf(
                 "Premain-Class" to "com.amazon.disco.agent.injector.Agent",
