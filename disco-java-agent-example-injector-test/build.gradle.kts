@@ -27,12 +27,10 @@ dependencies {
     //pull in the shadow configuration, so we only get the built jar, and not any transitive deps e.g. core
     //using the compileOnly config so that the tests do not have it on their classpath
     compileOnly(project(":disco-java-agent-example", "shadow"))
-    compileOnly(project(":disco-java-agent:disco-java-agent-injector", "shadow"))
 
     testCompile("junit", "junit", "4.12")
     testCompile(project(":disco-java-agent:disco-java-agent-api"))
-
-    testRuntime(files(org.gradle.internal.jvm.Jvm.current().toolsJar))
+    testCompile(project(":disco-java-agent:disco-java-agent-inject-api"))
 }
 
 configure<JavaPluginConvention> {

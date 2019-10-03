@@ -15,6 +15,8 @@
 
 package com.amazon.disco.agent.inject;
 
+import net.bytebuddy.agent.ByteBuddyAgent;
+
 import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Field;
@@ -23,33 +25,42 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.jar.JarFile;
 
-public class Agent {
+/**
+ * In an already running application, such as in AWS Lambda where users cannot control the JVM arguments, we can instead
+ * 'inject' an Agent via the shim Agent disco-java-agent-injector.
+ */
+public class Injector {
     /**
-     * Entry point when running the Injection agent via a "-javaagent" command line param.
+     * Attach a disco agent during application execution.
      *
-     * @param agentArgs any arguments passed as part of the -javaagent argument string
-     * @param instrumentation the Instrumentation object given to every Agent, to transform bytecode
+     * This makes some assumptions about the state of the Agent being loaded, notably that the bytebuddy and asm namespaces
+     * which are relocated in the API gradle build file must agree with the corresponding namespaces in that agent.
+     *
+     * This is recommended for AWS Lambda users, since jvm args are not available to them. The loadAgent() method should be called
+     * as early as possible in the application's life, preferably as the first line in 'Main'.
+     *
+     * @param agentJarPath path to the agent desired to be installed
+     * @param agentArgs arguments to be passed to the agent
      */
-    public static void premain(String agentArgs, Instrumentation instrumentation) {
-        agentmain(agentArgs, instrumentation);
+    public static void loadAgent(String agentJarPath, String agentArgs) {
+        try {
+            Instrumentation instrumentation = ByteBuddyAgent.install();
+            loadAgent(instrumentation, agentJarPath, agentArgs);
+        } catch (Throwable t) {
+            //survive any failures
+        }
     }
 
     /**
-     * Alternative entry point for when Agent is loaded after application startup. Manifest must declare the Agent-Class
-     * attribute accordingly.
-     *
-     * @param agentArgs any arguments passed during loading e.g. via VirtualMachine.attach()
-     * @param instrumentation the Instrumentation object given to every Agent, to transform bytecode
+     * Given an existing Instrumentation instance, load the given agent via it.
+     * @param instrumentation an Instrumentation instance to use
+     * @param agentJarPath path to the agent desired to be installed
+     * @param agentArgs arguments to be passed to the agent
      */
-    public static void agentmain(String agentArgs, Instrumentation instrumentation) {
+    public static void loadAgent(Instrumentation instrumentation, String agentJarPath, String agentArgs) {
         try {
-            //parse the target Agent JAR from the args
-            int indexOfSplitter = agentArgs.indexOf('=');
-            String jarPath = agentArgs.substring(0, indexOfSplitter == -1 ? agentArgs.length() : indexOfSplitter);
-            String remainingArgs = indexOfSplitter == -1 ? null : agentArgs.substring(indexOfSplitter + 1);
-
-            //add it to bootstrap
-            File jarFile = new File(jarPath);
+            //add agent to bootstrap
+            File jarFile = new File(agentJarPath);
             JarFile jar = new JarFile(jarFile);
             instrumentation.appendToBootstrapClassLoaderSearch(jar);
 
@@ -75,7 +86,9 @@ public class Agent {
 
             //reflectively call its premain, with the remaining args
             Class.forName(premainClass, true, null).getDeclaredMethod("premain", String.class, Instrumentation.class)
-                    .invoke(null, remainingArgs, instrumentation);
-        } catch (Throwable t) {}
+                    .invoke(null, agentArgs, instrumentation);
+        } catch (Throwable t) {
+            //survive any failures
+        }
     }
 }

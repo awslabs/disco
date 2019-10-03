@@ -27,9 +27,8 @@ public class Application {
     //comment out this annotation to see the test fail, since the agent will not have been loaded.
     @BeforeClass
     public static void beforeClass() throws Exception {
-        final String injectorPath = "../disco-java-agent/disco-java-agent-injector/build/libs/disco-java-agent-injector-0.1.jar";
         final String jarPath = "../disco-java-agent-example/build/libs/disco-java-agent-example-0.1.jar";
-        Injector.loadAgent(injectorPath, jarPath, "applicationName=Foobar:extraverbose");
+        Injector.loadAgent(jarPath, "applicationName=Foobar:extraverbose");
     }
 
     /**
