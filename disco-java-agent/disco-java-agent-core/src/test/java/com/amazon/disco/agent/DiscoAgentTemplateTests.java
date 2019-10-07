@@ -78,24 +78,6 @@ public class DiscoAgentTemplateTests {
     }
 
     @Test
-    public void testIncorrectCustomInstallablesSafelyIgnored() {
-        String[] installableNames = {
-                //not an Installable
-                "java.lang.Object",
-
-                //no such class
-                "com.example.Nothing",
-
-                //abstract class
-                Installable.class.getName()
-        };
-
-        install(createDiscoAgentTemplate("installables="+String.join(",", installableNames)));
-        Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any(), Mockito.any());
-        Assert.assertTrue(installableSetArgumentCaptor.getValue().isEmpty());
-    }
-
-    @Test
     public void testVerboseLogging() {
         install(createDiscoAgentTemplate("verbose"));
         assertEquals(Logger.Level.DEBUG, LogManager.getMinimumLevel());
