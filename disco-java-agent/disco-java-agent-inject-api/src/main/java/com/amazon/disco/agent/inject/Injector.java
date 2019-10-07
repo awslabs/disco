@@ -61,6 +61,30 @@ public class Injector {
         try {
             //add agent to bootstrap
             File jarFile = new File(agentJarPath);
+            JarFile jar = addToBootstrapClasspath(instrumentation, jarFile);
+
+            //read MANIFEST to ascertain the premain class
+            String premainClass = jar.getManifest().getMainAttributes().getValue("Premain-Class");
+
+            //reflectively call its premain, with the remaining args
+            Class.forName(premainClass, true, null).getDeclaredMethod("premain", String.class, Instrumentation.class)
+                    .invoke(null, agentArgs, instrumentation);
+        } catch (Throwable t) {
+            //survive any failures
+        }
+    }
+
+    /**
+     * Add a disco plugin of any kind, or an entire agent Jar, to the bootstrap classloader if desired or required.
+     * Typically Listeners and IntrusiveInterceptors do not need to be on the bootstrap, but any Installables which manipulate
+     * JDK classes, such as those in com.amazon.disco.agent.concurrent, do.
+     *
+     * @param instrumentation an Instrumentation instance to use
+     * @param jarFile the File instance pointing to the Jar file
+     * returns a JarFile instance of the JAR itself.
+     */
+    public static JarFile addToBootstrapClasspath(Instrumentation instrumentation, File jarFile) {
+        try {
             JarFile jar = new JarFile(jarFile);
             instrumentation.appendToBootstrapClassLoaderSearch(jar);
 
@@ -81,14 +105,11 @@ public class Injector {
             addURL.setAccessible(true);
             addURL.invoke(bootLoaderProxy, jarFile.toURI().toURL());
 
-            //read MANIFEST to ascertain the premain class
-            String premainClass = jar.getManifest().getMainAttributes().getValue("Premain-Class");
-
-            //reflectively call its premain, with the remaining args
-            Class.forName(premainClass, true, null).getDeclaredMethod("premain", String.class, Instrumentation.class)
-                    .invoke(null, agentArgs, instrumentation);
+            return jar;
         } catch (Throwable t) {
             //survive any failures
         }
+
+        return null;
     }
 }
