@@ -30,7 +30,7 @@ dependencies {
 
     testCompile("junit", "junit", "4.12")
     testCompile(project(":disco-java-agent:disco-java-agent-api"))
-    testCompile(project(":disco-java-agent:disco-java-agent-inject-api"))
+    testCompile(project(":disco-java-agent:disco-java-agent-inject-api", "shadow"))
 }
 
 configure<JavaPluginConvention> {
