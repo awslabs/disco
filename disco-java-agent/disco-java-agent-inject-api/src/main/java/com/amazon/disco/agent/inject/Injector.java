@@ -58,10 +58,11 @@ public class Injector {
      * @param agentArgs arguments to be passed to the agent
      */
     public static void loadAgent(Instrumentation instrumentation, String agentJarPath, String agentArgs) {
+        JarFile jar = null;
         try {
             //add agent to bootstrap
             File jarFile = new File(agentJarPath);
-            JarFile jar = addToBootstrapClasspath(instrumentation, jarFile);
+            jar = addToBootstrapClasspath(instrumentation, jarFile);
 
             //read MANIFEST to ascertain the premain class
             String premainClass = jar.getManifest().getMainAttributes().getValue("Premain-Class");
@@ -71,17 +72,45 @@ public class Injector {
                     .invoke(null, agentArgs, instrumentation);
         } catch (Throwable t) {
             //survive any failures
+        } finally {
+            if (jar != null) {
+                try {
+                    jar.close();
+                } catch (Throwable t) {
+                    //survive failure
+                }
+            }
         }
+    }
+
+    /**
+     * Add a disco plugin of any kind, or an entire agent Jar, to the System classloader.
+     *
+     * @param instrumentation an Instrumentation instance to use
+     * @param jarFile the File instance pointing to the Jar file
+     * @returns a File referring to the JAR. Calling code is responsible for calling close() on this object.
+     */
+    public static JarFile addToSystemClasspath(Instrumentation instrumentation, File jarFile) {
+        try {
+            JarFile jar = new JarFile(jarFile);
+            instrumentation.appendToSystemClassLoaderSearch(jar);
+            addURL(ClassLoader.getSystemClassLoader(), jarFile.toURI().toURL());
+            return jar;
+        } catch (Throwable t){
+            //safely continue
+        }
+
+        return null;
     }
 
     /**
      * Add a disco plugin of any kind, or an entire agent Jar, to the bootstrap classloader if desired or required.
      * Typically Listeners and IntrusiveInterceptors do not need to be on the bootstrap, but any Installables which manipulate
-     * JDK classes, such as those in com.amazon.disco.agent.concurrent, do.
+     * JDK classes, such as those in com.amazon.disco.agent.concurrent, do. Other Installables probably do not.
      *
      * @param instrumentation an Instrumentation instance to use
      * @param jarFile the File instance pointing to the Jar file
-     * returns a JarFile instance of the JAR itself.
+     * @returns a JarFile instance of the JAR itself. Calling code is responsible for calling close() on this object
      */
     public static JarFile addToBootstrapClasspath(Instrumentation instrumentation, File jarFile) {
         try {
@@ -97,13 +126,11 @@ public class Injector {
             //In this code we also make a very bold assumption that the bytebuddy classes have been relocated to the
             //com.amazon.disco.agent.jar namespace.
             //See: https://stackoverflow.com/questions/51347432/why-cant-i-load-resources-which-are-appended-to-the-bootstrap-class-loader-sear
-            Class classFileLocator = Class.forName("com.amazon.disco.agent.jar.bytebuddy.dynamic.ClassFileLocator$ForClassLoader");
+            Class classFileLocator = Class.forName("net.bytebuddy.dynamic.ClassFileLocator$ForClassLoader");
             Field bootLoaderProxyField = classFileLocator.getDeclaredField("BOOT_LOADER_PROXY");
             bootLoaderProxyField.setAccessible(true);
             Object bootLoaderProxy = bootLoaderProxyField.get(null);
-            Method addURL = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-            addURL.setAccessible(true);
-            addURL.invoke(bootLoaderProxy, jarFile.toURI().toURL());
+            addURL(bootLoaderProxy, jarFile.toURI().toURL());
 
             return jar;
         } catch (Throwable t) {
@@ -111,5 +138,16 @@ public class Injector {
         }
 
         return null;
+    }
+
+    /**
+     * Helper method to add a new URL to an existing URLClassloader
+     * @param classLoader a ClassLoader assumed to be a URLClassloader
+     * @param url the URL to add
+     */
+    private static void addURL(Object classLoader, URL url) throws Exception {
+        Method addURL = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+        addURL.setAccessible(true);
+        addURL.invoke(classLoader, url);
     }
 }
