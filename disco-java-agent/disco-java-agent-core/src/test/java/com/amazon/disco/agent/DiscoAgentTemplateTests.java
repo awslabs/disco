@@ -78,13 +78,6 @@ public class DiscoAgentTemplateTests {
     }
 
     @Test
-    public void testCorrectCustomInstallables() {
-        install(createDiscoAgentTemplate("installables="+MockInstallable.class.getName()));
-        Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any(), Mockito.any());
-        assertEquals(MockInstallable.class.getName(), installableSetArgumentCaptor.getValue().iterator().next().getClass().getName());
-    }
-
-    @Test
     public void testIncorrectCustomInstallablesSafelyIgnored() {
         String[] installableNames = {
                 //not an Installable

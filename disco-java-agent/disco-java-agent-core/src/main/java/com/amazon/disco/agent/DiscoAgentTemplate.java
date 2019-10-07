@@ -99,7 +99,6 @@ public class DiscoAgentTemplate {
             log.info("DiSCo(Core) removing all default installables as requested");
             installables.clear();
         }
-        addCustomInstallables(installables);
 
         //give each installable the chance to handle command line args
         for (Installable installable: installables) {
@@ -108,40 +107,6 @@ public class DiscoAgentTemplate {
         }
 
         interceptionInstaller.install(instrumentation, installables, config, customIgnoreMatcher);
-    }
-
-    /**
-     * If supplied on the command line, process the list of Installable class names, instantiate them, and
-     * add them to the set of Installables for installation.
-     * @param installables - the set of installables to populate
-     */
-    private void addCustomInstallables(Set<Installable> installables) {
-        for (String className: config.getCustomInstallableClasses()) {
-            Class clazz;
-            try {
-                clazz = Class.forName(className, true, ClassLoader.getSystemClassLoader());
-            } catch (ClassNotFoundException e) {
-                log.error("DiSCo(Core) Custom installable " + className + " not found (is it on the classpath?), skipping");
-                continue;
-            }
-
-            Installable installable;
-            try {
-                 installable = (Installable) clazz.newInstance();
-            } catch (IllegalAccessException e) {
-                log.error("DiSCo(Core) Custom installable " + className + " could not be instantiated - non-public or inaccessible default ctor, skipping");
-                continue;
-            } catch (InstantiationException e) {
-                log.error("DiSCo(Core) Custom installable " + className + " could not be instantiated - either no default ctor, or a non-concrete class, skipping");
-                continue;
-            } catch (ClassCastException e) {
-                log.error("DiSCo(Core) Custom installable " + className + " could not be instantiated - does not inherit from Installable, skipping");
-                continue;
-            }
-
-            log.info("DiSCo(Core) Adding Custom Installable " + className);
-            installables.add(installable);
-        }
     }
 
     /**

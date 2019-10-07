@@ -56,9 +56,6 @@ public class AgentConfigParser {
                 case "nodefaultinstallables":
                     result.setInstallDefaultInstallables(false);
                     break;
-                case "installables":
-                    result.setCustomInstallableClasses(value.split(","));
-                    break;
                 case "verbose":
                     result.setVerbose(true);
                     break;

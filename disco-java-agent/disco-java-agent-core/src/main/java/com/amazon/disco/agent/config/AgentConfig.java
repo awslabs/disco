@@ -24,7 +24,6 @@ public class AgentConfig {
     private List<String> args;
     private String applicationName;
     private boolean installDefaultInstallables = true;
-    private String[] customInstallableClasses = {};
     private boolean verbose = false;
     private boolean extraverbose = false;
     private String loggerFactoryClass;
@@ -63,14 +62,6 @@ public class AgentConfig {
     }
 
     /**
-     * Get any custom installable classes, which are not default installables, which were declared on the command line.
-     * @return collection of installables to be installed.
-     */
-    public String[] getCustomInstallableClasses() {
-        return customInstallableClasses;
-    }
-
-    /**
      * Get whether verbose (debug) logging is enabled.
      * @return true if debug level logging is enabled
      */
@@ -100,14 +91,6 @@ public class AgentConfig {
      */
     protected void setInstallDefaultInstallables(boolean installDefaultInstallables) {
         this.installDefaultInstallables = installDefaultInstallables;
-    }
-
-    /**
-     * Set the list of user-specified interceptors to install
-     * @param customInstallableClasses list of fully qualified class names of Installables to install
-     */
-    protected void setCustomInstallableClasses(String[] customInstallableClasses) {
-        this.customInstallableClasses = customInstallableClasses;
     }
 
     /**
