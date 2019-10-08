@@ -27,7 +27,6 @@ dependencies {
     //pull in the shadow configuration, so we only get the built jar, and not any transitive deps e.g. core
     //using the compileOnly dependency set so that it is invisible to tests
     compileOnly(project(":disco-java-agent-example", "shadow"))
-    compileOnly(project(":disco-java-agent:disco-java-agent-injector", "shadow"))
 
     testCompile("junit", "junit", "4.12")
     testCompile(project(":disco-java-agent:disco-java-agent-api"))
@@ -37,22 +36,9 @@ configure<JavaPluginConvention> {
     sourceCompatibility = JavaVersion.VERSION_1_8
 }
 
-
-//Set up two test runs to show the agent being used both in its raw form (which pollutes the application classpath, but
-//is still a valid usage, and a second test run which loads via the shim 'Injector' agent, which ensures the agent content
-//is only present on the bootstrap classpath instead.
-
-//By applying the Agent, we enable DiSCo's thread handoff support. Commenting out either jvmArgs line would cause the test to fail
-val testViaInjector = task<Test>("testViaInjector") {
-    jvmArgs("-javaagent:../disco-java-agent/disco-java-agent-injector/build/libs/disco-java-agent-injector-0.1.jar=../disco-java-agent-example/build/libs/disco-java-agent-example-0.1.jar")
-}
-
 tasks {
     test {
         jvmArgs("-javaagent:../disco-java-agent-example/build/libs/disco-java-agent-example-0.1.jar")
-    }
-    check {
-        dependsOn(testViaInjector)
     }
 }
 

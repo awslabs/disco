@@ -19,7 +19,6 @@ include("disco-java-agent:disco-java-agent-plugin-api")
 include("disco-java-agent:disco-java-agent-api")
 include("disco-java-agent:disco-java-agent-core")
 include("disco-java-agent:disco-java-agent-inject-api")
-include("disco-java-agent:disco-java-agent-injector")
 
 include("disco-java-agent-web")
 
