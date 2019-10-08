@@ -22,7 +22,6 @@ import java.util.List;
  */
 public class AgentConfig {
     private List<String> args;
-    private String applicationName;
     private boolean installDefaultInstallables = true;
     private boolean verbose = false;
     private boolean extraverbose = false;
@@ -43,14 +42,6 @@ public class AgentConfig {
      */
     public List<String> getArgs() {
         return args;
-    }
-
-    /**
-     * Get the application name set from the command line
-     * @return the application name
-     */
-    public String getApplicationName() {
-        return applicationName;
     }
 
     /**
@@ -75,14 +66,6 @@ public class AgentConfig {
      */
     public boolean isExtraverbose() {
         return extraverbose;
-    }
-
-    /**
-     * Set the application name
-     * @param applicationName the application name
-     */
-    protected void setApplicationName(String applicationName) {
-        this.applicationName = applicationName;
     }
 
     /**

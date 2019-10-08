@@ -93,13 +93,12 @@ public class DiscoAgentTemplateTests {
     public void testArgumentHandlerCalled() {
         Installable mock = Mockito.mock(Installable.class);
         install(createDiscoAgentTemplate("key=value"), new HashSet<>(Arrays.asList(Installable.class.cast(mock))));
-        List<String> args = new LinkedList<>(Arrays.asList("key=value", "applicationName=TestApp", "domain=DOMAIN", "realm=REALM"));
+        List<String> args = new LinkedList<>(Arrays.asList("key=value", "domain=DOMAIN", "realm=REALM"));
         Mockito.verify(mock).handleArguments(Mockito.eq(args));
     }
 
     private DiscoAgentTemplate createDiscoAgentTemplate(String... args) {
         List<String> argsList = new LinkedList<>(Arrays.asList(args));
-        argsList.add("applicationName=TestApp");
         argsList.add("domain=DOMAIN");
         argsList.add("realm=REALM");
         DiscoAgentTemplate discoAgentTemplate = new DiscoAgentTemplate(String.join(":", argsList));

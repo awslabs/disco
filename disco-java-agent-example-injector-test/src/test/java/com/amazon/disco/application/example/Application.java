@@ -28,7 +28,7 @@ public class Application {
     @BeforeClass
     public static void beforeClass() throws Exception {
         final String jarPath = "../disco-java-agent-example/build/libs/disco-java-agent-example-0.1.jar";
-        Injector.loadAgent(jarPath, "applicationName=Foobar:extraverbose");
+        Injector.loadAgent(jarPath, "extraverbose");
     }
 
     /**

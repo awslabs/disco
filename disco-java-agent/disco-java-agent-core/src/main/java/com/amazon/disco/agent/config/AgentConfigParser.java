@@ -50,9 +50,6 @@ public class AgentConfigParser {
                     : "";
 
             switch (pair[0].toLowerCase()) {
-                case "applicationname":
-                    result.setApplicationName(value);
-                    break;
                 case "nodefaultinstallables":
                     result.setInstallDefaultInstallables(false);
                     break;
@@ -69,10 +66,6 @@ public class AgentConfigParser {
                     //not an error, do nothing. individual interceptors might receive this arg instead
                     break;
             }
-        }
-
-        if (result.getApplicationName() == null) {
-            throw new IllegalArgumentException();
         }
 
         return result;
