@@ -123,8 +123,6 @@ public class Injector {
             //and so when loading an agent via Injection, this fails. To workaround this, we can force the creation of/
             //the (private) BOOT_LOADER_PROXY field inside of ClassFileLocator.ForClassLoader. We can then add our JAR
             //as a URL to it.
-            //In this code we also make a very bold assumption that the bytebuddy classes have been relocated to the
-            //com.amazon.disco.agent.jar namespace.
             //See: https://stackoverflow.com/questions/51347432/why-cant-i-load-resources-which-are-appended-to-the-bootstrap-class-loader-sear
             Class classFileLocator = Class.forName("net.bytebuddy.dynamic.ClassFileLocator$ForClassLoader");
             Field bootLoaderProxyField = classFileLocator.getDeclaredField("BOOT_LOADER_PROXY");
