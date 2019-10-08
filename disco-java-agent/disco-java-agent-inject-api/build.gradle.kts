@@ -29,8 +29,12 @@ dependencies {
     //pull all of BB into the client's code.
     compile("net.bytebuddy", "byte-buddy-agent", "1.9.12") {
         exclude("net.bytebuddy", "byte-buddy")
-        exclude("net.bytebuddy", "byte-dep")
+        exclude("net.bytebuddy", "byte-buddy-dep")
     }
+
+    testCompile("net.bytebuddy", "byte-buddy-dep", "1.9.12")
+    testCompile("org.mockito", "mockito-core", "1.+")
+    testCompile("junit", "junit", "4.12")
 }
 
 configure<JavaPluginConvention> {

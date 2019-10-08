@@ -143,7 +143,7 @@ public class Injector {
      * @param classLoader a ClassLoader assumed to be a URLClassloader
      * @param url the URL to add
      */
-    private static void addURL(Object classLoader, URL url) throws Exception {
+    static void addURL(Object classLoader, URL url) throws Exception {
         Method addURL = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
         addURL.setAccessible(true);
         addURL.invoke(classLoader, url);
