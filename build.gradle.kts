@@ -1,3 +1,5 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 /*
  * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
@@ -16,8 +18,7 @@
 //common features available to the entire project
 //TODO specify the versions of ByteBuddy and ASM in here, since they are used in a few places.
 //TODO think about maven-publish, and what we need to include in every single pom
-//TODO think about how to dedupe some of the shadowJar rules (removal of suffix and relocate())
-
+//TODO encapsulate the 'build shadowJar after normal jar' task rule which is duplicated for all agents and plugins at the moment
 plugins {
     id("com.github.johnrengelman.shadow") version "5.1.0" apply false
     java
@@ -38,5 +39,18 @@ subprojects {
 
     configure<JavaPluginConvention> {
         sourceCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    tasks {
+        pluginManager.withPlugin("com.github.johnrengelman.shadow") {
+            named<ShadowJar>("shadowJar") {
+                //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-web-plugin-0.1.jar)
+                archiveClassifier.set(null as String?)
+    
+                //Must relocate both of these inner dependencies of the Disco agent, to avoid conflicts in your customer's application
+                relocate("org.objectweb.asm", "com.amazon.disco.agent.jar.asm")
+                relocate("net.bytebuddy", "com.amazon.disco.agent.jar.bytebuddy")
+            }
+        }
     }
 }

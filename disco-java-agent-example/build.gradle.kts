@@ -23,9 +23,6 @@ dependencies {
 }
 
 tasks.shadowJar  {
-    //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-example-0.1.jar)
-    archiveClassifier.set(null as String?)
-
     manifest {
         attributes(mapOf(
                 "Premain-Class" to "com.amazon.disco.agent.example.Agent",
@@ -34,10 +31,6 @@ tasks.shadowJar  {
                 "Boot-Class-Path" to archiveFileName.get()
         ))
     }
-
-    //Must relocate both of these inner dependencies of the Disco agent, to avoid conflicts in your customer's application
-    relocate("org.objectweb.asm", "com.amazon.disco.agent.jar.asm")
-    relocate("net.bytebuddy", "com.amazon.disco.agent.jar.bytebuddy")
 }
 
 tasks {

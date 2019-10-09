@@ -30,19 +30,12 @@ dependencies {
 }
 
 tasks.shadowJar  {
-    //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-web-plugin-0.1.jar)
-    archiveClassifier.set(null as String?)
-
     manifest {
         attributes(mapOf(
             //this has to align with the contents of WebSupport.java. Would be good to find a way to avoid this duplication
             "Disco-Installable-Classes" to "com.amazon.disco.agent.web.servlet.HttpServletServiceInterceptor"
         ))
     }
-
-    //Must relocate both of these inner dependencies of the Disco agent, to avoid conflicts in your customer's application
-    relocate("org.objectweb.asm", "com.amazon.disco.agent.jar.asm")
-    relocate("net.bytebuddy", "com.amazon.disco.agent.jar.bytebuddy")
 }
 
 tasks {

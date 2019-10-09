@@ -28,15 +28,6 @@ dependencies {
     testCompile("junit", "junit", "4.12")
 }
 
-tasks.shadowJar  {
-    //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-inject-api-0.1.jar)
-    archiveClassifier.set(null as String?)
-
-    //Must relocate both of these inner dependencies of the Disco agent, to avoid conflicts in your customer's application
-    relocate("org.objectweb.asm", "com.amazon.disco.agent.jar.asm")
-    relocate("net.bytebuddy", "com.amazon.disco.agent.jar.bytebuddy")
-}
-
 tasks {
     //once gradle has made its default jar, follow up by producing the shadow/uber jar
     assemble {
