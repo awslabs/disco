@@ -23,7 +23,7 @@ plugins {
     java
 }
 
-allprojects {
+subprojects {
     apply<JavaPlugin>()
 
     version = "0.1"
