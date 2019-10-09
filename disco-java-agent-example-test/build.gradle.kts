@@ -14,12 +14,6 @@
  */
 
 dependencies {
-    //pull in the shadow configuration, so we only get the built jar, and not any transitive deps e.g. core
-    //using the compileOnly dependency set so that it is invisible to tests
-    compileOnly(project(":disco-java-agent-example", "shadow"))
-    compileOnly(project(":disco-java-agent:disco-java-agent", "shadow"))
-    compileOnly(project(":disco-java-agent-web:disco-java-agent-web-plugin", "shadow"))
-    
     testCompile(project(":disco-java-agent:disco-java-agent-api"))
     testCompile("junit", "junit", "4.12")
     testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
@@ -37,6 +31,14 @@ tasks {
     }
     check {
         dependsOn(testViaPlugin)
+    }
+
+    //make sure the agents and plugins we use have been built, without taking any real dependencies on them
+    //which would add them to classpaths and so on
+    compileJava {
+        dependsOn(":disco-java-agent-example:build")
+        dependsOn(":disco-java-agent:disco-java-agent:build")
+        dependsOn(":disco-java-agent-web:disco-java-agent-web-plugin:build")
     }
 }
 
