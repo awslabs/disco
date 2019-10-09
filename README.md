@@ -1,3 +1,5 @@
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 ## DiSCo Toolkit (Distributed Systems Comprehension)
 
 A suite of tools including a framework for creating Java Agents, for aspect-oriented tooling for distributed systems.
