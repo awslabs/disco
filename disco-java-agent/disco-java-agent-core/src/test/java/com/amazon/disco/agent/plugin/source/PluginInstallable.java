@@ -13,17 +13,21 @@
  *   permissions and limitations under the License.
  */
 
-rootProject.name = "com.amazon.disco"
-include("disco-java-agent")
-include("disco-java-agent:disco-java-agent")
-include("disco-java-agent:disco-java-agent-plugin-api")
-include("disco-java-agent:disco-java-agent-api")
-include("disco-java-agent:disco-java-agent-core")
-include("disco-java-agent:disco-java-agent-inject-api")
+package com.amazon.disco.agent.plugin.source;
 
-include("disco-java-agent-web")
-include("disco-java-agent-web:disco-java-agent-web-plugin")
+import com.amazon.disco.agent.interception.Installable;
+import net.bytebuddy.agent.builder.AgentBuilder;
 
-include("disco-java-agent-example")
-include("disco-java-agent-example-test")
-include("disco-java-agent-example-injector-test")
+import java.util.List;
+
+public class PluginInstallable implements Installable {
+
+    @Override
+    public AgentBuilder install(AgentBuilder agentBuilder) {
+        return null;
+    }
+
+    @Override
+    public void handleArguments(List<String> args) {
+    }
+}

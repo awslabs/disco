@@ -13,7 +13,7 @@
  *   permissions and limitations under the License.
  */
 
-package com.amazon.disco.agent.servlet;
+package com.amazon.disco.agent.web.servlet;
 
 /**
  * Constants of the method names which will be reflectively called on the servlet request and response objects

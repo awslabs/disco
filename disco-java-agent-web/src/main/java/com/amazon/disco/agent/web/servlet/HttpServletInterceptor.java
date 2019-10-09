@@ -13,7 +13,7 @@
  *   permissions and limitations under the License.
  */
 
-package com.amazon.disco.agent.servlet;
+package com.amazon.disco.agent.web.servlet;
 
 import com.amazon.disco.agent.interception.Installable;
 import net.bytebuddy.agent.builder.AgentBuilder;

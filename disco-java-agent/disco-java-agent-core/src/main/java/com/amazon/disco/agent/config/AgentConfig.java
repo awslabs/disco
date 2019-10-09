@@ -23,6 +23,7 @@ import java.util.List;
 public class AgentConfig {
     private List<String> args;
     private boolean installDefaultInstallables = true;
+    private String pluginPath = null;
     private boolean verbose = false;
     private boolean extraverbose = false;
     private String loggerFactoryClass;
@@ -53,6 +54,14 @@ public class AgentConfig {
     }
 
     /**
+     * Get the configured path to search for decoupled disco plugins
+     * @return the plugin path
+     */
+    public String getPluginPath() {
+        return pluginPath;
+    }
+
+    /**
      * Get whether verbose (debug) logging is enabled.
      * @return true if debug level logging is enabled
      */
@@ -74,6 +83,14 @@ public class AgentConfig {
      */
     protected void setInstallDefaultInstallables(boolean installDefaultInstallables) {
         this.installDefaultInstallables = installDefaultInstallables;
+    }
+
+    /**
+     * Set the path to search for decoupled disco plugins
+     * @param pluginPath the plugin path
+     */
+    protected void setPluginPath(String pluginPath) {
+        this.pluginPath = pluginPath;
     }
 
     /**

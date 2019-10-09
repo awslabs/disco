@@ -26,6 +26,7 @@ repositories {
 
 dependencies {
     compile(project(":disco-java-agent:disco-java-agent-core"))
+    compile(project(":disco-java-agent-web"))
 }
 
 configure<JavaPluginConvention> {

@@ -17,9 +17,12 @@ package com.amazon.disco.agent.example;
 
 import com.amazon.disco.agent.DiscoAgentTemplate;
 import com.amazon.disco.agent.concurrent.ConcurrencySupport;
+import com.amazon.disco.agent.interception.Installable;
+import com.amazon.disco.agent.web.WebSupport;
 
 import java.lang.instrument.Instrumentation;
 import java.util.HashSet;
+import java.util.Set;
 
 public class Agent {
     /**
@@ -30,7 +33,20 @@ public class Agent {
      * @param instrumentation - the Instrumentation object given to every Agent, to transform bytecode
      */
     public static void premain(String agentArgs, Instrumentation instrumentation) {
-        //install only the Concurrency support, just as the most simplistic test.
-        new DiscoAgentTemplate(agentArgs).install(instrumentation, new HashSet<>(new ConcurrencySupport().get()));
+        //As a monolithic agent, we choose which specific treatments to install.
+        //
+        //We specifically prohibit configuring plugin behaviour, to make this agent final and unconfigurable
+        //
+        //There is nothing to prevent the creation of a 'partially monolithic' agent, which is opinionated about
+        //the Installables, Listeners (and any other extension points) it provides, whilst also allowing plugins.
+        //
+        //We just make this one completely final for the purposes of an example.
+        DiscoAgentTemplate agent = new DiscoAgentTemplate(agentArgs);
+        agent.setAllowPlugins(false);
+
+        Set<Installable> installables = new HashSet<>();
+        installables.addAll(new ConcurrencySupport().get());
+        installables.addAll(new WebSupport().get());
+        agent.install(instrumentation, installables);
     }
 }

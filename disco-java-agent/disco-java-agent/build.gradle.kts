@@ -25,15 +25,7 @@ repositories {
 }
 
 dependencies {
-    //we use the ByteBuddyAgent for an install-after-startup injection strategy, but do not want to inadvertently
-    //pull all of BB into the client's code.
-    compile("net.bytebuddy", "byte-buddy-agent", "1.9.12") {
-        isTransitive = false
-    }
-
-    testCompile("net.bytebuddy", "byte-buddy-dep", "1.9.12")
-    testCompile("org.mockito", "mockito-core", "1.+")
-    testCompile("junit", "junit", "4.12")
+    compile(project(":disco-java-agent:disco-java-agent-core"))
 }
 
 configure<JavaPluginConvention> {
@@ -41,8 +33,18 @@ configure<JavaPluginConvention> {
 }
 
 tasks.shadowJar  {
-    //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-inject-api-0.1.jar)
+    //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-0.1.jar)
     archiveClassifier.set(null as String?)
+
+    manifest {
+        attributes(mapOf(
+                "Premain-Class" to "com.amazon.disco.agent.DiscoAgent",
+                "Agent-Class" to "com.amazon.disco.agent.DiscoAgent",
+                "Can-Redefine-Classes" to "true",
+                "Can-Retransform-Classes" to "true",
+                "Boot-Class-Path" to archiveFileName.get()
+        ))
+    }
 
     //Must relocate both of these inner dependencies of the Disco agent, to avoid conflicts in your customer's application
     relocate("org.objectweb.asm", "com.amazon.disco.agent.jar.asm")

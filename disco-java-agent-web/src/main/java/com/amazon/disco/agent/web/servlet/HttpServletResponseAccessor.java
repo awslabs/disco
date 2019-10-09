@@ -13,7 +13,7 @@
  *   permissions and limitations under the License.
  */
 
-package com.amazon.disco.agent.servlet;
+package com.amazon.disco.agent.web.servlet;
 
 import java.lang.invoke.MethodHandle;
 import java.util.Collection;

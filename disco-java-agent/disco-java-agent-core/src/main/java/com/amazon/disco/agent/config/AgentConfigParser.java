@@ -53,6 +53,9 @@ public class AgentConfigParser {
                 case "nodefaultinstallables":
                     result.setInstallDefaultInstallables(false);
                     break;
+                case "pluginpath":
+                    result.setPluginPath(value);
+                    break;
                 case "verbose":
                     result.setVerbose(true);
                     break;

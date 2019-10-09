@@ -27,18 +27,32 @@ dependencies {
     //pull in the shadow configuration, so we only get the built jar, and not any transitive deps e.g. core
     //using the compileOnly dependency set so that it is invisible to tests
     compileOnly(project(":disco-java-agent-example", "shadow"))
-
-    testCompile("junit", "junit", "4.12")
+    compileOnly(project(":disco-java-agent:disco-java-agent", "shadow"))
+    compileOnly(project(":disco-java-agent-web:disco-java-agent-web-plugin", "shadow"))
+    
     testCompile(project(":disco-java-agent:disco-java-agent-api"))
+    testCompile("junit", "junit", "4.12")
+    testCompile("org.mockito", "mockito-core", "1.+")
+    testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
 }
 
 configure<JavaPluginConvention> {
     sourceCompatibility = JavaVersion.VERSION_1_8
 }
 
+
+// Test 2 ways. Once using the example 'monolithic' agent defined in disco-java-agent-example, and then again using the 
+// decoupled agent via the Plugin Discovery subsystem
+val testViaPlugin = task<Test>("testViaPlugin") {
+    jvmArgs("-javaagent:../disco-java-agent/disco-java-agent/build/libs/disco-java-agent-0.1.jar=pluginPath=../disco-java-agent-web/disco-java-agent-web-plugin/build/libs")
+}
+
 tasks {
     test {
         jvmArgs("-javaagent:../disco-java-agent-example/build/libs/disco-java-agent-example-0.1.jar")
+    }
+    check {
+        dependsOn(testViaPlugin)
     }
 }
 

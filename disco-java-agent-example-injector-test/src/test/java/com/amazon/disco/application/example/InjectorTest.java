@@ -23,7 +23,7 @@ import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class Application {
+public class InjectorTest {
     //comment out this annotation to see the test fail, since the agent will not have been loaded.
     @BeforeClass
     public static void beforeClass() throws Exception {

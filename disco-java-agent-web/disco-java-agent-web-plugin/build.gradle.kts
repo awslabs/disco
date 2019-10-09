@@ -25,15 +25,15 @@ repositories {
 }
 
 dependencies {
-    //we use the ByteBuddyAgent for an install-after-startup injection strategy, but do not want to inadvertently
-    //pull all of BB into the client's code.
-    compile("net.bytebuddy", "byte-buddy-agent", "1.9.12") {
+    compile(project(":disco-java-agent-web")) {
+        //by setting this flag false, we take only what is described by the above project, and not its entire
+        //closure of transitive dependencies (i.e. all of Core, all of Bytebuddy, etc)
+        //this makes our generated Jar minimal, containing only our source files, and our manifest. All those other
+        //dependencies are expected to be in the base agent, which loads this plugin.
+        //Ideally we would have a test for this which inspects the final Jar's content, but it can be reviewed manually
+        //on the command line with "jar -tf disco-java-agent-web-plugin.jar"
         isTransitive = false
     }
-
-    testCompile("net.bytebuddy", "byte-buddy-dep", "1.9.12")
-    testCompile("org.mockito", "mockito-core", "1.+")
-    testCompile("junit", "junit", "4.12")
 }
 
 configure<JavaPluginConvention> {
@@ -41,8 +41,15 @@ configure<JavaPluginConvention> {
 }
 
 tasks.shadowJar  {
-    //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-inject-api-0.1.jar)
+    //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-web-plugin-0.1.jar)
     archiveClassifier.set(null as String?)
+
+    manifest {
+        attributes(mapOf(
+            //this has to align with the contents of WebSupport.java. Would be good to find a way to avoid this duplication
+            "Disco-Installable-Classes" to "com.amazon.disco.agent.web.servlet.HttpServletServiceInterceptor"
+        ))
+    }
 
     //Must relocate both of these inner dependencies of the Disco agent, to avoid conflicts in your customer's application
     relocate("org.objectweb.asm", "com.amazon.disco.agent.jar.asm")

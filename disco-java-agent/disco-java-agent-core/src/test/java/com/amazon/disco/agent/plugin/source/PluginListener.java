@@ -13,17 +13,24 @@
  *   permissions and limitations under the License.
  */
 
-rootProject.name = "com.amazon.disco"
-include("disco-java-agent")
-include("disco-java-agent:disco-java-agent")
-include("disco-java-agent:disco-java-agent-plugin-api")
-include("disco-java-agent:disco-java-agent-api")
-include("disco-java-agent:disco-java-agent-core")
-include("disco-java-agent:disco-java-agent-inject-api")
+package com.amazon.disco.agent.plugin.source;
 
-include("disco-java-agent-web")
-include("disco-java-agent-web:disco-java-agent-web-plugin")
+import com.amazon.disco.agent.event.Event;
+import com.amazon.disco.agent.event.Listener;
 
-include("disco-java-agent-example")
-include("disco-java-agent-example-test")
-include("disco-java-agent-example-injector-test")
+import java.util.LinkedList;
+import java.util.List;
+
+public class PluginListener implements Listener {
+    public List<Event> events = new LinkedList<>();
+
+    @Override
+    public int getPriority() {
+        return 0;
+    }
+
+    @Override
+    public void listen(Event e) {
+        events.add(e);
+    }
+}

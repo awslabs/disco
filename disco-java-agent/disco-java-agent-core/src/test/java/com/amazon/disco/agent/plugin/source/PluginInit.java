@@ -13,17 +13,12 @@
  *   permissions and limitations under the License.
  */
 
-rootProject.name = "com.amazon.disco"
-include("disco-java-agent")
-include("disco-java-agent:disco-java-agent")
-include("disco-java-agent:disco-java-agent-plugin-api")
-include("disco-java-agent:disco-java-agent-api")
-include("disco-java-agent:disco-java-agent-core")
-include("disco-java-agent:disco-java-agent-inject-api")
+package com.amazon.disco.agent.plugin.source;
 
-include("disco-java-agent-web")
-include("disco-java-agent-web:disco-java-agent-web-plugin")
+public class PluginInit {
+    public static boolean initCalled = false;
 
-include("disco-java-agent-example")
-include("disco-java-agent-example-test")
-include("disco-java-agent-example-injector-test")
+    public static void init() {
+        initCalled = true;
+    }
+}

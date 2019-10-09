@@ -13,7 +13,7 @@
  *   permissions and limitations under the License.
  */
 
-package com.amazon.disco.agent.servlet;
+package com.amazon.disco.agent.web.servlet;
 
 import com.amazon.disco.agent.concurrent.TransactionContext;
 import com.amazon.disco.agent.event.EventBus;
@@ -67,7 +67,7 @@ public class HttpServletServiceInterceptor extends HttpServletInterceptor {
         Throwable throwable = null;
 
         if (LogManager.isDebugEnabled()) {
-            log.debug("AlphaOne(Servlet) interception of " + origin);
+            log.debug("DiSCo(Web) interception of " + origin);
         }
         TransactionContext.create();
 
@@ -104,7 +104,7 @@ public class HttpServletServiceInterceptor extends HttpServletInterceptor {
                     .withURL(reqAccessor.getRequestURL());
             EventBus.publish(requestEvent);
         } catch (Throwable e) {
-            log.error("AlphaOne(Servlet) Failed to retrieve request data from servlet service.");
+            log.error("DiSCo(Web) Failed to retrieve request data from servlet service.");
         }
 
         // call the original, catching anything it throws
@@ -125,7 +125,7 @@ public class HttpServletServiceInterceptor extends HttpServletInterceptor {
                     .withResponse(response);
             EventBus.publish(responseEvent);
         } catch (Throwable t) {
-            log.error("AlphaOne(Servlet) Failed to retrieve response data from service.");
+            log.error("DiSCo(Web) Failed to retrieve response data from service.");
         }
 
         TransactionContext.destroy();

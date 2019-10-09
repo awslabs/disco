@@ -13,17 +13,22 @@
  *   permissions and limitations under the License.
  */
 
-rootProject.name = "com.amazon.disco"
-include("disco-java-agent")
-include("disco-java-agent:disco-java-agent")
-include("disco-java-agent:disco-java-agent-plugin-api")
-include("disco-java-agent:disco-java-agent-api")
-include("disco-java-agent:disco-java-agent-core")
-include("disco-java-agent:disco-java-agent-inject-api")
+package com.amazon.disco.application.example;
 
-include("disco-java-agent-web")
-include("disco-java-agent-web:disco-java-agent-web-plugin")
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
-include("disco-java-agent-example")
-include("disco-java-agent-example-test")
-include("disco-java-agent-example-injector-test")
+/**
+ * A class pretending to be a real Http Servlet
+ */
+public class MyServlet extends HttpServlet {
+    public boolean called;
+
+    @Override
+    protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        called = true;
+    }
+}

@@ -22,11 +22,15 @@ import com.amazon.disco.agent.interception.InterceptionInstaller;
 import com.amazon.disco.agent.logging.LogManager;
 import com.amazon.disco.agent.logging.Logger;
 import com.amazon.disco.agent.logging.LoggerFactory;
+import com.amazon.disco.agent.plugin.PluginDiscovery;
+import com.amazon.disco.agent.plugin.PluginOutcome;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 
 import java.lang.instrument.Instrumentation;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -40,6 +44,7 @@ public class DiscoAgentTemplate {
     private AgentConfig config;
     private InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
     private ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher = ElementMatchers.none();
+    private boolean allowPlugins = true;
 
     /**
      * Constructs a new DiSCoAgentTemplate, which is the responsibility of any Agent build on DiSCo.
@@ -67,6 +72,14 @@ public class DiscoAgentTemplate {
     }
 
     /**
+     * Set whether or not to allow a plugin search
+     * @param allowPlugins true to allow plugins (which is the default), or false to prevent
+     */
+    public void setAllowPlugins(boolean allowPlugins) {
+        this.allowPlugins = allowPlugins;
+    }
+
+    /**
      * Set an extra ignore rule for ByteBuddy, if you know of extra rules beyond the defaults that make sense for your
      * agent.
      * @param customIgnoreMatcher - an ignore matcher which will be logically OR'd with the default
@@ -81,9 +94,10 @@ public class DiscoAgentTemplate {
      *
      * @param instrumentation the Instrumentation object given to every Agent, to transform bytecode
      * @param installables the agent supplies a collection of Installables to be installed.
+     * @return information about any loaded plugins
      */
-    public void install(Instrumentation instrumentation, Set<Installable> installables) {
-        install(instrumentation, installables, ElementMatchers.none());
+    public List<PluginOutcome> install(Instrumentation instrumentation, Set<Installable> installables) {
+        return install(instrumentation, installables, ElementMatchers.none());
     }
 
     /**
@@ -93,11 +107,23 @@ public class DiscoAgentTemplate {
      * @param instrumentation the Instrumentation object given to every Agent, to transform bytecode
      * @param installables the agent supplies a collection of Installables to be installed.
      * @param customIgnoreMatcher an extra ignore rule to be OR'd with the default
+     * @return information about any loaded plugins
      */
-    public void install(Instrumentation instrumentation, Set<Installable> installables, ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
+    public List<PluginOutcome> install(Instrumentation instrumentation, Set<Installable> installables, ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
         if (!config.isInstallDefaultInstallables()) {
             log.info("DiSCo(Core) removing all default installables as requested");
             installables.clear();
+        }
+
+        //give the Plugin Discovery subsystem the chance to scan any configured plugin folder.
+        List<PluginOutcome> outcomes;
+        if (allowPlugins) {
+            outcomes = PluginDiscovery.init(instrumentation, installables, config);
+        } else {
+            if (config.getPluginPath() != null) {
+                log.warn("DiSCo(Core) plugin path set but agent is disallowing plugins. No plugins will be loaded");
+            }
+            outcomes = new ArrayList<>();
         }
 
         //give each installable the chance to handle command line args
@@ -107,6 +133,16 @@ public class DiscoAgentTemplate {
         }
 
         interceptionInstaller.install(instrumentation, installables, config, customIgnoreMatcher);
+
+        return outcomes;
+    }
+
+    /**
+     * Get the AgentConfig for inspection if needed
+     * @return the AgentConfig which was created via DiscoAgentTemplate construction
+     */
+    public AgentConfig getConfig() {
+        return config;
     }
 
     /**
