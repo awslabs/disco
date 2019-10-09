@@ -27,13 +27,3 @@ dependencies {
     testCompile("net.bytebuddy", "byte-buddy-dep", "1.9.12")
     testCompile("junit", "junit", "4.12")
 }
-
-tasks {
-    //once gradle has made its default jar, follow up by producing the shadow/uber jar
-    assemble {
-        dependsOn(shadowJar)
-    }
-    shadowJar {
-        dependsOn(jar)
-    }
-}

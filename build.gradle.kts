@@ -18,7 +18,6 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 //common features available to the entire project
 //TODO specify the versions of ByteBuddy and ASM in here, since they are used in a few places.
 //TODO think about maven-publish, and what we need to include in every single pom
-//TODO encapsulate the 'build shadowJar after normal jar' task rule which is duplicated for all agents and plugins at the moment
 plugins {
     id("com.github.johnrengelman.shadow") version "5.1.0" apply false
     java
@@ -50,6 +49,14 @@ subprojects {
                 //Must relocate both of these inner dependencies of the Disco agent, to avoid conflicts in your customer's application
                 relocate("org.objectweb.asm", "com.amazon.disco.agent.jar.asm")
                 relocate("net.bytebuddy", "com.amazon.disco.agent.jar.bytebuddy")
+            }
+
+            //once gradle has made its default jar, follow up by producing the shadow/uber jar
+            assemble {
+                dependsOn(named<ShadowJar>("shadowJar"))
+            }
+            named<ShadowJar>("shadowJar") {
+                dependsOn(jar)
             }
         }
     }
