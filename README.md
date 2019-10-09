@@ -1,4 +1,5 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Actions Status](https://github.com/awslabs/disco/workflows/Java CI/badge.svg)](https://github.com/awslabs/disco/actions)
 
 ## DiSCo Toolkit (Distributed Systems Comprehension)
 
