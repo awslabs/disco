@@ -13,16 +13,6 @@
  *   permissions and limitations under the License.
  */
 
-plugins {
-    java
-}
-
-version = "0.1"
-
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     //pull in the shadow configuration, so we only get the built jar, and not any transitive deps e.g. core
     //using the compileOnly config so that the tests do not have it on their classpath
@@ -31,8 +21,4 @@ dependencies {
     testCompile("junit", "junit", "4.12")
     testCompile(project(":disco-java-agent:disco-java-agent-api"))
     testCompile(project(":disco-java-agent:disco-java-agent-inject-api", "shadow"))
-}
-
-configure<JavaPluginConvention> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
 }

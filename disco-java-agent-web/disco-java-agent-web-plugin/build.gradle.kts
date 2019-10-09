@@ -14,14 +14,7 @@
  */
 
 plugins {
-    java
-    id("com.github.johnrengelman.shadow") version "5.1.0"
-}
-
-version = "0.1"
-
-repositories {
-    mavenCentral()
+    id("com.github.johnrengelman.shadow")
 }
 
 dependencies {
@@ -34,10 +27,6 @@ dependencies {
         //on the command line with "jar -tf disco-java-agent-web-plugin.jar"
         isTransitive = false
     }
-}
-
-configure<JavaPluginConvention> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
 }
 
 tasks.shadowJar  {

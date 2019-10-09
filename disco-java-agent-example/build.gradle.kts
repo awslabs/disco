@@ -14,23 +14,12 @@
  */
 
 plugins {
-    java
-    id("com.github.johnrengelman.shadow") version "5.1.0"
-}
-
-version = "0.1"
-
-repositories {
-    mavenCentral()
+    id("com.github.johnrengelman.shadow")
 }
 
 dependencies {
     compile(project(":disco-java-agent:disco-java-agent-core"))
     compile(project(":disco-java-agent-web"))
-}
-
-configure<JavaPluginConvention> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
 }
 
 tasks.shadowJar  {

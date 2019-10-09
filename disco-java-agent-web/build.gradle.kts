@@ -13,23 +13,9 @@
  *   permissions and limitations under the License.
  */
 
-plugins {
-    java
-}
-
-version = "0.1"
-
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     compile(project(":disco-java-agent:disco-java-agent-core"))
     testCompile("junit", "junit", "4.12")
     testCompile("org.mockito", "mockito-core", "1.+")
     testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
-}
-
-configure<JavaPluginConvention> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
 }

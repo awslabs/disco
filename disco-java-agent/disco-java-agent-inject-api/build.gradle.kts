@@ -14,14 +14,7 @@
  */
 
 plugins {
-    java
-    id("com.github.johnrengelman.shadow") version "5.1.0"
-}
-
-version = "0.1"
-
-repositories {
-    mavenCentral()
+    id("com.github.johnrengelman.shadow")
 }
 
 dependencies {
@@ -32,12 +25,7 @@ dependencies {
     }
 
     testCompile("net.bytebuddy", "byte-buddy-dep", "1.9.12")
-    testCompile("org.mockito", "mockito-core", "1.+")
     testCompile("junit", "junit", "4.12")
-}
-
-configure<JavaPluginConvention> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
 }
 
 tasks.shadowJar  {

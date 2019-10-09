@@ -14,7 +14,7 @@
  */
 
 rootProject.name = "com.amazon.disco"
-include("disco-java-agent")
+
 include("disco-java-agent:disco-java-agent")
 include("disco-java-agent:disco-java-agent-plugin-api")
 include("disco-java-agent:disco-java-agent-api")
