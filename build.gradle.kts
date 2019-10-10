@@ -1,5 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
 /*
  * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
@@ -14,6 +12,8 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
  *   express or implied. See the License for the specific language governing
  *   permissions and limitations under the License.
  */
+
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 //common features available to the entire project
 //TODO specify the versions of ByteBuddy and ASM in here, since they are used in a few places.
