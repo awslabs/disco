@@ -20,3 +20,48 @@ dependencies {
 
     testCompile("junit", "junit", "4.12")
 }
+
+/**
+ * Define a secondary set of tests, for testing the actual interceptions provided by the Installables.
+ */
+sourceSets {
+    create("integtest") {
+        java {
+            srcDir("src/integ/java")
+        }
+    }
+}
+
+val integtestCompile by configurations.getting {
+    extendsFrom(configurations.testCompile.get())
+}
+
+dependencies {
+    integtestCompile("junit", "junit", "4.12")
+    integtestCompile(project(":disco-java-agent:disco-java-agent-api"))
+}
+
+val integtest = task<Test>("integtest") {
+    testClassesDirs = sourceSets["integtest"].output.classesDirs
+    classpath = sourceSets["integtest"].runtimeClasspath
+
+    //show logging with --info
+    //gradle caches outputs, so needs a workaround to ensure stdout is always provided
+    testLogging {
+        outputs.upToDateWhen {false}
+        showStandardStreams = true
+    }
+
+    //apply the canonical agent which intalls core interceptors
+    jvmArgs = listOf("-javaagent:../disco-java-agent/build/libs/disco-java-agent-0.1.jar")
+
+    //try and coerce the runtime into giving the tests some parallelism to work with. The tests have a retry
+    //policy to encourage them to work, but the runtime sometimes provides no threads in the thread pool
+    systemProperty("java.util.concurrent.ForkJoinPool.common.parallelism", 24)
+
+    //no point running this if unit tests failed
+    mustRunAfter(tasks["test"])
+
+    //we need the agent to be built first
+    dependsOn(":disco-java-agent:disco-java-agent:build")
+}

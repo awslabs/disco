@@ -120,7 +120,7 @@ public class InterceptionInstaller {
 
             //disco itself and its internals
             .or(nameStartsWith("com.amazon.disco.agent.")
-                .and(not(nameStartsWith("com.amazon.disco.agent.tester."))));
+                .and(not(nameStartsWith("com.amazon.disco.agent.integtest."))));
 
         return excludedNamespaces.or(customIgnoreMatcher);
 
