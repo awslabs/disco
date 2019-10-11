@@ -34,10 +34,6 @@ tasks.shadowJar  {
                 "Boot-Class-Path" to archiveFileName.get()
         ))
     }
-
-    //Must relocate both of these inner dependencies of the Disco agent, to avoid conflicts in your customer's application
-    relocate("org.objectweb.asm", "com.amazon.disco.agent.jar.asm")
-    relocate("net.bytebuddy", "com.amazon.disco.agent.jar.bytebuddy")
 }
 
 tasks {
