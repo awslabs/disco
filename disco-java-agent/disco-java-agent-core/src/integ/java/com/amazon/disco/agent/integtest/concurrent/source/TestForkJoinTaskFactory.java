@@ -25,7 +25,6 @@ import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 
 public class TestForkJoinTaskFactory {
-    public static final String FORKJOINTASKS = "ForkJoinTasks";
     static int numFactoryMethods;
 
     static {

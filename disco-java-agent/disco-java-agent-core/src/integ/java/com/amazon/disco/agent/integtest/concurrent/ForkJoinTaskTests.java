@@ -28,12 +28,6 @@ import java.util.List;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.TimeUnit;
 
-import static com.amazon.disco.agent.integtest.concurrent.source.TestForkJoinTaskFactory.FORKJOINTASKS;
-
-/**
- * A small class per 'test', so that TestNG can have a DataProvider, and a RetryAnalyzer attached, along with the
- * correct BeforeMethod and AfterMethod lifetimes.
- */
 public class ForkJoinTaskTests {
     @RunWith(Parameterized.class)
     public static class SingleThreadedInvoke extends ForkJoinTestBase.ForkJoinTaskBase {
