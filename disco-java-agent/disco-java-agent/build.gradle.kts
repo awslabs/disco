@@ -35,13 +35,3 @@ tasks.shadowJar  {
         ))
     }
 }
-
-tasks {
-    //once gradle has made its default jar, follow up by producing the shadow/uber jar
-    assemble {
-        dependsOn(shadowJar)
-    }
-    shadowJar {
-        dependsOn(jar)
-    }
-}
