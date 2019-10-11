@@ -52,7 +52,7 @@ val integtest = task<Test>("integtest") {
         showStandardStreams = true
     }
 
-    //apply the canonical agent which intalls core interceptors
+    //apply the canonical agent which installs core interceptors
     jvmArgs = listOf("-javaagent:../disco-java-agent/build/libs/disco-java-agent-0.1.jar")
 
     //try and coerce the runtime into giving the tests some parallelism to work with. The tests have a retry
