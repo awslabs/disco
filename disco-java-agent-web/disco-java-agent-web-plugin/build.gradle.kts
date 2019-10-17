@@ -18,7 +18,7 @@ plugins {
 }
 
 dependencies {
-    compile(project(":disco-java-agent-web")) {
+    runtimeOnly(project(":disco-java-agent-web")) {
         //by setting this flag false, we take only what is described by the above project, and not its entire
         //closure of transitive dependencies (i.e. all of Core, all of Bytebuddy, etc)
         //this makes our generated Jar minimal, containing only our source files, and our manifest. All those other
@@ -27,6 +27,13 @@ dependencies {
         //on the command line with "jar -tf disco-java-agent-web-plugin.jar"
         isTransitive = false
     }
+
+    //Test target is integ tests for this plugin. Some classes in the integ tests also self-test via little unit tests during this
+    //testrun.
+    testCompile(project(":disco-java-agent:disco-java-agent-api"))
+    testCompile("junit", "junit", "4.12")
+    testCompile("org.mockito", "mockito-core", "1.+")
+    testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
 }
 
 tasks.shadowJar  {
@@ -36,4 +43,20 @@ tasks.shadowJar  {
             "Disco-Installable-Classes" to "com.amazon.disco.agent.web.servlet.HttpServletServiceInterceptor"
         ))
     }
+}
+
+//integ testing needs a loaded agent, and the loaded plugin
+tasks.test {
+    //explicitly remove the runtime classpath from the tests since they are integ tests, and may not access the
+    //dependency we acquired in order to build the plugin, namely the disco-java-agent-web jar which makes reference
+    //to byte buddy classes which have NOT been relocated by a shadowJar rule. Discovering those unrelocated classes
+    //would not be possible in a real client installation, and would cause plugin loading to fail.
+    classpath = classpath.minus(configurations.runtimeClasspath.get())
+
+    //load the agent for the tests, and have it discover the web plugin
+    jvmArgs("-javaagent:../../disco-java-agent/disco-java-agent/build/libs/disco-java-agent-0.1.jar=pluginPath=./build/libs:extraverbose")
+
+    //we do not take any normal compile/runtime dependency on this, but it must be built first since the above jvmArg
+    //refers to its built artifact.
+    dependsOn(":disco-java-agent:disco-java-agent:build")
 }
