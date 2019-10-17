@@ -38,8 +38,8 @@ public abstract class HttpServletInterceptor implements Installable {
     }
 
     /**
-     * Build an ElementMatcher which will match against the dispatch method
-     * methods of a Coral Dispatcher class. Package-private for tests
+     * Build an ElementMatcher which will match against the service() method of an HttpServlet.
+     * Package-private for tests
      *
      * @return An ElementMatcher suitable for passing to the method() method of a DynamicType.Builder
      */
