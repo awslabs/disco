@@ -32,9 +32,9 @@ sourceSets {
     }
 }
 
-val integtestCompile by configurations.getting {
-    extendsFrom(configurations.testCompile.get())
-}
+//create a new empty integ test config - not extending from existing compile or testCompile, since we don't want to
+//be able to compile against Core etc.
+val integtestCompile by configurations.getting {}
 
 dependencies {
     integtestCompile("junit", "junit", "4.12")
@@ -43,7 +43,9 @@ dependencies {
 
 val integtest = task<Test>("integtest") {
     testClassesDirs = sourceSets["integtest"].output.classesDirs
-    classpath = sourceSets["integtest"].runtimeClasspath
+    //explicitly remove the non-test runtime classpath from these tests since they are integ tests, and may not access the
+    //dependencies e.g Core and ByteBuddy and so on during agent loading
+    classpath = sourceSets["integtest"].runtimeClasspath.minus(configurations.compileClasspath.get())
 
     //show logging with --info
     //gradle caches outputs, so needs a workaround to ensure stdout is always provided
