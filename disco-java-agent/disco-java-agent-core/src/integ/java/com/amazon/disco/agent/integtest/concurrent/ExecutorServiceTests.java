@@ -93,6 +93,9 @@ public class ExecutorServiceTests {
 
     @RunWith(Parameterized.class)
     public static class ExecuteRunnable extends RunnableBase {
+        @Rule
+        public ForceConcurrency.RetryRule retry = new ForceConcurrency.RetryRule();
+
         @Test
         public void testExecuteRunnable() throws Exception {
             testBeforeInvocation(testableRunnable);
@@ -103,6 +106,9 @@ public class ExecutorServiceTests {
 
     @RunWith(Parameterized.class)
     public static class SubmitRunnable extends RunnableBase {
+        @Rule
+        public ForceConcurrency.RetryRule retry = new ForceConcurrency.RetryRule();
+
         @Test
         public void testSubmitRunnable() throws Exception {
             testBeforeInvocation(testableRunnable);
@@ -113,6 +119,9 @@ public class ExecutorServiceTests {
 
     @RunWith(Parameterized.class)
     public static class SubmitRunnableWithResult extends RunnableBase {
+        @Rule
+        public ForceConcurrency.RetryRule retry = new ForceConcurrency.RetryRule();
+
         @Test
         public void testSubmitRunnableWithResult() throws Exception {
             testBeforeInvocation(testableRunnable);
@@ -123,6 +132,9 @@ public class ExecutorServiceTests {
 
     @RunWith(Parameterized.class)
     public static class SubmitCallable extends CallableBase {
+        @Rule
+        public ForceConcurrency.RetryRule retry = new ForceConcurrency.RetryRule();
+
         @Test
         public void testSubmitCallable() throws Exception {
             testBeforeInvocation(testableCallable);
@@ -133,6 +145,9 @@ public class ExecutorServiceTests {
 
     @RunWith(Parameterized.class)
     public static class InvokeAllCallable extends CallableBase {
+        @Rule
+        public ForceConcurrency.RetryRule retry = new ForceConcurrency.RetryRule();
+
         @Test
         public void testInvokeAllCallable() throws Exception {
             testBeforeInvocation(testableCallable);
@@ -145,6 +160,9 @@ public class ExecutorServiceTests {
 
     @RunWith(Parameterized.class)
     public static class InvokeAllCallableWithTimeout extends CallableBase {
+        @Rule
+        public ForceConcurrency.RetryRule retry = new ForceConcurrency.RetryRule();
+
         @Test
         public void testInvokeAllCallableWithTimeout() throws Exception {
             testBeforeInvocation(testableCallable);
@@ -157,6 +175,9 @@ public class ExecutorServiceTests {
 
     @RunWith(Parameterized.class)
     public static class InvokeAnyCallable extends CallableBase {
+        @Rule
+        public ForceConcurrency.RetryRule retry = new ForceConcurrency.RetryRule();
+
         @Test
         public void testInvokeAnyCallable() throws Exception {
             testBeforeInvocation(testableCallable);
@@ -169,6 +190,9 @@ public class ExecutorServiceTests {
 
     @RunWith(Parameterized.class)
     public static class InvokeAnyCallableWithTimeout extends CallableBase {
+        @Rule
+        public ForceConcurrency.RetryRule retry = new ForceConcurrency.RetryRule();
+
         @Test
         public void testInvokeAnyCallableWithTimeout() throws Exception {
             testBeforeInvocation(testableCallable);
