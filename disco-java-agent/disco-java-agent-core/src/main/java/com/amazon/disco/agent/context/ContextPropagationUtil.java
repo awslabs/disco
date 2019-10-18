@@ -25,6 +25,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static com.amazon.disco.agent.concurrent.TransactionContext.PROPAGATE_IN_REQUEST_TAG;
+
 /**
  * A helper/utility class that provides the mechanisms for packing and unpacking
  * various key value pairs to and from a header attribute. Specifically,
@@ -45,7 +47,6 @@ import java.util.Set;
  */
 public class ContextPropagationUtil {
     private final static Logger log = LogManager.getLogger(ContextPropagationUtil.class);
-    private final static String PROPAGATE_IN_REQUEST_TAG = "PROPAGATE_IN_REQUEST";
     private static final String DELIMITER_KEY = "=";
     private static final String DELIMITER_PAIR = "&";
     private static final String UTF_8 = "UTF-8";
