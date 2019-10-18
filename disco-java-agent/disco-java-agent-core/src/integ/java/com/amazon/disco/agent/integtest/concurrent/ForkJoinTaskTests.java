@@ -51,9 +51,7 @@ public class ForkJoinTaskTests {
         public void testMultiThreadedForkJoinTaskForkAndJoin() {
             testableForkJoinTask.testBeforeInvocation();
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             testableForkJoinTask.forkJoinTask.fork();
-            ForceConcurrency.after(ctx);
 
             testableForkJoinTask.forkJoinTask.join();
             testableForkJoinTask.testAfterConcurrentInvocation();
@@ -69,9 +67,7 @@ public class ForkJoinTaskTests {
         public void testMultiThreadedForkJoinTaskForkAndGet() throws Exception {
             testableForkJoinTask.testBeforeInvocation();
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             testableForkJoinTask.forkJoinTask.fork();
-            ForceConcurrency.after(ctx);
 
             testableForkJoinTask.forkJoinTask.get();
             testableForkJoinTask.testAfterConcurrentInvocation();
@@ -88,9 +84,7 @@ public class ForkJoinTaskTests {
         public void testMultiThreadedForkJoinTaskForkAndGetWithTimeout() throws Exception {
             testableForkJoinTask.testBeforeInvocation();
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             testableForkJoinTask.forkJoinTask.fork();
-            ForceConcurrency.after(ctx);
 
             testableForkJoinTask.forkJoinTask.get(1, TimeUnit.DAYS);
             testableForkJoinTask.testAfterConcurrentInvocation();
@@ -111,9 +105,7 @@ public class ForkJoinTaskTests {
 
             List<ForkJoinTask> list = Arrays.asList(fjt1, testableForkJoinTask.forkJoinTask, fjt3);
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             ForkJoinTask.invokeAll(list);
-            ForceConcurrency.after(ctx);
             testableForkJoinTask.testAfterConcurrentInvocation();
         }
     }
@@ -128,9 +120,7 @@ public class ForkJoinTaskTests {
             testableForkJoinTask.testBeforeInvocation();
             ForkJoinTask fjt1 = ForkJoinTask.adapt(()->testableForkJoinTask.forkJoinTask.join());
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             ForkJoinTask.invokeAll(fjt1, testableForkJoinTask.forkJoinTask);
-            ForceConcurrency.after(ctx);
             testableForkJoinTask.testAfterConcurrentInvocation();
         }
     }
@@ -147,9 +137,7 @@ public class ForkJoinTaskTests {
             ForkJoinTask fjt1 = ForkJoinTask.adapt(()->testableForkJoinTask.forkJoinTask.join());
             ForkJoinTask fjt3 = ForkJoinTask.adapt(()->fjt1.join());
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             ForkJoinTask.invokeAll(fjt1, testableForkJoinTask.forkJoinTask, fjt3);
-            ForceConcurrency.after(ctx);
             testableForkJoinTask.testAfterConcurrentInvocation();
         }
     }

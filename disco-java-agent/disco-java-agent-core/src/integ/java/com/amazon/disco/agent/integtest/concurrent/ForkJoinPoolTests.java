@@ -42,10 +42,8 @@ public class ForkJoinPoolTests {
         public void testMultithreadedForkJoinPoolExecuteForkJoinTaskAndJoin() {
             testableForkJoinTask.testBeforeInvocation();
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             ForkJoinPool.commonPool().execute(testableForkJoinTask.forkJoinTask);
             testableForkJoinTask.forkJoinTask.join();
-            ForceConcurrency.after(ctx);
             testableForkJoinTask.testAfterConcurrentInvocation();
         }
     }
@@ -60,9 +58,7 @@ public class ForkJoinPoolTests {
         public void testMultithreadedForkJoinPoolExecuteRunnableAndAwait() throws Exception {
             testableRunnable.testBeforeInvocation();
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             ForkJoinPool.commonPool().execute(testableRunnable.getRunnable());
-            ForceConcurrency.after(ctx);
 
             //is shutdown the right thing to do - sounds kind of 'terminal'. What I mean is 'wait for all tasks'.
             ForkJoinPool.commonPool().shutdown();
@@ -81,9 +77,7 @@ public class ForkJoinPoolTests {
         public void testMultithreadedForkJoinPoolInvokeForkJoinTask() {
             testableForkJoinTask.testBeforeInvocation();
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             ForkJoinPool.commonPool().invoke(testableForkJoinTask.forkJoinTask);
-            ForceConcurrency.after(ctx);
             testableForkJoinTask.testAfterConcurrentInvocation();
         }
     }
@@ -99,9 +93,7 @@ public class ForkJoinPoolTests {
             Callable<String> c1 = ()->"Result1";
             Callable<String> c3 = ()->"Result3";
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             List<Future<String>> futures = ForkJoinPool.commonPool().invokeAll(Arrays.asList(c1, testableCallable.callable, c3));
-            ForceConcurrency.after(ctx);
             testableCallable.testAfterConcurrentInvocation();
 
             Assert.assertEquals("Result1", futures.get(0).get());
@@ -119,10 +111,8 @@ public class ForkJoinPoolTests {
         public void testMultithreadedForkJoinPoolSubmitCallableAndJoin() {
             testableCallable.testBeforeInvocation();
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             ForkJoinTask fjt = ForkJoinPool.commonPool().submit(testableCallable.callable);
             fjt.join();
-            ForceConcurrency.after(ctx);
             testableCallable.testAfterConcurrentInvocation();
         }
     }
@@ -136,10 +126,8 @@ public class ForkJoinPoolTests {
         public void testMultithreadedForkJoinPoolSubmitForkJoinTaskAndJoin() {
             testableForkJoinTask.testBeforeInvocation();
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             ForkJoinTask fjt = ForkJoinPool.commonPool().submit(testableForkJoinTask.forkJoinTask);
             fjt.join();
-            ForceConcurrency.after(ctx);
             testableForkJoinTask.testAfterConcurrentInvocation();
         }
     }
@@ -153,10 +141,8 @@ public class ForkJoinPoolTests {
         public void testMultithreadedForkJoinPoolSubmitRunnableAndJoin() throws Exception {
             testableRunnable.testBeforeInvocation();
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             ForkJoinTask fjt = ForkJoinPool.commonPool().submit(testableRunnable.getRunnable());
             fjt.join();
-            ForceConcurrency.after(ctx);
             testableRunnable.testAfterConcurrentInvocation();
         }
     }
@@ -170,10 +156,8 @@ public class ForkJoinPoolTests {
         public void testMultithreadedForkJoinPoolSubmitRunnableWithResultAndJoin() throws Exception {
             testableRunnable.testBeforeInvocation();
 
-            ForceConcurrency.Context ctx = ForceConcurrency.before();
             ForkJoinTask<String> fjt = ForkJoinPool.commonPool().submit(testableRunnable.getRunnable(), "Result");
             String result = fjt.join();
-            ForceConcurrency.after(ctx);
             testableRunnable.testAfterConcurrentInvocation();
             Assert.assertEquals("Result", result);
         }

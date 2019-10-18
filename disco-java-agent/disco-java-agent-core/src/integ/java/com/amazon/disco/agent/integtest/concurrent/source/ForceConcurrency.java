@@ -19,48 +19,7 @@ import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-import java.util.concurrent.ForkJoinTask;
-import java.util.concurrent.locks.ReentrantLock;
-
-/**
- * Helper class to 'persuade' the Java runtime to create new pooled threads.
- * A lock is held at the time of object creation. A method which attempts to take this lock is dispatched to a thread.
- * The calling thread unlocks the lock, once the object-under-test has been forked to a thread pool.
- *
- * This 'forces' the two tasks to be parallelized. It's likely to be a brittle or unreliable mechanism. I don't know
- * any particularly better ways.
- */
 public class ForceConcurrency {
-    public static class Context {
-        ReentrantLock lock = new ReentrantLock();
-        public ForkJoinTask fjt;
-    }
-
-    public static Context before() {
-        Context ctx = createContext();
-        ctx.fjt.fork();
-        return ctx;
-    }
-
-    public static void after(Context ctx) {
-        ctx.lock.unlock();
-        ctx.fjt.join();
-    }
-
-    public static Context createContext() {
-        Context ctx = new Context();
-        ctx.lock.lock();
-
-        Runnable r = ()-> {
-            ctx.lock.lock();
-            ctx.lock.unlock();
-        };
-        ForkJoinTask fjt = ForkJoinTask.adapt(r);
-        ctx.fjt = fjt;
-
-        return ctx;
-    }
-
     public static class RetryRule implements TestRule {
         @Override
         public Statement apply(Statement base, Description target) {
@@ -69,7 +28,7 @@ public class ForceConcurrency {
                 public void evaluate() throws Throwable {
                     //seems like a high number of retries, but still fails occasionally, and requires the test suite to be rerun
                     boolean success = false;
-                    for (int i = 0; i < 31; i++) {
+                    for (int i = 0; i < 63; i++) {
                         try {
                             base.evaluate();
                             success = true;
