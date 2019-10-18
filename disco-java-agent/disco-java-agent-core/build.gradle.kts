@@ -67,3 +67,10 @@ val integtest = task<Test>("integtest") {
     //we need the agent to be built first
     dependsOn(":disco-java-agent:disco-java-agent:build")
 }
+
+//run the integ tests with every build. They can very occasionally fail due to concurrency uncertainty (e.g. requesting
+//a parallelStream() is just that - a request. the runtime is under no obligation to actually execute the code in parallel
+tasks.build {
+    dependsOn(integtest)
+}
+
