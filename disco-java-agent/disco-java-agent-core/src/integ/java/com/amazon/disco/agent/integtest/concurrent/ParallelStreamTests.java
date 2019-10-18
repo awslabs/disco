@@ -15,43 +15,36 @@
 
 package com.amazon.disco.agent.integtest.concurrent;
 
-import com.amazon.disco.agent.integtest.concurrent.source.ConcurrencyCanBeRetriedException;
-import com.amazon.disco.agent.reflect.concurrent.TransactionContext;
+import com.amazon.disco.agent.integtest.concurrent.source.TestableConcurrencyObject;
+import com.amazon.disco.agent.integtest.concurrent.source.TestableConcurrencyObjectImpl;
 import com.amazon.disco.agent.integtest.concurrent.source.ForceConcurrency;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
 
 public class ParallelStreamTests {
     static private final List<String> list = Arrays.asList("0", "1", "2", "3");
-    private long parentThreadId;
-    private Set<Long> threadIds;
+    private TestableConcurrencyObject testableConcurrencyObject;
 
     @Rule
     public ForceConcurrency.RetryRule retry = new ForceConcurrency.RetryRule();
 
     @Before
     public void before() {
-        parentThreadId = Thread.currentThread().getId();
-        threadIds = new HashSet<>();
-        threadIds.add(parentThreadId);
-        TransactionContext.clear();
-        TransactionContext.set("foo");
-        TransactionContext.putMetadata("metadata", "value");
+        testableConcurrencyObject = new TestableConcurrencyObjectImpl();
+        TestableConcurrencyObjectImpl.before();
+        testableConcurrencyObject.testBeforeInvocation();
     }
 
     @After
     public void after() {
-        testConcurrency();
-        TransactionContext.clear();
+        testableConcurrencyObject.testAfterConcurrentInvocation();
+        TestableConcurrencyObjectImpl.after();
     }
 
     @Test
@@ -77,15 +70,7 @@ public class ParallelStreamTests {
     }
 
     private void impl(String s) {
-        threadIds.add(Thread.currentThread().getId());
-        Assert.assertEquals("foo", TransactionContext.get());
-        Assert.assertEquals("value", TransactionContext.getMetadata("metadata"));
+        testableConcurrencyObject.perform();
     }
 
-    private void testConcurrency() {
-        //as long as something was parallelized, there will be more than 1 threadId in this set
-        if(threadIds.size() == 1) {
-            throw new ConcurrencyCanBeRetriedException();
-        }
-    }
 }

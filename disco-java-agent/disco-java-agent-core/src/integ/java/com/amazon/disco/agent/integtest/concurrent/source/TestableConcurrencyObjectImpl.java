@@ -23,6 +23,8 @@ import com.amazon.disco.agent.event.ThreadEnterEvent;
 import com.amazon.disco.agent.event.ThreadExitEvent;
 import org.junit.Assert;
 
+import java.util.concurrent.locks.ReentrantLock;
+
 
 public class TestableConcurrencyObjectImpl implements TestableConcurrencyObject {
     private boolean concurrencyMethodWasCalled;
@@ -36,6 +38,7 @@ public class TestableConcurrencyObjectImpl implements TestableConcurrencyObject 
     private static final String transactionIdPrefix = "transactionId-";
     private static final String metadataKey = "abstractTestableConcurrencyObjectMetadata";
     private static final String metadataValue = "value";
+    private static final ReentrantLock lock = new ReentrantLock();
 
     private TestListener listener;
 
@@ -44,6 +47,8 @@ public class TestableConcurrencyObjectImpl implements TestableConcurrencyObject 
     }
 
     public static void before() {
+        //prevent any tests running in parallel with each other, since global state is used.
+        lock.lock();
         TransactionContext.create();
         TransactionContext.set(transactionIdPrefix+TransactionContext.get());
         TransactionContext.putMetadata(metadataKey, metadataValue);
@@ -51,6 +56,7 @@ public class TestableConcurrencyObjectImpl implements TestableConcurrencyObject 
 
     public static void after() {
         TransactionContext.clear();
+        lock.unlock();
     }
 
     @Override
@@ -108,9 +114,12 @@ public class TestableConcurrencyObjectImpl implements TestableConcurrencyObject 
     @Override
     public void perform() {
         concurrencyMethodWasCalled = true;
-        executionThreadId = Thread.currentThread().getId();
-        executionTransactionId = TransactionContext.get();
-        executionMetadataValue = String.class.cast(TransactionContext.getMetadata(metadataKey));
+        //if this is the first time, or if so far a collection of work has been single threaded
+        if (executionThreadId == null || executionThreadId == beforeThreadId) {
+            executionTransactionId = TransactionContext.get();
+            executionMetadataValue = String.class.cast(TransactionContext.getMetadata(metadataKey));
+            executionThreadId = Thread.currentThread().getId();
+        }
     }
 
     class TestListener implements Listener {

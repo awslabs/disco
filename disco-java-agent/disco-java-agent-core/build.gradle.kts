@@ -61,10 +61,6 @@ val integtest = task<Test>("integtest") {
     //policy to encourage them to work, but the runtime sometimes provides no threads in the thread pool
     systemProperty("java.util.concurrent.ForkJoinPool.common.parallelism", 24)
 
-    //we do not want tests themselves to run in parallel since they manipulate global state such as the collection of
-    //listeners, and the value of TransactionContext which may produce race conditions.
-    maxParallelForks = 1
-
     //no point running this if unit tests failed
     mustRunAfter(tasks["test"])
 
