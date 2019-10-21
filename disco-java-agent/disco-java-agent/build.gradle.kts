@@ -35,3 +35,11 @@ tasks.shadowJar  {
         ))
     }
 }
+
+configure<PublishingExtension> {
+    publications {
+        named<MavenPublication>("maven") {
+            artifact(tasks.jar.get())
+        }
+    }
+}

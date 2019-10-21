@@ -27,3 +27,11 @@ dependencies {
     testCompile("net.bytebuddy", "byte-buddy-dep", "1.9.12")
     testCompile("junit", "junit", "4.12")
 }
+
+configure<PublishingExtension> {
+    publications {
+        named<MavenPublication>("maven") {
+            artifact(tasks.jar.get())
+        }
+    }
+}

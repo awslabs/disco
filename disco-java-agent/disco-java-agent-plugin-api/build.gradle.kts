@@ -20,3 +20,11 @@ dependencies {
     compile("org.ow2.asm", "asm-commons", "7.1")
     compile("org.ow2.asm", "asm-tree", "7.1")
 }
+
+configure<PublishingExtension> {
+    publications {
+        named<MavenPublication>("maven") {
+            from(components["java"])
+        }
+    }
+}

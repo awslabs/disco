@@ -19,3 +19,11 @@ dependencies {
     testCompile("org.mockito", "mockito-core", "1.+")
     testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
 }
+
+configure<PublishingExtension> {
+    publications {
+        named<MavenPublication>("maven") {
+            from(components["java"])
+        }
+    }
+}

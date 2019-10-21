@@ -60,3 +60,11 @@ tasks.test {
     //refers to its built artifact.
     dependsOn(":disco-java-agent:disco-java-agent:build")
 }
+
+configure<PublishingExtension> {
+    publications {
+        named<MavenPublication>("maven") {
+            artifact(tasks.jar.get())
+        }
+    }
+}

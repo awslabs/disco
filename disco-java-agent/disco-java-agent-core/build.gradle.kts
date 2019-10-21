@@ -21,6 +21,14 @@ dependencies {
     testCompile("junit", "junit", "4.12")
 }
 
+configure<PublishingExtension> {
+    publications {
+        named<MavenPublication>("maven") {
+            from(components["java"])
+        }
+    }
+}
+
 /**
  * Define a secondary set of tests, for testing the actual interceptions provided by the Installables.
  */

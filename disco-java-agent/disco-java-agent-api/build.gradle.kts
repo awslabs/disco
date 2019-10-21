@@ -16,3 +16,11 @@
 dependencies {
     testCompile("junit", "junit", "4.12")
 }
+
+configure<PublishingExtension> {
+    publications {
+        named<MavenPublication>("maven") {
+            from(components["java"])
+        }
+    }
+}

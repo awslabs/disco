@@ -21,6 +21,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 plugins {
     id("com.github.johnrengelman.shadow") version "5.1.0" apply false
     java
+    `maven-publish`
 }
 
 subprojects {
@@ -43,6 +44,7 @@ subprojects {
     tasks {
         pluginManager.withPlugin("com.github.johnrengelman.shadow") {
             named<ShadowJar>("shadowJar") {
+
                 //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-web-plugin-0.1.jar)
                 archiveClassifier.set(null as String?)
     
@@ -60,4 +62,83 @@ subprojects {
             }
         }
     }
+
+    //we publish everything except example subprojects to maven. Projects which desire to be published to maven express the intent
+    //via a property called simply 'maven' in their gradle.properties file (if it exists at all).
+    //Each package to be published still needs a small amount of boilerplate to express whether is is a 'normal'
+    //library which expresses its dependencies, or a shadowed library which includes and hides them. For a normal one
+    //e.g. Core or Web, that boilerplate may look like:
+    // configure<PublishingExtension> {
+    //     publications {
+    //         named<MavenPublication>("maven") {
+    //             from(components["java"])
+    //         }
+    //     }
+    // }
+    //
+    // whereas a shadowed artifact would be declared along the lines of:
+    //
+    // configure<PublishingExtension> {
+    //     publications {
+    //         named<MavenPublication>("maven") {
+    //             artifact(tasks.jar.get())
+    //         }
+    //     }
+    // }
+    //
+    //which declares the jar and the jar alone as the artifact, suppressing the default behaviour of gathering dependency info
+    //
+    //TODO: find a way to express this just once in the block below, probably by inspecting the existence or absence
+    //of the shadow plugin, or the ShadowJar task. So far attempts to consolidate this logic have not succeeded, hence
+    //the current need for the above boilerplate.
+    //
+    //TODO: apply some continuous integration rules to publish to Maven automatically when e.g. version number increases
+    //
+    //Publication to local Maven is simply "./gradlew publishToMavenLocal"
+    if (hasProperty("maven")) {
+        apply(plugin = "maven-publish")
+
+        //create a task to publish our sources
+        tasks.register<Jar>("sourcesJar") {
+            from(sourceSets.main.get().allJava)
+            archiveClassifier.set("sources")
+        }
+
+        //create a task to publish javadoc
+        tasks.register<Jar>("javadocJar") {
+            from(tasks.javadoc)
+            archiveClassifier.set("javadoc")
+        }
+
+        //defer maven publish until the assemble task has finished, giving time for shadowJar to complete, if it is present
+        tasks.withType<AbstractPublishToMaven> {
+            dependsOn(tasks.assemble)
+        }
+
+        //all our maven publications have similar characteristics, declare as much as possible here at the top level
+        configure<PublishingExtension> {
+            repositories {
+                maven {
+                }
+            }
+            publications {
+                create<MavenPublication>("maven") {
+                    artifact(tasks["sourcesJar"])
+                    artifact(tasks["javadocJar"])
+
+                    pom {
+                        licenses {
+                            license {
+                                name.set("The Apache License, Version 2.0")
+                                url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                            }
+                        }
+                    }
+
+                    //TODO scm, author, whatever other metadata makes sense.
+                }
+            }
+        }
+    }
 }
+
