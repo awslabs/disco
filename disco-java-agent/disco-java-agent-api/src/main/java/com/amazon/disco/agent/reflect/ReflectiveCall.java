@@ -190,7 +190,7 @@ public class ReflectiveCall<T> {
     /**
      * Install an UncaughtExceptionHandler, to receive a notification whe any exception is thrown by any method in the
      * DiSCo reflect APIs. Without such a handler installed, all exceptions - even unchecked ones - will be suppressed
-     * @param handler
+     * @param handler a callback to receive any unhandled exceptions in client code
      */
     public static void installUncaughtExceptionHandler(UncaughtExceptionHandler handler) {
         uncaughtExceptionHandler = handler;
