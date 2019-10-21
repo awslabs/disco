@@ -55,8 +55,8 @@ public class ContextPropagationUtil {
 
     /**
      * Retrieve the whitelisted attributes set in the TransactionContext
-     * @param whitelist
-     * @return
+     * @param whitelist a list of permitted attributes, to be union'ed against the requested metadata tagged with PROPAGATE_IN_REQUEST_TAG
+     * @return the resulting list
      */
     public static Map<String, Object> getWhiteListAttributesFromContext(Set<String> whitelist) {
         Map<String, Object> keyValuesToPropagate = TransactionContext.getMetadataWithTag(PROPAGATE_IN_REQUEST_TAG);

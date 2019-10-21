@@ -27,6 +27,7 @@ public class AgentConfigParser {
      * Parses command line arguments.
      *
      * @param args - the arguments passed in to premain
+     * @return an AgentConfig generated from the given args
      */
     public AgentConfig parseCommandLine(String args) {
         if (args == null || args.isEmpty()) {

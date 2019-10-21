@@ -34,7 +34,7 @@ public class PluginOutcome {
 
     /**
      * Construct a PluginOutcome given the JarFile which was processed
-     * @param jarFile
+     * @param jarFile a jar file assumed to contain a Disco plugin, identified by its manifest
      */
     public PluginOutcome(File jarFile) {
         this.name = jarFile.getName();

@@ -79,7 +79,7 @@ public class MetadataItem {
 
     /**
      * Check if a specific tag exists for this MetadataItem
-     *
+     * @param tag a tag to inspect on this metadata
      * @return True if the tag exists.
      */
     public Boolean hasTag(String tag) {

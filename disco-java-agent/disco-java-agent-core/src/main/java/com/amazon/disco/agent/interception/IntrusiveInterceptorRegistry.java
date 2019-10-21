@@ -69,7 +69,7 @@ public class IntrusiveInterceptorRegistry {
      * @param <T> the return type of the Callable (if known)
      * @return whatever is returned by the replace() or transform() methods of the IntrusiveInterceptor, or whatever
      *        is returned by the call() method of the supplied Callable if the decide() method produces Continue.
-     * @throws Throwable
+     * @throws Throwable the original SuperCall method expressed by call() may throw any kind of Throwable
      */
     public static <T> T intrude(Event event, Callable<T> call) throws Throwable {
         //special case when no user-supplied IntrusiveInterceptor is registered, since there

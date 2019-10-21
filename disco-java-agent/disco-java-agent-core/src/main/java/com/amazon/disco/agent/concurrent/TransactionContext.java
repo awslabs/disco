@@ -154,7 +154,6 @@ public class TransactionContext {
      * Set a tag on data from the metadata map with a tag
      * @param key a String to identify the data.
      * @param tag a String that will be added to label/tag the data.
-     * @return a map of metadata objects that contained the tag
      */
     public static void setMetadataTag(String key, String tag) {
         MetadataItem metadata = transactionContext.get().get(key);
@@ -176,7 +175,6 @@ public class TransactionContext {
      * Removes a tag from a metadata entry
      * @param key a String to identify the data.
      * @param tag a String representing the label/tag that will be cleared.
-     * @return a map of metadata objects that contained the tag
      */
     public static void clearMetadataTag(String key, String tag) {
         if (transactionContext.get().get(key) == null) {
