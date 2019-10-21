@@ -88,7 +88,7 @@ public class Injector {
      *
      * @param instrumentation an Instrumentation instance to use
      * @param jarFile the File instance pointing to the Jar file
-     * @returns a File referring to the JAR. Calling code is responsible for calling close() on this object.
+     * @return a File referring to the JAR. Calling code is responsible for calling close() on this object.
      */
     public static JarFile addToSystemClasspath(Instrumentation instrumentation, File jarFile) {
         try {
@@ -110,7 +110,7 @@ public class Injector {
      *
      * @param instrumentation an Instrumentation instance to use
      * @param jarFile the File instance pointing to the Jar file
-     * @returns a JarFile instance of the JAR itself. Calling code is responsible for calling close() on this object
+     * @return a JarFile instance of the JAR itself. Calling code is responsible for calling close() on this object
      */
     public static JarFile addToBootstrapClasspath(Instrumentation instrumentation, File jarFile) {
         try {
