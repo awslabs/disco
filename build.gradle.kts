@@ -126,15 +126,28 @@ subprojects {
                     artifact(tasks["javadocJar"])
 
                     pom {
+                        name.set(groupId + ":" + artifactId)
+                        description.set("Amazon Disco aspect oriented toolkit")
+                        url.set("https://github.com/awslabs/disco")
                         licenses {
                             license {
                                 name.set("The Apache License, Version 2.0")
                                 url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
                             }
                         }
+                        developers {
+                            developer {
+                                id.set("connellp")
+                                name.set("Paul Connell")
+                                email.set("connellp@amazon.com")
+                            }
+                        }
+                        scm {
+                            connection.set("scm:git:git://github.com/awslabs/disco.git")
+                            developerConnection.set("scm:git:ssh://github.com/awslabs/disco.git")
+                            url.set("https://github.com/awslabs/disco")
+                        }
                     }
-
-                    //TODO scm, author, whatever other metadata makes sense.
                 }
             }
         }
