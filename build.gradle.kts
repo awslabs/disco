@@ -17,7 +17,6 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 //common features available to the entire project
 //TODO specify the versions of ByteBuddy and ASM in here, since they are used in a few places.
-//TODO think about maven-publish, and what we need to include in every single pom
 plugins {
     id("com.github.johnrengelman.shadow") version "5.1.0" apply false
     java
