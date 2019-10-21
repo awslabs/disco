@@ -36,9 +36,10 @@ import java.util.stream.Collectors;
 public class TransactionContext {
     private static Logger log = LogManager.getLogger(TransactionContext.class);
 
-    static final String TRANSACTION_ID_KEY = "discoTransactionId";
+    static final String TRANSACTION_ID_KEY = "$amazon.discoTransactionId";
     public static final String UNINITIALIZED_TRANSACTION_CONTEXT_VALUE = "disco_null_id";
-    public static final String REFERENCE_COUNTER_KEY = "discoRefCounterKey";
+
+    private static final String REFERENCE_COUNTER_KEY = "$amazon.discoRefCounterKey";
 
     public static final String PROPAGATE_IN_REQUEST_TAG = "PROPAGATE_IN_REQUEST";
 

@@ -89,7 +89,7 @@ public class TransactionContextTests {
             caught.set(thrown);
         });
 
-        TransactionContext.putMetadata("discoIdentifier", new Object());
+        TransactionContext.putMetadata("$amazon.discoIdentifier", new Object());
 
         UncaughtExceptionHandler.install(null);
         Assert.assertTrue(caught.get() instanceof IllegalArgumentException);
@@ -102,7 +102,7 @@ public class TransactionContextTests {
             caught.set(thrown);
         });
 
-        TransactionContext.getMetadata("discoIdentifier");
+        TransactionContext.getMetadata("$amazon.discoIdentifier");
 
         UncaughtExceptionHandler.install(null);
         Assert.assertTrue(caught.get() instanceof IllegalArgumentException);

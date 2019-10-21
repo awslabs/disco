@@ -170,11 +170,11 @@ public class TransactionContextTests {
 
     @Test(expected = IllegalArgumentException.class)
     public void testPutMetadataThrowsWithIllegalIdentifier() {
-        TransactionContext.putMetadata("discoTransactionId", null);
+        TransactionContext.putMetadata("$amazon.discoTransactionId", null);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testGetMetadataThrowsWithIllegalIdentifier() {
-        TransactionContext.getMetadata("discoTransactionId");
+        TransactionContext.getMetadata("$amazon.discoTransactionId");
     }
 }

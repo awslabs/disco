@@ -31,7 +31,7 @@ import java.util.Map;
  * this TransactionContext should be set. This must be before ANY downstream dependency interactions have occurred.
  */
 public class TransactionContext {
-    static final String DISCO_PREFIX = "disco";
+    static final String DISCO_PREFIX = "$amazon.disco";
     static final String TRANSACTIONCONTEXT_CLASS = ".concurrent.TransactionContext";
 
     /**

@@ -24,7 +24,7 @@ import java.lang.reflect.Field;
  * augment the ForkJoinTask abstract class itself, with the addition threadId and transactionContext fields
  */
 public class DecoratedForkJoinTask extends Decorated {
-    public static final String DISCO_DECORATION_FIELD_NAME = "discoDecoration";
+    public static final String DISCO_DECORATION_FIELD_NAME = "$discoDecoration";
 
     /**
      * Create DiSCo propagation metadata on the supplied object, assumed to be a ForkJoinTask
