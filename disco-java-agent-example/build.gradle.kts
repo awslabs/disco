@@ -25,7 +25,7 @@ dependencies {
 tasks.shadowJar  {
     manifest {
         attributes(mapOf(
-                "Premain-Class" to "com.amazon.disco.agent.example.Agent",
+                "Premain-Class" to "software.amazon.disco.agent.example.Agent",
                 "Can-Redefine-Classes" to "true",
                 "Can-Retransform-Classes" to "true",
                 "Boot-Class-Path" to archiveFileName.get()

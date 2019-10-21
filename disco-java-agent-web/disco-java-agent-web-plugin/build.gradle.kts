@@ -40,7 +40,7 @@ tasks.shadowJar  {
     manifest {
         attributes(mapOf(
             //this has to align with the contents of WebSupport.java. Would be good to find a way to avoid this duplication
-            "Disco-Installable-Classes" to "com.amazon.disco.agent.web.servlet.HttpServletServiceInterceptor"
+            "Disco-Installable-Classes" to "software.amazon.disco.agent.web.servlet.HttpServletServiceInterceptor"
         ))
     }
 }

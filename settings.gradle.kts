@@ -13,7 +13,7 @@
  *   permissions and limitations under the License.
  */
 
-rootProject.name = "com.amazon.disco"
+rootProject.name = "software.amazon.disco"
 
 include("disco-java-agent:disco-java-agent")
 include("disco-java-agent:disco-java-agent-plugin-api")
