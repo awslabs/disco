@@ -125,6 +125,8 @@ subprojects {
                     artifact(tasks["sourcesJar"])
                     artifact(tasks["javadocJar"])
 
+                    groupId = "software.amazon.disco"
+
                     pom {
                         name.set(groupId + ":" + artifactId)
                         description.set("Amazon Disco aspect oriented toolkit")
