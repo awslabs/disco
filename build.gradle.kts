@@ -129,7 +129,7 @@ subprojects {
 
                     pom {
                         name.set(groupId + ":" + artifactId)
-                        description.set("Amazon Disco aspect oriented toolkit")
+                        description.set("Amazon Disco aspect oriented distributed systems comprehension toolkit")
                         url.set("https://github.com/awslabs/disco")
                         licenses {
                             license {
