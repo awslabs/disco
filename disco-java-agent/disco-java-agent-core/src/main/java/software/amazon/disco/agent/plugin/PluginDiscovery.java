@@ -86,15 +86,18 @@ public class PluginDiscovery {
 
             outcomes = new LinkedList<>();
 
-            for (File jarFile: pluginDir.listFiles()) {
-                if (jarFile.getName().substring(jarFile.getName().lastIndexOf(".")).equalsIgnoreCase(".jar")) {
-                    PluginOutcome outcome = processJarFile(instrumentation, installables, jarFile);
-                    if (outcome != null) {
-                        outcomes.add(outcome);
+            File[] files = pluginDir.listFiles();
+            if (files != null) {
+                for (File jarFile : files) {
+                    if (jarFile.getName().substring(jarFile.getName().lastIndexOf(".")).equalsIgnoreCase(".jar")) {
+                        PluginOutcome outcome = processJarFile(instrumentation, installables, jarFile);
+                        if (outcome != null) {
+                            outcomes.add(outcome);
+                        }
+                    } else {
+                        //ignore non JAR file
+                        log.info("DiSCo(Core) non JAR file found on plugin path, skipping this file");
                     }
-                } else {
-                    //ignore non JAR file
-                    log.info("DiSCo(Core) non JAR file found on plugin path, skipping this file");
                 }
             }
         } catch (Throwable t) {
