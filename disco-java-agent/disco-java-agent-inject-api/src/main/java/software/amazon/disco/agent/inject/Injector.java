@@ -31,6 +31,14 @@ import java.util.jar.JarFile;
  */
 public class Injector {
     /**
+     * Create an Instrumentation instance
+     * @return an instumentation
+     */
+    public static Instrumentation createInstrumentation() {
+        return ByteBuddyAgent.install();
+    }
+
+    /**
      * Attach a disco agent during application execution.
      *
      * This makes some assumptions about the state of the Agent being loaded, notably that the bytebuddy and asm namespaces
@@ -44,8 +52,7 @@ public class Injector {
      */
     public static void loadAgent(String agentJarPath, String agentArgs) {
         try {
-            Instrumentation instrumentation = ByteBuddyAgent.install();
-            loadAgent(instrumentation, agentJarPath, agentArgs);
+            loadAgent(createInstrumentation(), agentJarPath, agentArgs);
         } catch (Throwable t) {
             //survive any failures
         }
