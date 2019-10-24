@@ -15,6 +15,7 @@
 
 package software.amazon.disco.agent.integtest.web.servlet;
 
+import software.amazon.disco.agent.event.AbstractTransactionEvent;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.HttpNetworkProtocolRequestEvent;
 import software.amazon.disco.agent.event.HttpNetworkProtocolResponseEvent;
@@ -195,6 +196,10 @@ public class HttpServletServiceInterceptorTests {
 
         @Override
         public void listen(Event e) {
+            //ignore events of no concern to these tests
+            if (e instanceof AbstractTransactionEvent) {
+                return;
+            }
             events.add(e);
         }
     }

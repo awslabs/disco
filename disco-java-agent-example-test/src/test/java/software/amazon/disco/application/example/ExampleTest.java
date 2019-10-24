@@ -19,6 +19,8 @@ import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.HttpServletNetworkRequestEvent;
 import software.amazon.disco.agent.event.HttpServletNetworkResponseEvent;
 import software.amazon.disco.agent.event.Listener;
+import software.amazon.disco.agent.event.TransactionBeginEvent;
+import software.amazon.disco.agent.event.TransactionEndEvent;
 import software.amazon.disco.agent.reflect.concurrent.TransactionContext;
 import software.amazon.disco.agent.reflect.event.EventBus;
 import org.junit.Assert;
@@ -62,9 +64,11 @@ public class ExampleTest {
         HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
         servlet.service(req, resp);
         Assert.assertTrue(servlet.called);
-        Assert.assertEquals(2, l.events.size());
-        Assert.assertTrue(l.events.get(0) instanceof HttpServletNetworkRequestEvent);
-        Assert.assertTrue(l.events.get(1) instanceof HttpServletNetworkResponseEvent);
+        Assert.assertEquals(4, l.events.size());
+        Assert.assertTrue(l.events.get(0) instanceof TransactionBeginEvent);
+        Assert.assertTrue(l.events.get(1) instanceof HttpServletNetworkRequestEvent);
+        Assert.assertTrue(l.events.get(2) instanceof HttpServletNetworkResponseEvent);
+        Assert.assertTrue(l.events.get(3) instanceof TransactionEndEvent);
         EventBus.removeListener(l);
     }
 

@@ -16,6 +16,9 @@
 package software.amazon.disco.agent.concurrent;
 
 
+import software.amazon.disco.agent.event.EventBus;
+import software.amazon.disco.agent.event.TransactionBeginEvent;
+import software.amazon.disco.agent.event.TransactionEndEvent;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 
@@ -72,6 +75,7 @@ public class TransactionContext {
             clear();
             set(UUID.randomUUID().toString());
             transactionContext.get().put(REFERENCE_COUNTER_KEY, new MetadataItem(new AtomicInteger(0)));
+            EventBus.publish(new TransactionBeginEvent("Core"));
         }
         getReferenceCounter().getAndIncrement();
     }
@@ -89,6 +93,7 @@ public class TransactionContext {
         }
         // When the counter <= 0, we know that the transaction is fully finished.
         if (getReferenceCounter().decrementAndGet() <= 0) {
+            EventBus.publish(new TransactionEndEvent("Core"));
             clear();
         }
     }

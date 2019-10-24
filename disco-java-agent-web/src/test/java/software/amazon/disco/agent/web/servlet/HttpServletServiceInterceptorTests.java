@@ -15,6 +15,7 @@
 
 package software.amazon.disco.agent.web.servlet;
 
+import software.amazon.disco.agent.event.AbstractTransactionEvent;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.HttpServletNetworkRequestEvent;
@@ -165,13 +166,15 @@ public class HttpServletServiceInterceptorTests {
         public int getPriority() {
             return 0;
         }
-
+        
         @Override
         public void listen(Event e) {
             if (e instanceof HttpServletNetworkRequestEvent) {
                 request = (HttpServletNetworkRequestEvent) e;
             } else if (e instanceof HttpServletNetworkResponseEvent) {
                 response = (HttpServletNetworkResponseEvent) e;
+            } else if (e instanceof AbstractTransactionEvent) {
+                //ignore
             } else {
                 Assert.fail("Unexpected event");
             }

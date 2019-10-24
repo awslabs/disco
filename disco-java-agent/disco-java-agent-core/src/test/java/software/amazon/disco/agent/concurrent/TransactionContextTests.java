@@ -15,10 +15,18 @@
 
 package software.amazon.disco.agent.concurrent;
 
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import software.amazon.disco.agent.event.Event;
+import software.amazon.disco.agent.event.EventBus;
+import software.amazon.disco.agent.event.Listener;
+import software.amazon.disco.agent.event.TransactionBeginEvent;
+import software.amazon.disco.agent.event.TransactionEndEvent;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -27,24 +35,50 @@ import java.util.concurrent.ConcurrentMap;
  * Tests for the TransactionContext class
  */
 public class TransactionContextTests {
-    int initializerValue = 0;
+    private Listener listener;
 
     @Before
     public void before() {
+        TransactionContext.clear();
+        EventBus.addListener(listener = new Listener());
+    }
+
+    @After
+    public void after() {
+        EventBus.removeListener(listener);
         TransactionContext.clear();
     }
 
     @Test
     public void testInitialValue() {
+        Assert.assertEquals(1, TransactionContext.getPrivateMetadata().size()); //only TransactionId
         Assert.assertEquals(TransactionContext.UNINITIALIZED_TRANSACTION_CONTEXT_VALUE, TransactionContext.get());
     }
 
     @Test
-    public void testCreateDestroy() {
+    public void testDestroyWithNoCreate() {
         TransactionContext.putMetadata("foo", "bar");
         TransactionContext.destroy();
         Assert.assertEquals(1, TransactionContext.getPrivateMetadata().size()); //only TransactionId
+        Assert.assertEquals(0, listener.events.size());
+    }
 
+    @Test
+    public void testSingleCreateSingleDestroy() {
+        TransactionContext.create();
+        Assert.assertEquals(1, TransactionContext.getReferenceCounter().get());
+        Assert.assertEquals(2, TransactionContext.getPrivateMetadata().size()); //only TransactionId and Ref Counter
+        TransactionContext.putMetadata("foo", "bar");
+        Assert.assertEquals(3, TransactionContext.getPrivateMetadata().size()); //only TransactionId and Ref Counter and Foobar
+        TransactionContext.destroy();
+        testInitialValue();
+        Assert.assertEquals(2, listener.events.size());
+        Assert.assertTrue(listener.events.get(0) instanceof TransactionBeginEvent);
+        Assert.assertTrue(listener.events.get(1) instanceof TransactionEndEvent);
+    }
+
+    @Test
+    public void testSingleCreateMultipleDestroy() {
         TransactionContext.create();
         Assert.assertEquals(1, TransactionContext.getReferenceCounter().get());
         Assert.assertEquals(2, TransactionContext.getPrivateMetadata().size()); //only TransactionId and Ref Counter
@@ -55,8 +89,14 @@ public class TransactionContextTests {
         TransactionContext.destroy();
         TransactionContext.destroy();
         TransactionContext.destroy();
-        Assert.assertEquals(1, TransactionContext.getPrivateMetadata().size());
+        testInitialValue();
+        Assert.assertEquals(2, listener.events.size());
+        Assert.assertTrue(listener.events.get(0) instanceof TransactionBeginEvent);
+        Assert.assertTrue(listener.events.get(1) instanceof TransactionEndEvent);
+    }
 
+    @Test
+    public void testMultipleCreateMultipleDestroy() {
         // Create to represent 3 layers and then destroy 3 should represent clearing.
         TransactionContext.create();
         Assert.assertEquals(2, TransactionContext.getPrivateMetadata().size());
@@ -67,18 +107,10 @@ public class TransactionContextTests {
         TransactionContext.destroy();
         TransactionContext.destroy();
         TransactionContext.destroy();
-        Assert.assertEquals(1, TransactionContext.getPrivateMetadata().size()); //only TransactionId
-
-        TransactionContext.create();
-        TransactionContext.create();
-        TransactionContext.create();
-        TransactionContext.create();
-        Assert.assertEquals(4, TransactionContext.getReferenceCounter().get());
-
-        // Clear should wipe out the context.
-        TransactionContext.clear();
-        Assert.assertEquals(1, TransactionContext.getPrivateMetadata().size()); //only TransactionId
-
+        testInitialValue();
+        Assert.assertEquals(2, listener.events.size());
+        Assert.assertTrue(listener.events.get(0) instanceof TransactionBeginEvent);
+        Assert.assertTrue(listener.events.get(1) instanceof TransactionEndEvent);
     }
 
     @Test
@@ -176,5 +208,18 @@ public class TransactionContextTests {
     @Test(expected = IllegalArgumentException.class)
     public void testGetMetadataThrowsWithIllegalIdentifier() {
         TransactionContext.getMetadata("$amazon.discoTransactionId");
+    }
+
+    static class Listener implements software.amazon.disco.agent.event.Listener {
+        List<Event> events = new LinkedList<>();
+        @Override
+        public int getPriority() {
+            return 0;
+        }
+
+        @Override
+        public void listen(Event e) {
+            events.add(e);
+        }
     }
 }
