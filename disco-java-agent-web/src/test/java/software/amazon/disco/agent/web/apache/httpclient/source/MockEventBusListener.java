@@ -13,18 +13,30 @@
  *   permissions and limitations under the License.
  */
 
-dependencies {
-    compile(project(":disco-java-agent:disco-java-agent-core"))
-    testCompile("junit", "junit", "4.12")
-    testCompile("org.mockito", "mockito-core", "1.+")
-    testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
-    testCompile("org.apache.httpcomponents", "httpclient", "4.5.10")
-}
+package software.amazon.disco.agent.web.apache.httpclient.source;
 
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            from(components["java"])
-        }
+import software.amazon.disco.agent.event.Event;
+import software.amazon.disco.agent.event.Listener;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MockEventBusListener implements Listener {
+
+
+    public List<Event> getReceivedEvents() {
+        return receivedEvents;
+    }
+
+    private List<Event> receivedEvents = new ArrayList<>();
+
+    @Override
+    public int getPriority() {
+        return 0;
+    }
+
+    @Override
+    public void listen(Event event) {
+        receivedEvents.add(event);
     }
 }

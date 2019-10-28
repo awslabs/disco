@@ -13,18 +13,22 @@
  *   permissions and limitations under the License.
  */
 
-dependencies {
-    compile(project(":disco-java-agent:disco-java-agent-core"))
-    testCompile("junit", "junit", "4.12")
-    testCompile("org.mockito", "mockito-core", "1.+")
-    testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
-    testCompile("org.apache.httpcomponents", "httpclient", "4.5.10")
-}
+package software.amazon.disco.agent.integtest.web.apache.httpclient.source;
 
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            from(components["java"])
-        }
+import org.apache.http.HttpResponse;
+import org.apache.http.ProtocolVersion;
+import org.apache.http.message.BasicHttpResponse;
+
+import java.io.IOException;
+
+public class FakeChainedExecuteCallHttpClientReturnResponse extends FakeChainedExecuteCallHttpClientBase {
+    public HttpResponse fakeResponse = new BasicHttpResponse(new ProtocolVersion("protocol", 1, 1), 200, "");
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    HttpResponse actualExecute() throws IOException {
+        return fakeResponse;
     }
 }
