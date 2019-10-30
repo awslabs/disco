@@ -67,14 +67,15 @@ public class HttpServletServiceInterceptorTests {
 
     @Test
     public void testServletUseDefaultServiceTest() throws Throwable {
+        //this servlet has no impl of service(), it just uses the one in the abstract base
         testServlet(new FakeServletUseDefaultService());
     }
 
-    /*
     @Test
-    public void testChainedServlet() throws Throwable {
+    public void testServletUseInheritedServiceCallingDefaultTest() throws Throwable {
+        //this servlet implements service(), but calls to its super.service() impl
         testServlet(new FakeChainedServiceCallServlet());
-    }*/
+    }
 
     @Test
     public void testServiceInterceptionOverridden() throws Throwable{
@@ -164,7 +165,7 @@ public class HttpServletServiceInterceptorTests {
 
         servlet.service(request, response);
 
-        // Ensure that we get only two events.
+        // Ensure that we get only two events, even when a subclass and a superclass are both instrumented.
         Assert.assertEquals(2, eventBusListener.events.size());
         Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
         Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
