@@ -112,7 +112,7 @@ public class Injector {
 
     /**
      * Add a disco plugin of any kind, or an entire agent Jar, to the bootstrap classloader if desired or required.
-     * Typically Listeners and IntrusiveInterceptors do not need to be on the bootstrap, but any Installables which manipulate
+     * Typically Listeners do not need to be on the bootstrap, but any Installables which manipulate
      * JDK classes, such as those in software.amazon.disco.agent.concurrent, do. Other Installables probably do not.
      *
      * @param instrumentation an Instrumentation instance to use
