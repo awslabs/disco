@@ -53,7 +53,6 @@ public class ApacheHttpClientInterceptor implements Installable {
 
     private static final Logger log = LogManager.getLogger(ApacheHttpClientInterceptor.class);
     private static final MethodInterceptionCounter METHOD_INTERCEPTION_COUNTER = new MethodInterceptionCounter();
-    private static Set<String> whiteListedAttributes = new TreeSet<>();
 
     static final String APACHE_HTTP_CLIENT_ORIGIN = "ApacheHttpClient";
 
@@ -197,15 +196,6 @@ public class ApacheHttpClientInterceptor implements Installable {
             responseEvent.withThrown(throwable);
         }
         EventBus.publish(responseEvent);
-    }
-
-    /**
-     * Set the whitelisted attributes.
-     *
-     * @param attributeNames The names of the attributes
-     */
-    public static void setWhiteListedAttributes(final Set<String> attributeNames) {
-        whiteListedAttributes = attributeNames;
     }
 
     /**

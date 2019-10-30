@@ -66,7 +66,7 @@ public class ApacheHttpClientInterceptorTests {
     private static final String URI = "http://amazon.com/explore/something";
     private static final String METHOD = "GET";
 
-    // Set the whitelisted attributes
+    // Set the header attributes
     private static final String HEADER_NAME_1 = "headerName1";
     private static final String HEADER_VALUE_1 = "headerValue1";
     private static final String HEADER_NAME_2 = "headerName2";
@@ -218,9 +218,6 @@ public class ApacheHttpClientInterceptorTests {
     }
 
     private static void prepareToBePropagatedHeaders() {
-        // Set the whitelisted attributes
-        ApacheHttpClientInterceptor.setWhiteListedAttributes(new HashSet<>(Arrays.asList(HEADER_NAME_1, HEADER_NAME_2)));
-
         // Add test metadata
         TransactionContext.putMetadata(HEADER_NAME_1, HEADER_VALUE_1);
         TransactionContext.setMetadataTag(HEADER_NAME_1, TransactionContext.PROPAGATE_IN_REQUEST_TAG);

@@ -54,12 +54,11 @@ import static org.mockito.Mockito.when;
 public class ApacheHttpClientInterceptorTests {
 
     private static final String INTERCEPTOR_CLASS = "software.amazon.disco.agent.web.apache.httpclient.ApacheHttpClientInterceptor";
-    private static final String SET_WHITELISTED_ATTRIBUTES_METHOD = "setWhiteListedAttributes";
     private static final String PROPAGATE_IN_REQUEST_TAG = "PROPAGATE_IN_REQUEST";
 
     private TestListener testListener;
 
-    // Set the whitelisted attributes
+    // Set the header attributes
     private static final String HEADER_NAME_1 = "headerName1";
     private static final String HEADER_VALUE_1 = "headerValue1";
     private static final String HEADER_NAME_2 = "headerName2";
@@ -166,10 +165,6 @@ public class ApacheHttpClientInterceptorTests {
     }
 
     private static void prepareToBePropagatedHeaders() throws ClassNotFoundException, InvocationTargetException, IllegalAccessException, NoSuchMethodException {
-        // Set the whitelisted attributes
-        final Method method = Class.forName(INTERCEPTOR_CLASS).getMethod(SET_WHITELISTED_ATTRIBUTES_METHOD, Set.class);
-        method.invoke(null, new HashSet<>(Arrays.asList(HEADER_NAME_1, HEADER_NAME_2)));
-
         // Add test metadata
         TransactionContext.putMetadata(HEADER_NAME_1, HEADER_VALUE_1);
         TransactionContext.setMetadataTag(HEADER_NAME_1, PROPAGATE_IN_REQUEST_TAG);
