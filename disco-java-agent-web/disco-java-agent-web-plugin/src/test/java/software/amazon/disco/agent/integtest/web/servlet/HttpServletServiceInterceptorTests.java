@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
@@ -56,7 +57,6 @@ public class HttpServletServiceInterceptorTests {
 
         eventBusListener = new EventBusListener();
         EventBus.addListener(eventBusListener);
-        TransactionContext.create();
     }
 
     @After
@@ -66,8 +66,69 @@ public class HttpServletServiceInterceptorTests {
     }
 
     @Test
-    public void testServletUseDefaultServiceTest() throws Throwable {
-        FakeServletUseDefaultService servlet = new FakeServletUseDefaultService();
+    public void testAbstractServlet() throws Throwable {
+        testServlet(new FakeServletUseDefaultService());
+    }
+
+    @Test
+    public void testChainedServlet() throws Throwable {
+        testServlet(new FakeChainedServiceCallServlet());
+    }
+
+    @Test
+    public void testServiceInterceptionOverridden() throws Throwable{
+        FakeOverriddenServlet servlet = new FakeOverriddenServlet();
+
+        servlet.service(request, response);
+
+        // Confirm that the overridden service method was ran.
+        Assert.assertTrue(servlet.didRunService());
+
+        // Ensure that we captured 2 events. Signifies that we matched it.
+        Assert.assertEquals(2, eventBusListener.events.size());
+        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
+        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
+    }
+
+    @Test
+    public void testServiceInterceptionChained() throws Throwable{
+        FakeChainedServiceCallServlet servlet = new FakeChainedServiceCallServlet();
+
+        List<String> indicator = new ArrayList<>();
+        servlet.service(request, response, 1, 2, 3, 4, indicator);
+
+        // Ensure that the chain of "service()" methods were all called.
+        Assert.assertEquals(1, indicator.size());
+
+        // Ensure that we captured only 2 events. Chained calls should not give us more events.
+        // The matcher "shouldn't" capture the other events anyways, but as a sanity check,
+        // it's always good to ensure that more events aren't added through chained calls.
+        Assert.assertEquals(2, eventBusListener.events.size());
+        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
+        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
+    }
+
+    @Test
+    public void testServiceInterceptionException() throws Throwable {
+        // If the application code throws an exception, we should still be able to capture the http events.
+        FakeOverrideThrowExceptionServlet servlet = new FakeOverrideThrowExceptionServlet();
+
+        Throwable thrown;
+        try {
+            servlet.service(request, response);
+            Assert.fail();
+        } catch (ServletException e) {
+            thrown = e;
+        }
+
+        // Even though the service threw an exception, we still got http events.
+        Assert.assertEquals(2, eventBusListener.events.size());
+        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
+        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
+    }
+
+    // helper to test the same conditions for a variety of different concrete servlets
+    private void testServlet(HttpServlet servlet) throws Throwable {
 
         // Mock HttpServletRequest object.
         List<String> reqHeaderNames = new ArrayList<>();
@@ -133,59 +194,6 @@ public class HttpServletServiceInterceptorTests {
         Assert.assertEquals(response.getStatus(), responseEvent.getStatusCode());
         Assert.assertEquals(response.getHeader("more-custom-header"), responseEvent.getHeaderData("more-custom-header"));
     }
-
-    @Test
-    public void testServiceInterceptionOverridden() throws Throwable{
-        FakeOverriddenServlet servlet = new FakeOverriddenServlet();
-
-        servlet.service(request, response);
-
-        // Confirm that the overridden service method was ran.
-        Assert.assertTrue(servlet.didRunService());
-
-        // Ensure that we captured 2 events. Signifies that we matched it.
-        Assert.assertEquals(2, eventBusListener.events.size());
-        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
-        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
-    }
-
-    @Test
-    public void testServiceInterceptionChained() throws Throwable{
-        FakeChainedServiceCallServlet servlet = new FakeChainedServiceCallServlet();
-
-        List<String> indicator = new ArrayList<>();
-        servlet.service(request, response, 1, 2, 3, 4, indicator);
-
-        // Ensure that the chain of "service()" methods were all called.
-        Assert.assertEquals(1, indicator.size());
-
-        // Ensure that we captured only 2 events. Chained calls should not give us more events.
-        // The matcher "shouldn't" capture the other events anyways, but as a sanity check,
-        // it's always good to ensure that more events aren't added through chained calls.
-        Assert.assertEquals(2, eventBusListener.events.size());
-        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
-        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
-    }
-
-    @Test
-    public void testServiceInterceptionException() throws Throwable {
-        // If the application code throws an exception, we should still be able to capture the http events.
-        FakeOverrideThrowExceptionServlet servlet = new FakeOverrideThrowExceptionServlet();
-
-        Throwable thrown;
-        try {
-            servlet.service(request, response);
-            Assert.fail();
-        } catch (ServletException e) {
-            thrown = e;
-        }
-
-        // Even though the service threw an exception, we still got http events.
-        Assert.assertEquals(2, eventBusListener.events.size());
-        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
-        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
-    }
-
 
     class EventBusListener implements Listener {
         List<Event> events = new LinkedList<>();

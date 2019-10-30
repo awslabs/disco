@@ -36,12 +36,14 @@ public class TransactionContext {
 
     /**
      * Create a default UUID transaction ID
+     * @return the tx stack depth.
      */
-    public static void create() {
+    public static int create() {
         Logger.info("Creating a new random transactionId and an empty transaction Context.");
-        ReflectiveCall.returningVoid()
+        return ReflectiveCall.returning(int.class)
                 .ofClass(TRANSACTIONCONTEXT_CLASS)
                 .ofMethod("create")
+                .withDefaultValue(0)
                 .call();
     }
     /**

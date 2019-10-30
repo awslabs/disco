@@ -29,11 +29,15 @@ public class FakeChainedServiceCallServlet extends HttpServlet {
     /**
      * {@inheritDoc}
      */
+    @Override
+    public void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        super.service(request, response);
+    }
 
     public void service(HttpServletRequest request, HttpServletResponse response, int param1, List<String> didCallIndicator) throws ServletException, IOException {
         // didCallIndicator used to make sure that this call is made.
         didCallIndicator.add("called");
-        super.service(request, response);
+        service(request, response);
     }
 
     public void service(HttpServletRequest request, HttpServletResponse response, int param1, int param2, List<String> didCallIndicator) throws ServletException, IOException {

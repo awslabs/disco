@@ -67,8 +67,11 @@ public class TransactionContext {
 
     /**
      * Create a new unique Transaction Context for this thread
+     * @return the current stack depth of the transaction context caused by create(). Will be 0 if this call
+     * to create() actually caused a new transaction context to be created. Higher values indicate that the reference counter
+     * was simply incremented.
      */
-    public static void create() {
+    public static int create() {
         // Prevent destructive actions by incrementing a reference counter to detect when to truly
         // create a new Transaction Context.
         if (getReferenceCounter() == null || getReferenceCounter().get() <= 0) {
@@ -77,7 +80,7 @@ public class TransactionContext {
             transactionContext.get().put(REFERENCE_COUNTER_KEY, new MetadataItem(new AtomicInteger(0)));
             EventBus.publish(new TransactionBeginEvent("Core"));
         }
-        getReferenceCounter().getAndIncrement();
+        return getReferenceCounter().getAndIncrement();
     }
 
     /**
