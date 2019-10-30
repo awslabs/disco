@@ -90,7 +90,7 @@ public class ApacheHttpClientInterceptorTests {
     @After
     public void after() {
         TransactionContext.clear();
-        EventBus.removeAllListeners();
+        EventBus.removeListener(mockEventBusListener);
     }
 
     @Test
