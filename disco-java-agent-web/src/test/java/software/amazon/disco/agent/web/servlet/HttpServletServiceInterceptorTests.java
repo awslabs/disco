@@ -92,7 +92,7 @@ public class HttpServletServiceInterceptorTests {
 
     @After
     public void after() {
-        EventBus.removeAllListeners();
+        EventBus.removeListener(testListener);
     }
 
     @Test
