@@ -66,14 +66,15 @@ public class HttpServletServiceInterceptorTests {
     }
 
     @Test
-    public void testAbstractServlet() throws Throwable {
+    public void testServletUseDefaultServiceTest() throws Throwable {
         testServlet(new FakeServletUseDefaultService());
     }
 
+    /*
     @Test
     public void testChainedServlet() throws Throwable {
         testServlet(new FakeChainedServiceCallServlet());
-    }
+    }*/
 
     @Test
     public void testServiceInterceptionOverridden() throws Throwable{
