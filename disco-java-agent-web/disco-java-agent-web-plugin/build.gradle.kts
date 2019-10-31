@@ -60,6 +60,7 @@ tasks.test {
     //we do not take any normal compile/runtime dependency on this, but it must be built first since the above jvmArg
     //refers to its built artifact.
     dependsOn(":disco-java-agent:disco-java-agent:build")
+    dependsOn(":disco-java-agent-web:disco-java-agent-web-plugin:assemble")
 }
 
 configure<PublishingExtension> {
