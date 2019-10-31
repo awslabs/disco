@@ -16,6 +16,7 @@
 package software.amazon.disco.agent.integtest.web.apache.httpclient;
 
 import org.apache.http.RequestLine;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -85,13 +86,13 @@ public class ApacheHttpClientInterceptorTests {
 
     @Test
     public void testRealCall() throws Exception {
-        CloseableHttpClient httpClient = HttpClients.createMinimal();
-        HttpGet request = new HttpGet("https://amazon.com");
-        CloseableHttpResponse response = null;
-        try {
-            response = httpClient.execute(request);
-        } catch (IOException e) {
-            //swallow
+        try (CloseableHttpClient httpClient = HttpClients.createMinimal()) {
+            HttpGet request = new HttpGet("https://amazon.com");
+            try {
+                httpClient.execute(request);
+            } catch (IOException e) {
+                //swallow
+            }
         }
 
         assertEquals(1, testListener.requestEvents.size());

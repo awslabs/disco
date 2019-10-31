@@ -25,7 +25,6 @@ import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 import net.bytebuddy.agent.builder.AgentBuilder;
-import net.bytebuddy.description.ModifierReviewable;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.implementation.MethodDelegation;
@@ -204,7 +203,7 @@ public class ApacheHttpClientInterceptor implements Installable {
         return agentBuilder
                 .type(buildClassMatcher())
                 .transform((builder, typeDescription, classLoader, module) -> builder
-                        .method(buildMethodMatcher())
+                        .method(buildMethodMatcher(typeDescription))
                         .intercept(MethodDelegation.to(this.getClass())));
     }
 
@@ -215,22 +214,23 @@ public class ApacheHttpClientInterceptor implements Installable {
      */
     static ElementMatcher<? super TypeDescription> buildClassMatcher() {
         ElementMatcher.Junction<TypeDescription> classMatches = ElementMatchers.hasSuperType(ElementMatchers.named("org.apache.http.client.HttpClient"));
-        ElementMatcher.Junction<ModifierReviewable.OfAbstraction> notAbstractClassMatches = ElementMatchers.not(ElementMatchers.isAbstract());
         ElementMatcher.Junction<TypeDescription> notInterfaceMatches = ElementMatchers.not(ElementMatchers.isInterface());
-        return classMatches.and(notInterfaceMatches).and(notAbstractClassMatches);
+        return classMatches.and(notInterfaceMatches);
     }
 
     /**
      * Build an ElementMatcher which will match against the execute() method
      * with at least one argument having a super type of HttpRequest in the HttpClient class.
      * Package-private for tests.
-     *
+     * @param typeDescription a description of the class which has been matched for interception, passed in to
+     *                        prevent bytebuddy from aggressively matching superclass methods
      * @return An ElementMatcher suitable for passing to the method() method of a DynamicType.Builder
      */
-    static ElementMatcher<? super MethodDescription> buildMethodMatcher() {
+    static ElementMatcher<? super MethodDescription> buildMethodMatcher(TypeDescription typeDescription) {
         ElementMatcher.Junction<TypeDescription> superTypeIsHttpRequestMatches = ElementMatchers.hasSuperType(ElementMatchers.named("org.apache.http.HttpRequest"));
         ElementMatcher.Junction<MethodDescription> anyArgHasSuperTypeIsHttpRequestMatches = ElementMatchers.hasParameters(ElementMatchers.whereAny(ElementMatchers.hasType(superTypeIsHttpRequestMatches)));
         ElementMatcher.Junction<MethodDescription> methodMatches = ElementMatchers.named("execute").and(anyArgHasSuperTypeIsHttpRequestMatches);
-        return methodMatches.and(ElementMatchers.not(ElementMatchers.isAbstract()));
+        ElementMatcher.Junction<MethodDescription> declaredByClass = ElementMatchers.isDeclaredBy(typeDescription);
+        return methodMatches.and(declaredByClass).and(ElementMatchers.not(ElementMatchers.isAbstract()));
     }
 }

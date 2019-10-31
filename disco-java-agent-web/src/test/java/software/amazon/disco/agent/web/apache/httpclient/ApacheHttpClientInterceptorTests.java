@@ -15,6 +15,7 @@
 
 package software.amazon.disco.agent.web.apache.httpclient;
 
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.Event;
@@ -44,6 +45,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import software.amazon.disco.agent.web.apache.httpclient.source.MockEventBusListener;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -106,6 +108,7 @@ public class ApacheHttpClientInterceptorTests {
     @Test
     public void testClassMatcherSucceedsOnRealClient() {
         assertTrue(classMatches(HttpClients.createMinimal().getClass()));
+        assertTrue(classMatches(HttpClients.createMinimal().getClass().getSuperclass()));
     }
 
     @Test
@@ -121,6 +124,14 @@ public class ApacheHttpClientInterceptorTests {
     @Test
     public void testClassMatcherFailedOnUnrelatedClass() {
         assertFalse(classMatches(String.class));
+    }
+
+    @Test
+    public void testMethodMatcherSucceedsOnRealClient() throws Exception {
+        HttpClient client = HttpClients.createMinimal();
+        Class<?> clazz = client.getClass();
+        assertEquals(CloseableHttpClient.class, clazz.getSuperclass());
+        assertEquals(12, methodMatchedCount("execute", clazz.getSuperclass()));
     }
 
     /**
@@ -296,7 +307,7 @@ public class ApacheHttpClientInterceptorTests {
         int matchedCount = 0;
         for (Method m : methods) {
             MethodDescription.ForLoadedMethod forLoadedMethod = new MethodDescription.ForLoadedMethod(m);
-            if (ApacheHttpClientInterceptor.buildMethodMatcher().matches(forLoadedMethod)) {
+            if (ApacheHttpClientInterceptor.buildMethodMatcher(new TypeDescription.ForLoadedType(paramType)).matches(forLoadedMethod)) {
                 matchedCount++;
             }
         }
