@@ -86,14 +86,13 @@ public class ApacheHttpClientInterceptor implements Installable {
         ServiceDownstreamRequestEvent requestEvent = publishRequestEvent(requestAccessor);
 
         Throwable throwable = null;
-        Object response = null;
         try {
-            return response = call(zuper);
+            return call(zuper);
         } catch (Throwable t) {
             throw throwable = t;
         } finally {
             // publish response event
-            publishResponseEvent(requestEvent, response, throwable);
+            publishResponseEvent(requestEvent, throwable);
         }
     }
 
@@ -172,24 +171,18 @@ public class ApacheHttpClientInterceptor implements Installable {
      */
     private static ServiceDownstreamRequestEvent publishRequestEvent(final HttpRequestAccessor requestAccessor) {
         ServiceDownstreamRequestEvent requestEvent = new ServiceDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, requestAccessor.getUri(), requestAccessor.getMethod());
-        requestEvent.withRequest(requestAccessor.getRequest());
         EventBus.publish(requestEvent);
         return requestEvent;
     }
 
     /**
      * Publish a {@link ServiceDownstreamResponseEvent}.
-     *
-     * @param requestEvent Previously published ServiceDownstreamRequestEvent
-     * @param response The http response if the request succeeds
+     *  @param requestEvent Previously published ServiceDownstreamRequestEvent
      * @param throwable The throwable if the request fails
      */
-    private static void publishResponseEvent(final ServiceDownstreamRequestEvent requestEvent, final Object response, final Throwable throwable) {
+    private static void publishResponseEvent(final ServiceDownstreamRequestEvent requestEvent, final Throwable throwable) {
         ServiceDownstreamResponseEvent responseEvent = new ServiceDownstreamResponseEvent(APACHE_HTTP_CLIENT_ORIGIN, requestEvent.getService(), requestEvent.getOperation(), requestEvent);
-        if(throwable == null) {
-            responseEvent.withResponse(response);
-        }
-        else {
+        if(throwable != null) {
             responseEvent.withThrown(throwable);
         }
         EventBus.publish(responseEvent);

@@ -45,7 +45,6 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import software.amazon.disco.agent.web.apache.httpclient.source.MockEventBusListener;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -183,12 +182,12 @@ public class ApacheHttpClientInterceptorTests {
         assertEquals(2, events.size());
 
         // Verify the Request Event
-        verifyServiceRequestEvent(request, (ServiceDownstreamRequestEvent) events.get(0));
+        verifyServiceRequestEvent((ServiceDownstreamRequestEvent) events.get(0));
 
         // Verify the Response Event
         ServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (ServiceDownstreamResponseEvent) events.get(1);
         verifyServiceResponseEvent(serviceDownstreamResponseEvent);
-        assertEquals(expectedResponse, serviceDownstreamResponseEvent.getResponse());
+        assertNull(serviceDownstreamResponseEvent.getResponse());
         assertNull(serviceDownstreamResponseEvent.getThrown());
 
         assertEquals(3, someHttpClient.executeMethodChainingDepth);
@@ -220,7 +219,7 @@ public class ApacheHttpClientInterceptorTests {
             assertEquals(2, events.size());
 
             // Verify the Request Event
-            verifyServiceRequestEvent(request, (ServiceDownstreamRequestEvent) events.get(0));
+            verifyServiceRequestEvent((ServiceDownstreamRequestEvent) events.get(0));
 
             // Verify the Response Event
             ServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (ServiceDownstreamResponseEvent) events.get(1);
@@ -263,11 +262,11 @@ public class ApacheHttpClientInterceptorTests {
         assertEquals(HEADER_VALUE_2, addHeaderValueArgumentCaptor.getAllValues().get(1));
     }
 
-    private static void verifyServiceRequestEvent(final HttpRequest request, final ServiceDownstreamRequestEvent serviceDownstreamRequestEvent) {
+    private static void verifyServiceRequestEvent(final ServiceDownstreamRequestEvent serviceDownstreamRequestEvent) {
         assertEquals(METHOD, serviceDownstreamRequestEvent.getOperation());
         assertEquals(URI, serviceDownstreamRequestEvent.getService());
         assertEquals(ApacheHttpClientInterceptor.APACHE_HTTP_CLIENT_ORIGIN, serviceDownstreamRequestEvent.getOrigin());
-        assertEquals(request, serviceDownstreamRequestEvent.getRequest());
+        assertNull(serviceDownstreamRequestEvent.getRequest());
     }
 
     private static void verifyServiceResponseEvent(final ServiceDownstreamResponseEvent serviceDownstreamResponseEvent) {

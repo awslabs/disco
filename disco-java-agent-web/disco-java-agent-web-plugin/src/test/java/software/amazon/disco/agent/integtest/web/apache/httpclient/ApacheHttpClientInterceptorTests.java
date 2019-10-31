@@ -16,8 +16,6 @@
 package software.amazon.disco.agent.integtest.web.apache.httpclient;
 
 import org.apache.http.RequestLine;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -41,12 +39,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -58,7 +52,6 @@ import static org.mockito.Mockito.when;
 
 public class ApacheHttpClientInterceptorTests {
 
-    private static final String INTERCEPTOR_CLASS = "software.amazon.disco.agent.web.apache.httpclient.ApacheHttpClientInterceptor";
     private static final String PROPAGATE_IN_REQUEST_TAG = "PROPAGATE_IN_REQUEST";
 
     private TestListener testListener;
@@ -133,13 +126,13 @@ public class ApacheHttpClientInterceptorTests {
         assertEquals(1, testListener.requestEvents.size());
 
         // Verify the Request Event
-        verifyServiceRequestEvent(request, testListener.requestEvents.get(0));
+        verifyServiceRequestEvent(testListener.requestEvents.get(0));
 
         assertEquals(1, testListener.responseEvents.size());
 
         // Verify the Response Event
         verifyServiceResponseEvent(testListener.responseEvents.get(0));
-        assertEquals(httpClient.fakeResponse, testListener.responseEvents.get(0).getResponse());
+        assertNull(testListener.responseEvents.get(0).getResponse());
         assertNull(testListener.responseEvents.get(0).getThrown());
 
         assertEquals(3, httpClient.executeCallChainDepth);
@@ -165,7 +158,7 @@ public class ApacheHttpClientInterceptorTests {
             assertEquals(1, testListener.requestEvents.size());
 
             // Verify the Request Event
-            verifyServiceRequestEvent(request, testListener.requestEvents.get(0));
+            verifyServiceRequestEvent(testListener.requestEvents.get(0));
 
             assertEquals(1, testListener.responseEvents.size());
 
@@ -230,12 +223,12 @@ public class ApacheHttpClientInterceptorTests {
         assertEquals(HEADER_VALUE_2, addHeaderValueArgumentCaptor.getAllValues().get(1));
     }
 
-    private static void verifyServiceRequestEvent(final HttpRequest request, final ServiceRequestEvent serviceDownstreamRequestEvent) {
+    private static void verifyServiceRequestEvent(final ServiceRequestEvent serviceDownstreamRequestEvent) {
         assertTrue(serviceDownstreamRequestEvent instanceof ServiceDownstreamRequestEvent);
         assertEquals(METHOD, serviceDownstreamRequestEvent.getOperation());
         assertEquals(SOME_URI, serviceDownstreamRequestEvent.getService());
         assertEquals("ApacheHttpClient", serviceDownstreamRequestEvent.getOrigin());
-        assertEquals(request, serviceDownstreamRequestEvent.getRequest());
+        assertNull(serviceDownstreamRequestEvent.getRequest());
     }
 
     private static void verifyServiceResponseEvent(final ServiceResponseEvent serviceDownstreamResponseEvent) {
