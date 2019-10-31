@@ -27,38 +27,42 @@ import net.bytebuddy.utility.JavaModule;
  */
 public class InterceptionListener implements AgentBuilder.Listener {
     private static Logger log = LogManager.getLogger(InterceptionListener.class);
+    private final String prefix;
     private final boolean shouldTrace;
 
-    public static AgentBuilder.Listener INSTANCE = new InterceptionListener();
-
-    private InterceptionListener() {
+    private InterceptionListener(Installable installable) {
         shouldTrace = LogManager.isTraceEnabled();
+        prefix = installable.getClass().getName();
+    }
+
+    static InterceptionListener create(Installable installable) {
+        return new InterceptionListener(installable);
     }
 
     public void onDiscovery(String typeName, ClassLoader classLoader, JavaModule module, boolean loaded) {
         if (shouldTrace) {
-            log.trace("Discovered " + typeName + (loaded?" (after":" (before") + " loading)");
+            log.trace("DiSCo(Core) " + prefix + " discovered " + typeName + (loaded?" (after":" (before") + " loading)");
         }
     }
 
     public void onTransformation(TypeDescription typeDescription, ClassLoader classLoader, JavaModule module, boolean loaded, DynamicType dynamicType) {
-        log.debug("Transforming " + typeDescription.getName() + (loaded?" (after":" (before") + " loading)");
+        log.debug("DiSCo(Core) " + prefix + " transforming " + typeDescription.getName() + (loaded?" (after":" (before") + " loading)");
     }
 
     public void onIgnored(TypeDescription typeDescription, ClassLoader classLoader, JavaModule module, boolean loaded) {
         if (shouldTrace) {
-            log.trace("Ignoring " + typeDescription.getName() + (loaded ? " (after" : " (before") + " loading)");
+            log.trace("DiSCo(Core) " + prefix + " ignoring " + typeDescription.getName() + (loaded ? " (after" : " (before") + " loading)");
         }
     }
 
     public void onError(String typeName, ClassLoader classLoader, JavaModule module, boolean loaded, Throwable throwable) {
-        log.warn("Failed to transform " + typeName + (loaded?" (after":" (before") + " loading) in classloader " + classLoader.toString(),
+        log.warn("DiSCo(Core) " + prefix + " failed to transform " + typeName + (loaded?" (after":" (before") + " loading) in classloader " + classLoader.toString(),
                 throwable);
     }
 
     public void onComplete(String typeName, ClassLoader classLoader, JavaModule module, boolean loaded) {
         if (shouldTrace) {
-            log.trace("Completed " + typeName + (loaded ? "(after" : "(before") + " loading)");
+            log.trace("DiSCo(Core) " + prefix + " completed " + typeName + (loaded ? "(after" : "(before") + " loading)");
         }
     }
 }

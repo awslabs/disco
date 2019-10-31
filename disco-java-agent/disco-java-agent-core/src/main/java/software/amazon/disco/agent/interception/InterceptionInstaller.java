@@ -81,7 +81,7 @@ public class InterceptionInstaller {
 
             //The Interception listener is expensive during class loading, and limited value most of the time
             if (config.isExtraverbose()) {
-                agentBuilder = agentBuilder.with(InterceptionListener.INSTANCE);
+                agentBuilder = agentBuilder.with(InterceptionListener.create(installable));
             }
 
             log.info("DiSCo(Core) attempting to install "+installable.getClass().getName());
