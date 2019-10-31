@@ -25,7 +25,7 @@ import net.bytebuddy.utility.JavaModule;
 /**
  * An implementation of a ByteBuddy listener, to spy on interception, for debugging.
  */
-public class InterceptionListener implements AgentBuilder.Listener {
+class InterceptionListener implements AgentBuilder.Listener {
     private static Logger log = LogManager.getLogger(InterceptionListener.class);
     private final String prefix;
     private final boolean shouldTrace;
