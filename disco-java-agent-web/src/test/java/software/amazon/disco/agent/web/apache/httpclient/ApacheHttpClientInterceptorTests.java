@@ -15,6 +15,7 @@
 
 package software.amazon.disco.agent.web.apache.httpclient;
 
+import org.apache.http.impl.client.HttpClients;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
@@ -46,8 +47,6 @@ import software.amazon.disco.agent.web.apache.httpclient.source.MockEventBusList
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -102,6 +101,11 @@ public class ApacheHttpClientInterceptorTests {
         when(narrowable.transform(any(AgentBuilder.Transformer.class))).thenReturn(extendable);
         AgentBuilder result = interceptor.install(agentBuilder);
         assertSame(extendable, result);
+    }
+
+    @Test
+    public void testClassMatcherSucceedsOnRealClient() {
+        assertTrue(classMatches(HttpClients.createMinimal().getClass()));
     }
 
     @Test
