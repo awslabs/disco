@@ -15,6 +15,7 @@
 
 package software.amazon.disco.agent.web.apache.httpclient;
 
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.Event;
@@ -109,6 +110,11 @@ public class ApacheHttpClientInterceptorTests {
     }
 
     @Test
+    public void testClassMatcherSucceedsOnAbstractClass() {
+        assertTrue(classMatches(CloseableHttpClient.class));
+    }
+
+    @Test
     public void testClassMatcherSucceededOnConcreteClass() {
         assertTrue(classMatches(SomeChainedExecuteMethodsHttpClient.class));
     }
@@ -129,6 +135,16 @@ public class ApacheHttpClientInterceptorTests {
     @Test
     public void testMethodMatcherSucceeded() throws Exception {
         assertEquals(11, methodMatchedCount("execute", SomeChainedExecuteMethodsHttpClient.class));
+    }
+
+    @Test
+    public void testMethodMatcherSucceededOnAbstractClassButConcreteMethod() throws Exception {
+        assertEquals(12, methodMatchedCount("execute", CloseableHttpClient.class));
+    }
+
+    @Test(expected = NoSuchMethodException.class)
+    public void testMethodMatcherFailedOnConcreteClassButNoTargetedMethodImpl() throws Exception {
+        methodMatchedCount("execute", HttpClients.createMinimal().getClass());
     }
 
     @Test

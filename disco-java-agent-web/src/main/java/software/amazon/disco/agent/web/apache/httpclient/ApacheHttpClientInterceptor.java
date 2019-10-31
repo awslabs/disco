@@ -215,9 +215,8 @@ public class ApacheHttpClientInterceptor implements Installable {
      */
     static ElementMatcher<? super TypeDescription> buildClassMatcher() {
         ElementMatcher.Junction<TypeDescription> classMatches = ElementMatchers.hasSuperType(ElementMatchers.named("org.apache.http.client.HttpClient"));
-        ElementMatcher.Junction<ModifierReviewable.OfAbstraction> notAbstractClassMatches = ElementMatchers.not(ElementMatchers.isAbstract());
         ElementMatcher.Junction<TypeDescription> notInterfaceMatches = ElementMatchers.not(ElementMatchers.isInterface());
-        return classMatches.and(notInterfaceMatches).and(notAbstractClassMatches);
+        return classMatches.and(notInterfaceMatches);
     }
 
     /**
