@@ -16,7 +16,11 @@
 package software.amazon.disco.agent.integtest.web.apache.httpclient;
 
 import org.apache.http.RequestLine;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.mockito.ArgumentCaptor;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
@@ -77,6 +81,21 @@ public class ApacheHttpClientInterceptorTests {
     public void after() {
         TransactionContext.clear();
         EventBus.removeListener(testListener);
+    }
+
+    @Test
+    public void testRealCall() throws Exception {
+        CloseableHttpClient httpClient = HttpClients.createMinimal();
+        HttpGet request = new HttpGet("https://amazon.com");
+        CloseableHttpResponse response = null;
+        try {
+            response = httpClient.execute(request);
+        } catch (IOException e) {
+            //swallow
+        }
+
+        assertEquals(1, testListener.requestEvents.size());
+        assertEquals(1, testListener.responseEvents.size());
     }
 
     @Test
