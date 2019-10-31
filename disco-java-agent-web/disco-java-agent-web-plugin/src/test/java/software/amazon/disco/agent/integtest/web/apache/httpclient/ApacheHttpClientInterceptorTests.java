@@ -85,8 +85,23 @@ public class ApacheHttpClientInterceptorTests {
     }
 
     @Test
-    public void testRealCall() throws Exception {
+    public void testMinimalClient() throws Exception {
         try (CloseableHttpClient httpClient = HttpClients.createMinimal()) {
+            HttpGet request = new HttpGet("https://amazon.com");
+            try {
+                httpClient.execute(request);
+            } catch (IOException e) {
+                //swallow
+            }
+        }
+
+        assertEquals(1, testListener.requestEvents.size());
+        assertEquals(1, testListener.responseEvents.size());
+    }
+
+    @Test
+    public void testDefaultClient() throws Exception {
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpGet request = new HttpGet("https://amazon.com");
             try {
                 httpClient.execute(request);
