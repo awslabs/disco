@@ -35,6 +35,7 @@ import java.io.FileOutputStream;
 import java.lang.instrument.Instrumentation;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -71,12 +72,12 @@ public class PluginDiscoveryTests {
         //on the system classpath, so the best we can do is a mockito verify that it was in principle added to this classpath,
         //while also asserting that it was not already used
         Assert.assertFalse(PluginInit.initCalled);
-        List<PluginOutcome> outcomes = PluginDiscovery.init(instrumentation, installables, agentConfig);
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
         Mockito.verify(instrumentation).appendToSystemClassLoaderSearch(Mockito.any());
 
         //now the class was loaded, and its static init called
         Assert.assertTrue(PluginInit.initCalled);
-        Assert.assertFalse(outcomes.get(0).bootstrap);
+        Assert.assertFalse(outcomes.iterator().next().bootstrap);
     }
 
     @Test
@@ -84,12 +85,13 @@ public class PluginDiscoveryTests {
         createJar("plugin_with_listener",
                 "Disco-Listener-Classes: software.amazon.disco.agent.plugin.source.PluginListener",
                 "software.amazon.disco.agent.plugin.source.PluginListener");
-        List<PluginOutcome> outcomes = PluginDiscovery.init(instrumentation, installables, agentConfig);
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
         Event event = Mockito.mock(Event.class);
         EventBus.publish(event);
         Mockito.verify(instrumentation).appendToSystemClassLoaderSearch(Mockito.any());
-        Assert.assertEquals(event, ((PluginListener)outcomes.get(0).listeners.get(0)).events.get(0));
-        Assert.assertFalse(outcomes.get(0).bootstrap);
+        PluginOutcome outcome = outcomes.iterator().next();
+        Assert.assertEquals(event, ((PluginListener)outcome.listeners.get(0)).events.get(0));
+        Assert.assertFalse(outcome.bootstrap);
     }
 
     @Test
@@ -97,11 +99,12 @@ public class PluginDiscoveryTests {
         createJar("plugin_with_installable",
                 "Disco-Installable-Classes: software.amazon.disco.agent.plugin.source.PluginInstallable",
                 "software.amazon.disco.agent.plugin.source.PluginInstallable");
-        List<PluginOutcome> outcomes = PluginDiscovery.init(instrumentation, installables, agentConfig);
-        Installable installable = outcomes.get(0).installables.get(0);
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        PluginOutcome outcome = outcomes.iterator().next();
+        Installable installable = outcome.installables.get(0);
         Mockito.verify(instrumentation).appendToSystemClassLoaderSearch(Mockito.any());
         Assert.assertTrue(installables.contains(installable));
-        Assert.assertFalse(outcomes.get(0).bootstrap);
+        Assert.assertFalse(outcome.bootstrap);
     }
 
     @Test
@@ -109,9 +112,15 @@ public class PluginDiscoveryTests {
         createJar("plugin_with_bootstrap_true",
                 "Disco-Bootstrap-Classloader: true",
                 null);
-        List<PluginOutcome> outcomes = PluginDiscovery.init(instrumentation, installables, agentConfig);
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
         Mockito.verify(instrumentation).appendToBootstrapClassLoaderSearch(Mockito.any());
-        Assert.assertTrue(outcomes.get(0).bootstrap);
+        Assert.assertTrue(outcomes.iterator().next().bootstrap);
+    }
+
+    private Collection<PluginOutcome> scanAndApply(Instrumentation instrumentation, AgentConfig agentConfig) {
+        PluginDiscovery.scan(instrumentation, agentConfig);
+        installables.addAll(PluginDiscovery.processInstallables());
+        return PluginDiscovery.apply();
     }
 
     private void createJar(String name, String manifestContent, String className) throws Exception {

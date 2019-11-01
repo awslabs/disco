@@ -23,6 +23,7 @@ import software.amazon.disco.agent.plugin.PluginOutcome;
 
 import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 
@@ -87,7 +88,7 @@ public class DiscoAgent {
         //installed interceptions. e.g.:
 
         //ElementMatcher myIgnoreMatcher = ElementMatchers.named("com.my.organization.some.problematic.class.TheClass");
-        List<PluginOutcome> outcomes = agent.install(instrumentation, new HashSet<>(new ConcurrencySupport().get())/*, myIgnoreMatcher */);
+        Collection<PluginOutcome> outcomes = agent.install(instrumentation, new HashSet<>(new ConcurrencySupport().get())/*, myIgnoreMatcher */);
         dump(outcomes);
 
         log.info("DiSCo(Agent) agent startup complete");
@@ -100,7 +101,7 @@ public class DiscoAgent {
      *
      * @param outcomes the summary of outcomes produced by the Plugin Discovery subsystem.
      */
-    private static void dump(List<PluginOutcome> outcomes) {
+    private static void dump(Collection<PluginOutcome> outcomes) {
         for (PluginOutcome outcome: outcomes) {
             StringBuilder builder = new StringBuilder();
             builder.append("DiSCo(Agent) Plugin name: ").append(outcome.name).append("\n");

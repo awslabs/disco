@@ -30,7 +30,7 @@ import net.bytebuddy.matcher.ElementMatchers;
 
 import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 import java.util.Set;
 
 /**
@@ -96,7 +96,7 @@ public class DiscoAgentTemplate {
      * @param installables the agent supplies a collection of Installables to be installed.
      * @return information about any loaded plugins
      */
-    public List<PluginOutcome> install(Instrumentation instrumentation, Set<Installable> installables) {
+    public Collection<PluginOutcome> install(Instrumentation instrumentation, Set<Installable> installables) {
         return install(instrumentation, installables, ElementMatchers.none());
     }
 
@@ -109,21 +109,20 @@ public class DiscoAgentTemplate {
      * @param customIgnoreMatcher an extra ignore rule to be OR'd with the default
      * @return information about any loaded plugins
      */
-    public List<PluginOutcome> install(Instrumentation instrumentation, Set<Installable> installables, ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
+    public Collection<PluginOutcome> install(Instrumentation instrumentation, Set<Installable> installables, ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
         if (!config.isInstallDefaultInstallables()) {
             log.info("DiSCo(Core) removing all default installables as requested");
             installables.clear();
         }
 
         //give the Plugin Discovery subsystem the chance to scan any configured plugin folder.
-        List<PluginOutcome> outcomes;
         if (allowPlugins) {
-            outcomes = PluginDiscovery.init(instrumentation, installables, config);
+            PluginDiscovery.scan(instrumentation, config);
+            installables.addAll(PluginDiscovery.processInstallables());
         } else {
             if (config.getPluginPath() != null) {
                 log.warn("DiSCo(Core) plugin path set but agent is disallowing plugins. No plugins will be loaded");
             }
-            outcomes = new ArrayList<>();
         }
 
         //give each installable the chance to handle command line args
@@ -134,7 +133,12 @@ public class DiscoAgentTemplate {
 
         interceptionInstaller.install(instrumentation, installables, config, customIgnoreMatcher);
 
-        return outcomes;
+        //after Installables have been installed, process the remaining plugin behaviour
+        if (allowPlugins) {
+            return PluginDiscovery.apply();
+        } else {
+            return new ArrayList<>(0);
+        }
     }
 
     /**

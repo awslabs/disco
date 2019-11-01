@@ -25,9 +25,12 @@ import software.amazon.disco.agent.logging.Logger;
 
 import java.io.File;
 import java.lang.instrument.Instrumentation;
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
@@ -44,12 +47,13 @@ import java.util.jar.Manifest;
  *
  * Each plugin is delivered as a JAR file, containing a Manifest with the following properties:
  *
- * Disco-Init-Class: if any one-off-initialization is required, a fully qualified class may be provided. If this class provides a method
- *                   matching the signature "public static void init(void)", that method will be executed.
  * Disco-Installable-Classes: a space-separated list of fully qualified class names which are expected to inherit from Installable
- *                            and have a no-args constructor.
+ *                            and have a no-args constructor. Installables will be processed first, across all scanned plugins
+ * Disco-Init-Class: if any further one-off-initialization is required, a fully qualified class may be provided. If this class provides a method
+ *                  matching the signature "public static void init(void)", that method will be executed. All plugins will have this init()
+ *                  method processed *after* all plugins have had their Installables processed.
  * Disco-Listener-Classes: a space-separated list of fully qualified class names which are expected to inherit from Listener
- *                         and have a no-args constructor.
+ *                         and have a no-args constructor. Listener registration for all plugins will occure after one-off initialization for all plugins
  * Disco-Bootstrap-Classloader: if set to the literal case-insensitive string 'true', this JAR file will be added to the runtime's bootstrap
  *                              classloader. Any other value, or the absence of this attribute, means the plugin will be loaded
  *                              via the system classloader like a normal runtime dependency. It is not usually necessary to
@@ -61,39 +65,55 @@ import java.util.jar.Manifest;
 public class PluginDiscovery {
     private static final Logger log = LogManager.getLogger(PluginDiscovery.class);
 
+    //results of the scan()
+    static class ClassInfo {
+        final String pluginName;
+        final Class<?> clazz;
+        final boolean bootstrap;
+
+        ClassInfo(String pluginName, Class<?> clazz, boolean bootstrap) {
+            this.pluginName = pluginName;
+            this.clazz = clazz;
+            this.bootstrap = bootstrap;
+        }
+    }
+    private static List<ClassInfo> installableClasses;
+    private static List<ClassInfo> initClasses;
+    private static List<ClassInfo> listenerClasses;
+    private static Map<String, PluginOutcome> pluginOutcomes;
+
     /**
-     * Entry point for plugin discovery. Should be called just once in any agent. It is called by DiscoAgentTemplate.install()
-     * and should not be called directly under normal circumstances.
-     * @param instrumentation the Instrumentation instance to use for interacting with this plugin
-     * @param installables the set of installables gathered so far by the surrounding agent, to be added to upon discovery of more.
-     * @param config the Agent's config, from command line or otherwise
-     * @return a collection of PluginOutcomes describing what took place during plugin discovery
+     * Entry point for plugin discovery. The lifetime of the system begins with a call to scan(), after which point any
+     * discovered Installables may be instantiated and collected via processInstallables, and finally the Init methods
+     * and Listeners are applied via apply(). DiscoAgentTemplate manages this sequence of calls, and it would be unusual for
+     * any other code to call these methods directly.
+     * @param instrumentation and instrumentation instance, used to add discovered plugins to classpaths
+     * @param config an AgentConfig supplying information about whether plugin discovery should be attempted, and if
+     *               so which path to scan.
      */
-    public static List<PluginOutcome> init(Instrumentation instrumentation, Set<Installable> installables, AgentConfig config) {
-        List<PluginOutcome> outcomes = null;
+    public static void scan(Instrumentation instrumentation, AgentConfig config) {
+        installableClasses = new LinkedList<>();
+        initClasses = new LinkedList<>();
+        listenerClasses = new LinkedList<>();
+        pluginOutcomes = new HashMap<>();
 
         try {
             if (config.getPluginPath() == null) {
                 log.info("DiSCo(Core) no plugin path specified, skipping plugin scan");
-                return new ArrayList<>();
+                return;
             }
 
             File pluginDir = new File(config.getPluginPath());
             if (!pluginDir.isDirectory()) {
                 log.warn("DiSCo(Core) invalid plugin path specified, skipping plugin scan");
-                return new ArrayList<>();
+                return;
             }
-
-            outcomes = new LinkedList<>();
 
             File[] files = pluginDir.listFiles();
             if (files != null) {
                 for (File jarFile : files) {
                     if (jarFile.getName().substring(jarFile.getName().lastIndexOf(".")).equalsIgnoreCase(".jar")) {
-                        PluginOutcome outcome = processJarFile(instrumentation, installables, jarFile);
-                        if (outcome != null) {
-                            outcomes.add(outcome);
-                        }
+                        processJarFile(instrumentation, jarFile);
                     } else {
                         //ignore non JAR file
                         log.info("DiSCo(Core) non JAR file found on plugin path, skipping this file");
@@ -104,32 +124,81 @@ public class PluginDiscovery {
             //safely do nothing
             log.error("DiSCo(Core) error while processing plugins", t);
         }
-
-        return outcomes;
     }
 
     /**
-     * Process a single JAR file whilst scanning the plugin directory for plugins
-     * @param instrumentation an Agent Instrumentation instance, used to manipulate classloader search paths. Typically acquired
-     *                        from premain() or agentmain() methods, or by manually installing a ByteBuddyAgent instance.
-     * @param installables the set of Installables found so far, for later passing to InterceptionInstaller methods
-     * @param jarFile a Java File object represenenting the JAR file on disk
-     * @return the PluginOutcome encapsulating all that took place whilst loading this plugin
-     * @throws Exception
+     * Must be called after scan() and before apply(). Discovered Installables are instantiated, and returned such that
+     * they may be passed to an InterceptionInstaller.
+     * @return a collection of discovered, but not-yet-installed, Installables
      */
-    static PluginOutcome processJarFile(Instrumentation instrumentation, Set<Installable> installables, File jarFile) throws Exception {
+    public static Set<Installable> processInstallables() {
+        Set<Installable> installables = new HashSet<>();
+        if (installableClasses != null && !installableClasses.isEmpty()) {
+            for (ClassInfo info : installableClasses) {
+                try {
+                    Installable installable = (Installable) info.clazz.newInstance();
+                    installables.add(installable);
+                    pluginOutcomes.get(info.pluginName).installables.add(installable);
+                } catch (Exception e) {
+                    log.warn("DiSCo(Core) could not instantiate Installable " + info.clazz.getName(), e);
+                }
+            }
+        }
+        return installables;
+    }
+
+    /**
+     * The final stage in PluginDiscovery lifetime, the apply() method will call all plugins' init methods, followed by
+     * registering all their Listeners with the EventBus
+     * @return a collection of PluginOutcomes to describe all actions that were taken by the plugin subsystem, for debugging
+     * and information.
+     */
+    public static Collection<PluginOutcome> apply() {
+        if (initClasses != null && !initClasses.isEmpty()) {
+            for (ClassInfo info : initClasses) {
+                try {
+                    info.clazz.getDeclaredMethod("init").invoke(null);
+                    pluginOutcomes.get(info.pluginName).initClass = info.clazz;
+                } catch (Exception e) {
+                    log.warn("DiSCo(Core) could not process the init() method of " + info.clazz.getName(), e);
+                }
+            }
+        }
+
+        if (listenerClasses != null && !listenerClasses.isEmpty()) {
+            for (ClassInfo info : listenerClasses) {
+                try {
+                    Listener listener = (Listener) info.clazz.newInstance();
+                    EventBus.addListener(listener);
+                    pluginOutcomes.get(info.pluginName).listeners.add(listener);
+                } catch (Exception e) {
+                    log.warn("DiSCo(Core) could not add the Listener " + info.clazz.getName(), e);
+                }
+            }
+        }
+
+        return pluginOutcomes.values();
+    }
+
+    /**
+     * Process a single JAR file which is assumed to be a plugin
+     * @param instrumentation and instrumentation instance, used to add discovered plugins to classpaths
+     * @param jarFile the jar file to be processed
+     * @throws Exception class reflection or file i/o errors may occur
+     */
+    static void processJarFile(Instrumentation instrumentation, File jarFile) throws Exception {
         JarFile jar = new JarFile(jarFile);
         Manifest manifest = jar.getManifest();
+        jar.close();
         if (manifest == null) {
             log.info("DiSCo(Core) JAR file without manifest found on plugin path, skipping this file");
-            return null;
+            return;
         }
-        jar.close();
 
         Attributes attributes = manifest.getMainAttributes();
         if (attributes == null) {
             log.info("DiSCo(Core) JAR file found with manifest without any main attributes, skipping this file");
-            return null;
+            return;
         }
 
         //read each pertinent Manifest attribute
@@ -138,24 +207,23 @@ public class PluginDiscovery {
         String listenerClassNames = attributes.getValue("Disco-Listener-Classes");
         String bootstrapClassloader = attributes.getValue("Disco-Bootstrap-Classloader");
 
-        //load and process the plugin based on the Manifest
-        PluginOutcome outcome = new PluginOutcome(jarFile);
+        //process the plugin based on the Manifest
+        String pluginName = jarFile.getName();
+        pluginOutcomes.put(pluginName, new PluginOutcome(pluginName));
         boolean bootstrap = loadJar(instrumentation, jarFile, bootstrapClassloader);
-        outcome.bootstrap = bootstrap;
-        outcome.initClass = initJar(initClassName, bootstrap);
-        outcome.installables = initInstallables(installableClassNames, installables, bootstrap);
-        outcome.listeners = initListeners(listenerClassNames, bootstrap);
-        return outcome;
+        pluginOutcomes.get(pluginName).bootstrap = bootstrap;
+        processInitClass(pluginName, initClassName, bootstrap);
+        processInstallableClasses(pluginName, installableClassNames, bootstrap);
+        processListenerClasses(pluginName, listenerClassNames, bootstrap);
     }
 
     /**
-     * Load the given Jar file by adding it appropriately to either the bootstrap or system classloader, as dictated by the
-     * relevant Manifest entry
-     * @param instrumentation an Agent Instrumentation instance, used to manipulate classloader search paths. Typically acquired
-     *                        from premain() or agentmain() methods, or by manually installing a ByteBuddyAgent instance.
-     * @param jarFile a Java File object representing the JAR file on disk
-     * @param bootstrapClassLoader the Manifest entry declaring whether the JAR should be loaded by the bootstrap classloader.
-     * @return true if the JAR was loaded by the bootstrap classloader, else false.
+     * Having discovered a plugin JAR, add it to the classloader as specified in its Manifest
+     * @param instrumentation and instrumentation instance, used to add discovered plugins to classpaths
+     * @param jarFile the jar file to be processed
+     * @param bootstrapClassLoader the content of the Disco-Bootstrap-Classloader manifest attribute
+     * @return true if the Jar file is considered for the bootstrap or false if not
+     * @throws Exception JAR file processing may produce I/O exceptions
      */
     static boolean loadJar(Instrumentation instrumentation, File jarFile, String bootstrapClassLoader) throws Exception {
         boolean bootstrap = false;
@@ -185,61 +253,54 @@ public class PluginDiscovery {
     }
 
     /**
-     * Helper to execute the one-off initialization method if specified in the plugin manifest.
-     * @param initClassName the fully qualified classname of the class
-     * @param bootstrap true if loading into the bootstrap classloader
-     * @return the init class discovered, or null if none.
+     * Helper method to discover the Class specified for initialization via the init() static method
+     * @param pluginName the name of the plugin JAR file where the init class is defined
+     * @param initClassName the name of the init class determined from the Manifest
+     * @param bootstrap true if the plugin is requesting to be loaded by the bootstrap classloader
+     * @throws Exception reflection errors may occur if the class cannot be found
      */
-    static Class<?> initJar(String initClassName, boolean bootstrap) throws Exception {
-        if (LogManager.isDebugEnabled()) {
-            log.debug("DiSCo(Core) attempting to init plugin using class: " + initClassName);
-        }
+    static void processInitClass(String pluginName, String initClassName, boolean bootstrap) throws Exception {
         if (initClassName != null) {
-            Class<?> initClass = classForName(initClassName.trim(), bootstrap);
-            initClass.getDeclaredMethod("init").invoke(null);
-            return initClass;
+            Class<?> clazz = classForName(initClassName.trim(), bootstrap);
+            ClassInfo initInfo = new ClassInfo(pluginName, clazz, bootstrap);
+            initClasses.add(initInfo);
         }
-        return null;
     }
 
     /**
-     * Helper to load all installables from the given whitespace-separated list
-     * @param installableClassNames a string containing the list of Installable class names
-     * @param installables the set of Installables found so far, for later passing to InterceptionInstaller methods
-     * @param bootstrap true if loading into the bootstrap classloader
-     * @return a set of all discovered and succesfully added installables.
+     * Helper method to discover the Classes specified for Installables in the plugin
+     * @param pluginName the name of the plugin JAR file where the classes are defined
+     * @param installableClassNames the names of the Installable classes determined from the Manifest
+     * @param bootstrap true if the plugin is requesting to be loaded by the bootstrap classloader
+     * @throws Exception reflection errors may occur if the class cannot be found
      */
-    static List<Installable> initInstallables(String installableClassNames, Set<Installable> installables, boolean bootstrap) throws Exception {
-        List<Installable> newInstallables = new LinkedList<>();
+    static void processInstallableClasses(String pluginName, String installableClassNames, boolean bootstrap) throws Exception {
         if (installableClassNames != null) {
             String[] classNames = installableClassNames.trim().split("\\s");
             for (String className: classNames) {
-                if (LogManager.isDebugEnabled()) {
-                    log.debug("DiSCo(Core) attempting to add Installable from plugin using class: " + className);
-                }
                 try {
                     Class<?> clazz = classForName(className.trim(), bootstrap);
                     if (Installable.class.isAssignableFrom(clazz)) {
-                        Installable installable = (Installable) clazz.newInstance();
-                        newInstallables.add(installable);
-                        installables.add(installable);
+                        ClassInfo installableInfo = new ClassInfo(pluginName, clazz, bootstrap);
+                        installableClasses.add(installableInfo);
+                    } else {
+                        log.warn("DiSCo(Core) specified Installable is not an instance of Installable: " + className);
                     }
                 } catch (ClassNotFoundException e) {
-                    log.warn("DiSCo(Core) failed to instantiate Installable: " + className);
+                    log.warn("DiSCo(Core) cannot locate Installable: " + className);
                 }
             }
         }
-        return newInstallables;
     }
 
     /**
-     * Helper to load all listeners from the given whitespace-separated list
-     * @param listenerClassNames a string containing the list of Listener class names
-     * @param bootstrap true if loading into the bootstrap classloader
-     * @return set of now-installed Listeners
+     * Helper method to discover the Classes specified to be Listeners in the Plugin.
+     * @param pluginName the name of the plugin JAR file where the classes are defined
+     * @param listenerClassNames the names of the Listener classes determined from the Manifest
+     * @param bootstrap true if the plugin is requesting to be loaded by the bootstrap classloader
+     * @throws Exception reflection errors may occur if the class cannot be found
      */
-    static List<Listener> initListeners(String listenerClassNames, boolean bootstrap) throws Exception {
-        List<Listener> addedListeners = new LinkedList<>();
+    static void processListenerClasses(String pluginName, String listenerClassNames, boolean bootstrap) throws Exception {
         if (listenerClassNames != null) {
             String[] classNames = listenerClassNames.trim().split("\\s");
             for (String className : classNames) {
@@ -249,17 +310,16 @@ public class PluginDiscovery {
                 try {
                     Class<?> clazz = classForName(className.trim(), bootstrap);
                     if (Listener.class.isAssignableFrom(clazz)) {
-                        Listener listener = (Listener) clazz.newInstance();
-                        EventBus.addListener(listener);
-                        addedListeners.add(listener);
+                        ClassInfo installableInfo = new ClassInfo(pluginName, clazz, bootstrap);
+                        listenerClasses.add(installableInfo);
+                    } else {
+                        log.warn("DiSCo(Core) specified Listener is not an instance of Listener: " + className);
                     }
                 } catch (ClassNotFoundException e) {
                     log.warn("DiSCo(Core) failed to instantiate Listener: " + className);
                 }
             }
         }
-
-        return addedListeners;
     }
 
     /**
@@ -270,8 +330,10 @@ public class PluginDiscovery {
      */
     static Class<?> classForName(String name, boolean bootstrap) throws Exception {
         return bootstrap
-            ? Class.forName(name, true, null)
-            : Class.forName(name, true, ClassLoader.getSystemClassLoader());
+            //the initialize param is false so that static initializers are not yet called until we really want
+            //to instantiate the class
+            ? Class.forName(name, false, null)
+            : Class.forName(name, false, ClassLoader.getSystemClassLoader());
     }
 
 }

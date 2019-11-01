@@ -19,6 +19,7 @@ import software.amazon.disco.agent.event.Listener;
 import software.amazon.disco.agent.interception.Installable;
 
 import java.io.File;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -34,9 +35,11 @@ public class PluginOutcome {
 
     /**
      * Construct a PluginOutcome given the JarFile which was processed
-     * @param jarFile a jar file assumed to contain a Disco plugin, identified by its manifest
+     * @param name the name of the plugin determined by its file name
      */
-    public PluginOutcome(File jarFile) {
-        this.name = jarFile.getName();
+    public PluginOutcome(String name) {
+        this.name = name;
+        this.listeners = new LinkedList<>();
+        this.installables = new LinkedList<>();
     }
 }
