@@ -40,15 +40,6 @@ abstract public class AbstractServiceRequestEvent extends AbstractServiceEvent i
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public AbstractServiceRequestEvent withData(String key, Object data) {
-        super.withData(key, data);
-        return this;
-    }
-
-    /**
      * Add a request object to this event
      * @param request the request object
      * @return the 'this' for method chaining

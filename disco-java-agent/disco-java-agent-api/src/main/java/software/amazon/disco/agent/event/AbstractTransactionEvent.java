@@ -33,14 +33,5 @@ public abstract class AbstractTransactionEvent extends AbstractEvent implements 
      * {@inheritDoc}
      */
     @Override
-    public AbstractTransactionEvent withData(String key, Object data) {
-        super.withData(key, data);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public abstract Operation getOperation();
 }

@@ -55,15 +55,6 @@ public abstract class AbstractServiceEvent extends AbstractEvent implements Serv
      * {@inheritDoc}
      */
     @Override
-    public AbstractServiceEvent withData(String key, Object data) {
-        super.withData(key, data);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public String getService() {
         return String.class.cast(getData(DataKey.SERVICE.name()));
     }

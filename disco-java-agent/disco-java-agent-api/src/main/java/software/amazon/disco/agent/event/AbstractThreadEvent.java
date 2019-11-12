@@ -50,15 +50,6 @@ public abstract class AbstractThreadEvent extends AbstractEvent implements Threa
      * {@inheritDoc}
      */
     @Override
-    public AbstractThreadEvent withData(String key, Object data) {
-        super.withData(key, data);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public long getParentId() {
         return Long.class.cast(getData(DataKey.PARENT_ID.name()));
     }
