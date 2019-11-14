@@ -15,8 +15,8 @@
 
 package software.amazon.disco.agent.web.apache.httpclient;
 
+import org.apache.http.HttpRequest;
 import software.amazon.disco.agent.concurrent.TransactionContext;
-import software.amazon.disco.agent.web.apache.httpclient.utils.HttpRequestAccessor;
 import software.amazon.disco.agent.web.apache.httpclient.utils.MethodInterceptionCounter;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
@@ -77,13 +77,13 @@ public class ApacheHttpClientInterceptor implements Installable {
             return call(zuper);
         }
 
-        HttpRequestAccessor requestAccessor = new HttpRequestAccessor(args);
+        HttpRequest request = findRequestObject(args);
 
         // header propagation
-        propagateHeaders(requestAccessor);
+        propagateHeaders(request);
 
         // publish request event
-        ServiceDownstreamRequestEvent requestEvent = publishRequestEvent(requestAccessor);
+        ServiceDownstreamRequestEvent requestEvent = publishRequestEvent(request);
 
         Throwable throwable = null;
         try {
@@ -116,9 +116,13 @@ public class ApacheHttpClientInterceptor implements Installable {
     /**
      * Add headers to the http request if there is any.
      *
-     * @param requestAccessor The {@link HttpRequestAccessor}
+     * @param request The {@link HttpRequest}
      */
-    private static void propagateHeaders(final HttpRequestAccessor requestAccessor) {
+    private static void propagateHeaders(final HttpRequest request) {
+        if (request == null) {
+            return;
+        }
+
         try {
             // Gather the metadata that must be propagated
             final Map<String, Object> headerAttributes = TransactionContext.getMetadataWithTag(TransactionContext.PROPAGATE_IN_REQUEST_TAG);
@@ -130,7 +134,7 @@ public class ApacheHttpClientInterceptor implements Installable {
                             entry.getKey(), entry.getValue()));
                 }
 
-                propagateHeader(requestAccessor, entry.getKey(), entry.getValue());
+                propagateHeader(request, entry.getKey(), entry.getValue());
             }
         }
         catch (final Exception e) {
@@ -141,12 +145,11 @@ public class ApacheHttpClientInterceptor implements Installable {
 
     /**
      * Add a header to the http request.
-     *
-     * @param requestAccessor The {@link HttpRequestAccessor}
+     * @param request The {@link HttpRequest}
      * @param name The name of the header
      * @param value The value of the header
      */
-    private static void propagateHeader(final HttpRequestAccessor requestAccessor, final String name, final Object value) {
+    private static void propagateHeader(final HttpRequest request, final String name, final Object value) {
         String stringValue;
         if (value == null) {
             stringValue = null;
@@ -159,18 +162,22 @@ public class ApacheHttpClientInterceptor implements Installable {
 
         // This will aggressively overwrite the header if it's already there. It's necessary so that we don't end up
         // with duplicate header values by mistake
-        requestAccessor.removeHeaders(name);
-        requestAccessor.addHeader(name, stringValue);
+        request.removeHeaders(name);
+        request.addHeader(name, stringValue);
     }
 
     /**
      * Publish a {@link ServiceDownstreamRequestEvent}.
      *
-     * @param requestAccessor The {@link HttpRequestAccessor}
+     * @param request The {@link HttpRequest}
      * @return The published ServiceDownstreamRequestEvent, which is needed when publishing ServiceDownstreamResponseEvent later
      */
-    private static ServiceDownstreamRequestEvent publishRequestEvent(final HttpRequestAccessor requestAccessor) {
-        ServiceDownstreamRequestEvent requestEvent = new ServiceDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, requestAccessor.getUri(), requestAccessor.getMethod());
+    private static ServiceDownstreamRequestEvent publishRequestEvent(final HttpRequest request) {
+        ServiceDownstreamRequestEvent requestEvent = new ServiceDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, null, null);
+
+        if (request != null && request.getRequestLine() != null) {
+            requestEvent = new ServiceDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, request.getRequestLine().getUri(), request.getRequestLine().getMethod());
+        }
         EventBus.publish(requestEvent);
         return requestEvent;
     }
@@ -186,6 +193,23 @@ public class ApacheHttpClientInterceptor implements Installable {
             responseEvent.withThrown(throwable);
         }
         EventBus.publish(responseEvent);
+    }
+
+    /**
+     * Find the FIRST concrete HttpRequest object from a list of objects.
+     *
+     * @param args The args of HttpClient.execute, in which contains a concrete HttpRequest object to inspect
+     * @return The first concrete HttpRequest object, or null if cannot find any
+     */
+    private static HttpRequest findRequestObject(final Object... args) {
+
+        // prefer array access via indexes over foreach for the sake of performance
+        for (Object arg : args) {
+            if (arg instanceof HttpRequest) {
+                return (HttpRequest) arg;
+            }
+        }
+        return null;
     }
 
     /**
