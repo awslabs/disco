@@ -18,6 +18,7 @@ package software.amazon.disco.agent.web.apache.httpclient;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
+import software.amazon.disco.agent.web.apache.httpclient.event.ApacheHttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.web.apache.httpclient.utils.HttpRequestAccessor;
 import software.amazon.disco.agent.web.apache.httpclient.utils.HttpResponseAccessor;
 import software.amazon.disco.agent.web.apache.httpclient.utils.MethodInterceptionCounter;
@@ -178,8 +179,8 @@ public class ApacheHttpClientInterceptor implements Installable {
      * @param requestAccessor The {@link HttpRequestAccessor}
      * @return The published ServiceDownstreamRequestEvent, which is needed when publishing ServiceDownstreamResponseEvent later
      */
-    private static HttpServiceDownstreamRequestEvent publishRequestEvent(final HttpRequestAccessor requestAccessor) throws Throwable {
-        HttpServiceDownstreamRequestEvent requestEvent = new HttpServiceDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, requestAccessor.getUri(), requestAccessor.getMethod());
+    private static ApacheHttpServiceDownstreamRequestEvent publishRequestEvent(final HttpRequestAccessor requestAccessor) throws Throwable {
+        ApacheHttpServiceDownstreamRequestEvent requestEvent = new ApacheHttpServiceDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, requestAccessor.getUri(), requestAccessor.getMethod(), requestAccessor);
         requestEvent.withMethod(requestAccessor.getMethod());
         requestEvent.withUri(requestAccessor.getUri());
         EventBus.publish(requestEvent);

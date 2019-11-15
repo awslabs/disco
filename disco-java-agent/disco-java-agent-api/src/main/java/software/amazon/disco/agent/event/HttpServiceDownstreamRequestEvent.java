@@ -79,4 +79,15 @@ public class HttpServiceDownstreamRequestEvent extends ServiceDownstreamRequestE
     public String getUri() {
         return (String)getData(DataKey.URI.name());
     }
+
+    /**
+     * Override this method if you are a publisher of HttpServiceDownstreamRequestEvents which allows header replacement
+     * @param name the header name
+     * @param value the header value
+     * @return true if successful
+     * @throws UnsupportedOperationException if not implemented
+     */
+    public boolean replaceHeader(String name, String value) {
+        throw new UnsupportedOperationException("replaceHeader not supported");
+    }
 }

@@ -60,7 +60,7 @@ public class HttpRequestAccessor {
      *
      * @param name The name of the headers to remove
      */
-    public void removeHeaders(final String name) throws Throwable {
+    public void removeHeaders(final String name) {
         removeHeaders.invoke(requestObject, name);
     }
 

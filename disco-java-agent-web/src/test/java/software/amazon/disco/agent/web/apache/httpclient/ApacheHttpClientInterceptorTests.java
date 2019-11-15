@@ -15,6 +15,7 @@
 
 package software.amazon.disco.agent.web.apache.httpclient;
 
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import software.amazon.disco.agent.concurrent.TransactionContext;
@@ -45,6 +46,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import software.amazon.disco.agent.web.apache.httpclient.event.ApacheHttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.web.apache.httpclient.source.MockEventBusListener;
 
 import java.io.IOException;
@@ -156,6 +158,23 @@ public class ApacheHttpClientInterceptorTests {
     @Test(expected = NoSuchMethodException.class)
     public void testMethodMatcherFailedOnWrongClass() throws Exception {
         assertEquals(0, methodMatchedCount("service", String.class));
+    }
+
+    @Test
+    public void testHeaderReplacement() throws Throwable {
+        HttpGet get = new HttpGet(URI);
+        get.addHeader("foo", "bar");
+        get.addHeader("foo", "bar2");
+
+        SomeChainedExecuteMethodsHttpClient someHttpClient = new SomeChainedExecuteMethodsHttpClient();
+        ApacheHttpClientInterceptor.intercept(new Object[] {get}, "origin", () -> someHttpClient.execute(get));
+
+        List<Event> events = mockEventBusListener.getReceivedEvents();
+        ApacheHttpServiceDownstreamRequestEvent event = (ApacheHttpServiceDownstreamRequestEvent)events.get(0);
+        event.replaceHeader("foo", "bar3");
+
+        assertEquals(1, get.getHeaders("foo").length);
+        assertEquals("bar3", get.getFirstHeader("foo").getValue());
     }
 
     /**
