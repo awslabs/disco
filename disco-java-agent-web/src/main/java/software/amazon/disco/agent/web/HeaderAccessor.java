@@ -13,14 +13,14 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.agent.web.servlet;
+package software.amazon.disco.agent.web;
 
 import java.util.Map;
 
 /**
- * HTTP Servlet requests and responses need reflective access to their headers and list of header names
+ * HTTP requests and responses need reflective access to their headers and list of header names
  * and more generally we reflectively look into them whilst composing events to publish. This interface is a base
- * for reflective accessors for both HttpServletRequest and HttpServletResponse
+ * for reflective accessors for all kinds of HTTP requests and responses, upstream and downstream
  */
 public interface HeaderAccessor {
     /**
@@ -30,21 +30,9 @@ public interface HeaderAccessor {
     Map<String, String> retrieveHeaderMap();
 
     /**
-     * Get the real class of this accessor. Should be either HttpServletRequest or HttpServletResponse
-     * @return the class which this accessor accesses
-     */
-    Class<?> getClassOf();
-
-    /**
      * Get a named header from the servlet request or response
      * @param name the name of the header
      * @return the value of the header, or null if absent
      */
     String getHeader(String name);
-
-    /**
-     * Get the actual request or response object contained by this instance
-     * @return an object of either HttpServletRequest or HttpServletResponse type
-     */
-    Object getObject();
 }

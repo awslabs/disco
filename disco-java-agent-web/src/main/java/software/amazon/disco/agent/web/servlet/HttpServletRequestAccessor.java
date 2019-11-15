@@ -15,7 +15,11 @@
 
 package software.amazon.disco.agent.web.servlet;
 
+import software.amazon.disco.agent.web.AccessorBase;
+import software.amazon.disco.agent.web.HeaderAccessor;
+
 import java.lang.invoke.MethodHandle;
+import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -25,7 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Concrete accessor for the methods reflectively accessed within HttpServletRequest
  */
-public class HttpServletRequestAccessor extends HeaderAccessorBase {
+public class HttpServletRequestAccessor extends AccessorBase implements HeaderAccessor {
     static AtomicReference<MethodHandle> getHeaderNamesHandle = new AtomicReference<>();
     static AtomicReference<MethodHandle> getHeaderHandle = new AtomicReference<>();
 
@@ -58,7 +62,8 @@ public class HttpServletRequestAccessor extends HeaderAccessorBase {
      */
     @Override
     public String getHeader(String name) {
-        return (String)maybeInitAndCall(getHeaderHandle, MethodNames.GET_HEADER, String.class, String.class, name);
+        return (String)maybeInitAndCall(getHeaderHandle, MethodNames.GET_HEADER, String.class,
+                new AbstractMap.SimpleImmutableEntry<>(String.class, name));
     }
 
     /**

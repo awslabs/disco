@@ -15,6 +15,8 @@
 
 package software.amazon.disco.agent.web.apache.httpclient.utils;
 
+import software.amazon.disco.agent.web.AccessorBase;
+
 import java.lang.invoke.MethodHandle;
 import java.util.AbstractMap;
 import java.util.concurrent.atomic.AtomicReference;

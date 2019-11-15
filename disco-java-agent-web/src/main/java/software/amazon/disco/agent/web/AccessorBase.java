@@ -13,7 +13,7 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.agent.web.apache.httpclient.utils;
+package software.amazon.disco.agent.web;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
