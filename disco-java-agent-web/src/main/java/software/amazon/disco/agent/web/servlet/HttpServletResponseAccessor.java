@@ -15,40 +15,33 @@
 
 package software.amazon.disco.agent.web.servlet;
 
-import software.amazon.disco.agent.web.AccessorBase;
 import software.amazon.disco.agent.web.HeaderAccessor;
+import software.amazon.disco.agent.web.MethodHandleWrapper;
 
-import java.lang.invoke.MethodHandle;
-import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Concrete accessor for the methods reflectively accessed within HttpServletResponse
  */
-public class HttpServletResponseAccessor extends AccessorBase implements HeaderAccessor {
-    static AtomicReference<MethodHandle> getHeaderNamesHandle = new AtomicReference<>();
-    static AtomicReference<MethodHandle> getHeaderHandle = new AtomicReference<>();
+public class HttpServletResponseAccessor implements HeaderAccessor {
+    private static final String SERVLET_RESPONSE_CLASS_NAME = "javax.servlet.http.HttpServletResponse";
 
-    static AtomicReference<MethodHandle> getStatusHandle = new AtomicReference<>();
+    private static final ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+    static final MethodHandleWrapper getHeaderNames = new MethodHandleWrapper(SERVLET_RESPONSE_CLASS_NAME, classLoader, "getHeaderNames", Collection.class);
+    static final MethodHandleWrapper getHeader = new MethodHandleWrapper(SERVLET_RESPONSE_CLASS_NAME, classLoader, "getHeader", String.class, String.class);
+    static final MethodHandleWrapper getStatus = new MethodHandleWrapper(SERVLET_RESPONSE_CLASS_NAME, classLoader, "getStatus", int.class);
 
-    static Class responseClass = null;
+
+    private final Object responseObject;
 
     /**
      * Construct a new HttpServletResponseAccessor with a concrete request object
      * @param response the HttpServletResponse to inspect
      */
     HttpServletResponseAccessor(Object response) {
-        super(response);
-        if (responseClass == null) {
-            try {
-                responseClass = Class.forName("javax.servlet.http.HttpServletResponse", true, ClassLoader.getSystemClassLoader());
-            } catch (ClassNotFoundException e) {
-                //try again next time?
-            }
-        }
+        this.responseObject = response;
     }
 
     /**
@@ -56,8 +49,11 @@ public class HttpServletResponseAccessor extends AccessorBase implements HeaderA
      */
     @Override
     public String getHeader(String name) {
-        return (String)maybeInitAndCall(getHeaderHandle, MethodNames.GET_HEADER, String.class,
-                new AbstractMap.SimpleImmutableEntry<>(String.class, name));
+        try {
+            return (String) getHeader.invoke(responseObject, name);
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     /**
@@ -66,23 +62,24 @@ public class HttpServletResponseAccessor extends AccessorBase implements HeaderA
     @Override
     public Map<String, String> retrieveHeaderMap() {
         Map<String, String> ret = new HashMap<>();
-        Collection<String> headerNames = getHeaderNames();
-        if (headerNames == null) {
-            return ret;
+        try {
+            Collection<String> headerNames = getHeaderNames();
+            if (headerNames == null) {
+                return ret;
+            }
+
+            for (String name : headerNames) {
+                try {
+                    ret.put(name, getHeader(name));
+                } catch (Throwable t) {
+                    //do nothing
+                }
+            }
+        } catch (Throwable t) {
+            //do nothing
         }
 
-        for (String name: headerNames) {
-            ret.put(name, getHeader(name));
-        }
         return ret;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Class<?> getClassOf() {
-        return responseClass;
     }
 
     /**
@@ -90,7 +87,7 @@ public class HttpServletResponseAccessor extends AccessorBase implements HeaderA
      * @return the status code e.g. 200
      */
     int getStatus() {
-        return (int)maybeInitAndCall(getStatusHandle, MethodNames.GET_STATUS, int.class);
+        return (int)getStatus.invoke(responseObject);
     }
 
     /**
@@ -98,6 +95,6 @@ public class HttpServletResponseAccessor extends AccessorBase implements HeaderA
      * @return an iterable collection of all named headers
      */
     private Collection<String> getHeaderNames() {
-        return (Collection<String>)maybeInitAndCall(getHeaderNamesHandle, MethodNames.GET_HEADER_NAMES, Collection.class);
+        return (Collection<String>)getHeaderNames.invoke(responseObject);
     }
 }

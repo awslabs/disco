@@ -118,7 +118,7 @@ public class ApacheHttpClientInterceptor implements Installable {
      *
      * @param requestAccessor The {@link HttpRequestAccessor}
      */
-    private static void propagateHeaders(final HttpRequestAccessor requestAccessor) {
+    private static void propagateHeaders(final HttpRequestAccessor requestAccessor) throws Throwable {
         try {
             // Gather the metadata that must be propagated
             final Map<String, Object> headerAttributes = TransactionContext.getMetadataWithTag(TransactionContext.PROPAGATE_IN_REQUEST_TAG);
@@ -146,7 +146,7 @@ public class ApacheHttpClientInterceptor implements Installable {
      * @param name The name of the header
      * @param value The value of the header
      */
-    private static void propagateHeader(final HttpRequestAccessor requestAccessor, final String name, final Object value) {
+    private static void propagateHeader(final HttpRequestAccessor requestAccessor, final String name, final Object value) throws Throwable {
         String stringValue;
         if (value == null) {
             stringValue = null;
@@ -169,7 +169,7 @@ public class ApacheHttpClientInterceptor implements Installable {
      * @param requestAccessor The {@link HttpRequestAccessor}
      * @return The published ServiceDownstreamRequestEvent, which is needed when publishing ServiceDownstreamResponseEvent later
      */
-    private static ServiceDownstreamRequestEvent publishRequestEvent(final HttpRequestAccessor requestAccessor) {
+    private static ServiceDownstreamRequestEvent publishRequestEvent(final HttpRequestAccessor requestAccessor) throws Throwable {
         ServiceDownstreamRequestEvent requestEvent = new ServiceDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, requestAccessor.getUri(), requestAccessor.getMethod());
         EventBus.publish(requestEvent);
         return requestEvent;

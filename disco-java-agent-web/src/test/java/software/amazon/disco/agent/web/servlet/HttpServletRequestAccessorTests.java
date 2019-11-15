@@ -53,16 +53,6 @@ public class HttpServletRequestAccessorTests {
     }
 
     @Test
-    public void testGetClassOf() {
-        Assert.assertEquals(HttpServletRequest.class, accessor.getClassOf());
-    }
-
-    @Test
-    public void testGetObject() {
-        Assert.assertEquals(req, accessor.getObject());
-    }
-
-    @Test
     public void testGetRemotePort() {
         when(req.getRemotePort()).thenReturn(800);
         Assert.assertEquals(800, accessor.getRemotePort());

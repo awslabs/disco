@@ -15,27 +15,36 @@
 
 package software.amazon.disco.agent.web.apache.httpclient.utils;
 
-import software.amazon.disco.agent.web.AccessorBase;
-
-import java.lang.invoke.MethodHandle;
-import java.util.AbstractMap;
-import java.util.concurrent.atomic.AtomicReference;
+import software.amazon.disco.agent.web.MethodHandleWrapper;
 
 /**
  * Concrete accessor for the methods reflectively accessed within HttpRequest.
  */
-public class HttpRequestAccessor extends AccessorBase {
+public class HttpRequestAccessor {
     private static final String HTTP_REQUEST_CLASS_NAME = "org.apache.http.HttpRequest";
-    private static final String REQUEST_LINE_CLASS_NAME = "org.apache.http.RequestLine";
 
-    private static AtomicReference<MethodHandle> addHeaderMethodHandle = new AtomicReference<>();
-    private static AtomicReference<MethodHandle> removeHeadersMethodHandle = new AtomicReference<>();
-    private static AtomicReference<MethodHandle> getRequestLineMethodHandle = new AtomicReference<>();
+    private static final ClassLoader classLoader = ClassLoader.getSystemClassLoader();
 
-    static Class httpRequestClass = null;
-    static Class requestLineClass = null;
+    //these methods only use simple types, so can be initialized inline without any exception handling
+    private static MethodHandleWrapper addHeader = new MethodHandleWrapper(HTTP_REQUEST_CLASS_NAME, classLoader, "addHeader", void.class, String.class, String.class);
+    private static MethodHandleWrapper removeHeaders = new MethodHandleWrapper(HTTP_REQUEST_CLASS_NAME, classLoader, "removeHeaders", void.class, String.class);
 
-    AtomicReference<RequestLineAccessor> requestLineAccessor = new AtomicReference<>();
+    private static MethodHandleWrapper getRequestLine;
+    private static MethodHandleWrapper getMethod;
+    private static MethodHandleWrapper getUri;
+
+    private final Object requestObject;
+
+    {
+        try {
+            //TODO unsafe to leave these as null if they fail?
+            getRequestLine = new MethodHandleWrapper(HTTP_REQUEST_CLASS_NAME, classLoader, "getRequestLine", "org.apache.http.RequestLine");
+            getMethod = new MethodHandleWrapper(getRequestLine.getRtype().getName(), classLoader, "getMethod", String.class);
+            getUri = new MethodHandleWrapper(getRequestLine.getRtype().getName(), classLoader, "getUri", String.class);
+        } catch (Throwable t) {
+            //do nothing?
+        }
+    }
 
     /**
      * Construct a new HttpRequestAccessor with a concrete HttpRequest object.
@@ -43,15 +52,7 @@ public class HttpRequestAccessor extends AccessorBase {
      * @param args The args of HttpClient.execute, in which contains a concrete HttpRequest object to inspect
      */
     public HttpRequestAccessor(final Object...args) {
-        super(findRequestObject(args));
-    }
-
-    /**
-     * @return The real class which this accessor accesses
-     */
-    @Override
-    protected Class<?> getClassOf() {
-        return httpRequestClass;
+        this.requestObject = findRequestObject(args);
     }
 
     /**
@@ -59,11 +60,8 @@ public class HttpRequestAccessor extends AccessorBase {
      *
      * @param name The name of the headers to remove
      */
-    public void removeHeaders(final String name) {
-        maybeInitAndCall(removeHeadersMethodHandle,
-                        MethodNames.REMOVE_HEADERS,
-                        void.class,
-                        new AbstractMap.SimpleImmutableEntry<>(String.class, name));
+    public void removeHeaders(final String name) throws Throwable {
+        removeHeaders.invoke(requestObject, name);
     }
 
     /**
@@ -73,11 +71,7 @@ public class HttpRequestAccessor extends AccessorBase {
      * @param value The value of the header
      */
     public void addHeader(final String name, final String value) {
-        maybeInitAndCall(addHeaderMethodHandle,
-                        MethodNames.ADD_HEADER,
-                        void.class,
-                        new AbstractMap.SimpleImmutableEntry<>(String.class, name),
-                        new AbstractMap.SimpleImmutableEntry<>(String.class, value));
+        addHeader.invoke(requestObject, name, value);
     }
 
     /**
@@ -86,11 +80,7 @@ public class HttpRequestAccessor extends AccessorBase {
      * @return The http method of this request
      */
     public String getMethod() {
-        maybeInitRequestLineAccessor();
-        if (requestLineAccessor.get() != null) {
-            return requestLineAccessor.get().getMethod();
-        }
-        return null;
+        return (String)getMethod.invoke(getRequestLine.invoke(requestObject));
     }
 
     /**
@@ -99,34 +89,7 @@ public class HttpRequestAccessor extends AccessorBase {
      * @return The http uri of this request
      */
     public String getUri() {
-        maybeInitRequestLineAccessor();
-        if (requestLineAccessor.get() != null) {
-            return requestLineAccessor.get().getUri();
-        }
-        return null;
-    }
-
-    /**
-     * @return The HttpRequest object.
-     */
-    public Object getRequest() {
-        return getObject();
-    }
-
-    /**
-     * Helper method to safely try to initialize the RequestLineAccessor prior to calling it.
-     */
-    private void maybeInitRequestLineAccessor() {
-        if (requestLineAccessor.get() != null) {
-            return;
-        }
-        requestLineClass = maybeFindClass(requestLineClass, REQUEST_LINE_CLASS_NAME);
-        final Object requestLineObject = maybeInitAndCall(getRequestLineMethodHandle, MethodNames.GET_REQUEST_LINE, requestLineClass);
-        if (requestLineObject == null) {
-            // try next time
-            return;
-        }
-        requestLineAccessor.compareAndSet(null, new RequestLineAccessor(requestLineObject, requestLineClass));
+        return (String)getUri.invoke(getRequestLine.invoke(requestObject));
     }
 
     /**
@@ -136,7 +99,7 @@ public class HttpRequestAccessor extends AccessorBase {
      * @return The first concrete HttpRequest object, or null if cannot find any
      */
     static Object findRequestObject(final Object... args) {
-        httpRequestClass = maybeFindClass(httpRequestClass, HTTP_REQUEST_CLASS_NAME);
+        Class<?> httpRequestClass = maybeFindClass(HTTP_REQUEST_CLASS_NAME);
 
         // prefer array access via indexes over foreach for the sake of performance
         for (int i = 0; i < args.length; i++) {
@@ -149,78 +112,16 @@ public class HttpRequestAccessor extends AccessorBase {
 
     /**
      * Lookup a Class by name if encountering for the first time.
-     *
-     * @param accessingClass The Class which this accessor accesses, could be null for the first time
      * @param accessClassName The class name which this accessor accesses
      * @return The Class which this accessor accesses
      */
-    private static Class maybeFindClass(final Class accessingClass, final String accessClassName) {
-        if (accessingClass == null) {
-            try {
-                return Class.forName(accessClassName, true, ClassLoader.getSystemClassLoader());
-            } catch (ClassNotFoundException e) {
-                // do nothing
-            }
-        }
-        return accessingClass;
-    }
-
-    /**
-     * Constants of the method names which will be reflectively called on the HttpRequest objects
-     */
-    private static class MethodNames {
-        private static final String ADD_HEADER = "addHeader";
-        private static final String REMOVE_HEADERS = "removeHeaders";
-        private static final String GET_REQUEST_LINE = "getRequestLine";
-    }
-
-    /**
-     * Concrete accessor for the methods reflectively accessed within RequestLine.
-     */
-    static class RequestLineAccessor extends AccessorBase {
-        private static AtomicReference<MethodHandle> getMethodMethodHandle = new AtomicReference<>();
-        private static AtomicReference<MethodHandle> getUriMethodHandle = new AtomicReference<>();
-        private static Class requestLineClass = null;
-
-        /**
-         * Construct a new RequestLineAccessor with a concrete RequestLine object.
-         *
-         * @param requestLine The RequestLine object to inspect
-         * @param clazz The RequestLine class
-         */
-        RequestLineAccessor(final Object requestLine, final Class clazz) {
-            super(requestLine);
-            requestLineClass = clazz;
+    private static Class maybeFindClass(final String accessClassName) {
+        try {
+            return Class.forName(accessClassName, true, ClassLoader.getSystemClassLoader());
+        } catch (ClassNotFoundException e) {
+            // do nothing
         }
 
-        /**
-         * @return The real class which this accessor accesses.
-         */
-        @Override
-        protected Class<?> getClassOf() {
-            return requestLineClass;
-        }
-
-        /**
-         * @return The http method of this request line.
-         */
-        public String getMethod() {
-            return (String) maybeInitAndCall(getMethodMethodHandle, MethodNames.GET_METHOD, String.class);
-        }
-
-        /**
-         * @return The http uri of this request line.
-         */
-        public String getUri() {
-            return (String) maybeInitAndCall(getUriMethodHandle, MethodNames.GET_URI, String.class);
-        }
-
-        /**
-         * Constants of the method names which will be reflectively called on the RequestLine objects
-         */
-        private static class MethodNames {
-            private static final String GET_METHOD = "getMethod";
-            private static final String GET_URI = "getUri";
-        }
+        return null;
     }
 }

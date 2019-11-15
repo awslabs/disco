@@ -15,46 +15,38 @@
 
 package software.amazon.disco.agent.web.servlet;
 
-import software.amazon.disco.agent.web.AccessorBase;
 import software.amazon.disco.agent.web.HeaderAccessor;
+import software.amazon.disco.agent.web.MethodHandleWrapper;
 
-import java.lang.invoke.MethodHandle;
-import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Concrete accessor for the methods reflectively accessed within HttpServletRequest
  */
-public class HttpServletRequestAccessor extends AccessorBase implements HeaderAccessor {
-    static AtomicReference<MethodHandle> getHeaderNamesHandle = new AtomicReference<>();
-    static AtomicReference<MethodHandle> getHeaderHandle = new AtomicReference<>();
+public class HttpServletRequestAccessor implements HeaderAccessor {
+    private static final String SERVLET_REQUEST_CLASS_NAME = "javax.servlet.http.HttpServletRequest";
+    private static final ClassLoader classLoader = ClassLoader.getSystemClassLoader();
 
-    static AtomicReference<MethodHandle> getRemotePortHandle = new AtomicReference<>();
-    static AtomicReference<MethodHandle> getRemoteAddrHandle = new AtomicReference<>();
-    static AtomicReference<MethodHandle> getLocalPortHandle = new AtomicReference<>();
-    static AtomicReference<MethodHandle> getLocalAddrHandle = new AtomicReference<>();
-    static AtomicReference<MethodHandle> getMethodHandle = new AtomicReference<>();
-    static AtomicReference<MethodHandle> getRequestURLHandle = new AtomicReference<>();
+    private static final MethodHandleWrapper getHeaderNames = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getHeaderNames", Enumeration.class);
+    private static final MethodHandleWrapper getHeader = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getHeader", String.class, String.class);
+    private static final MethodHandleWrapper getRemotePort = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getRemotePort", int.class);
+    private static final MethodHandleWrapper getLocalPort = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getLocalPort", int.class);
+    private static final MethodHandleWrapper getRemoteAddr = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getRemoteAddr", String.class);
+    private static final MethodHandleWrapper getLocalAddr = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getLocalAddr", String.class);
+    private static final MethodHandleWrapper getMethod = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getMethod", String.class);
+    private static final MethodHandleWrapper getRequestURL = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getRequestURL", StringBuffer.class);
 
-    static Class requestClass = null;
+    private final Object requestObject;
 
     /**
      * Construct a new HttpServletRequestAccessor with a concrete request object
      * @param request the HttpServletRequest to inspect
      */
     HttpServletRequestAccessor(Object request) {
-        super(request);
-        if (requestClass == null) {
-            try {
-                requestClass = Class.forName("javax.servlet.http.HttpServletRequest", true, ClassLoader.getSystemClassLoader());
-            } catch (ClassNotFoundException e) {
-                //try again next time?
-            }
-        }
+        this.requestObject = request;
     }
 
     /**
@@ -62,8 +54,11 @@ public class HttpServletRequestAccessor extends AccessorBase implements HeaderAc
      */
     @Override
     public String getHeader(String name) {
-        return (String)maybeInitAndCall(getHeaderHandle, MethodNames.GET_HEADER, String.class,
-                new AbstractMap.SimpleImmutableEntry<>(String.class, name));
+        try {
+            return (String) getHeader.invoke(requestObject, name);
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     /**
@@ -72,23 +67,19 @@ public class HttpServletRequestAccessor extends AccessorBase implements HeaderAc
     @Override
     public Map<String, String> retrieveHeaderMap() {
         Map<String, String> ret = new HashMap<>();
-        Enumeration<String> headerNames = getHeaderNames();
-        if (headerNames == null) {
-            return ret;
-        }
+        try {
+            Enumeration<String> headerNames = getHeaderNames();
+            if (headerNames == null) {
+                return ret;
+            }
 
-        for (String name: Collections.list(headerNames)) {
-            ret.put(name, getHeader(name));
+            for (String name : Collections.list(headerNames)) {
+                ret.put(name, getHeader(name));
+            }
+        } catch (Throwable t) {
+            //do nothing
         }
         return ret;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Class<?> getClassOf() {
-        return requestClass;
     }
 
     /**
@@ -96,7 +87,7 @@ public class HttpServletRequestAccessor extends AccessorBase implements HeaderAc
      * @return the IP port used by the remote client
      */
     int getRemotePort() {
-        return (int)maybeInitAndCall(getRemotePortHandle, MethodNames.GET_REMOTE_PORT, int.class);
+        return (int)getRemotePort.invoke(requestObject);
     }
 
     /**
@@ -104,7 +95,7 @@ public class HttpServletRequestAccessor extends AccessorBase implements HeaderAc
      * @return the IP address used by the remote client
      */
     String getRemoteAddr() {
-        return (String)maybeInitAndCall(getRemoteAddrHandle, MethodNames.GET_REMOTE_ADDR, String.class);
+        return (String)getRemoteAddr.invoke(requestObject);
     }
 
     /**
@@ -112,7 +103,7 @@ public class HttpServletRequestAccessor extends AccessorBase implements HeaderAc
      * @return the IP port used by the service to receive the request
      */
     int getLocalPort() {
-        return (int)maybeInitAndCall(getLocalPortHandle, MethodNames.GET_LOCAL_PORT, int.class);
+        return (int)getLocalPort.invoke(requestObject);
     }
 
     /**
@@ -120,7 +111,7 @@ public class HttpServletRequestAccessor extends AccessorBase implements HeaderAc
      * @return the IP address used by the service to receive the request
      */
     String getLocalAddr() {
-        return (String)maybeInitAndCall(getLocalAddrHandle, MethodNames.GET_LOCAL_ADDR, String.class);
+        return (String)getLocalAddr.invoke(requestObject);
     }
 
     /**
@@ -128,7 +119,7 @@ public class HttpServletRequestAccessor extends AccessorBase implements HeaderAc
      * @return the HTTP verb used in the request
      */
     String getMethod() {
-        return (String)maybeInitAndCall(getMethodHandle, MethodNames.GET_METHOD, String.class);
+        return (String)getMethod.invoke(requestObject);
     }
 
     /**
@@ -136,7 +127,7 @@ public class HttpServletRequestAccessor extends AccessorBase implements HeaderAc
      * @return the request URL
      */
     String getRequestURL() {
-        StringBuffer requestUrl = (StringBuffer) maybeInitAndCall(getRequestURLHandle, MethodNames.GET_REQUEST_URL, StringBuffer.class);
+        StringBuffer requestUrl = (StringBuffer)getRequestURL.invoke(requestObject);
         if (requestUrl == null) {
             return null;
         }
@@ -148,6 +139,6 @@ public class HttpServletRequestAccessor extends AccessorBase implements HeaderAc
      * @return an enumeration of all named headers
      */
     private Enumeration<String> getHeaderNames() {
-        return (Enumeration<String>)maybeInitAndCall(getHeaderNamesHandle, MethodNames.GET_HEADER_NAMES, Enumeration.class);
+        return (Enumeration<String>)getHeaderNames.invoke(requestObject);
     }
 }

@@ -53,16 +53,6 @@ public class HttpServletResponseAccessorTests {
     }
 
     @Test
-    public void testGetClassOf() {
-        Assert.assertEquals(HttpServletResponse.class, accessor.getClassOf());
-    }
-
-    @Test
-    public void testGetObject() {
-        Assert.assertEquals(req, accessor.getObject());
-    }
-
-    @Test
     public void testGetStatus() {
         when(req.getStatus()).thenReturn(202);
         Assert.assertEquals(202, accessor.getStatus());
