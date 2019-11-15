@@ -17,6 +17,7 @@ dependencies {
     testCompile(project(":disco-java-agent:disco-java-agent-api"))
     testCompile("junit", "junit", "4.12")
     testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
+    testCompile("org.apache.httpcomponents", "httpclient", "4.5.10")
 }
 
 // Test 2 ways. Once using the example 'monolithic' agent defined in disco-java-agent-example, and then again using the 
