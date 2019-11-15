@@ -15,12 +15,15 @@
 
 package software.amazon.disco.agent.integtest.web.apache.httpclient;
 
+import org.apache.http.HttpEntity;
 import org.apache.http.RequestLine;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.mockito.ArgumentCaptor;
+import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.integtest.web.apache.httpclient.source.FakeChainedExecuteCallHttpClientReturnResponse;
@@ -116,7 +119,7 @@ public class ApacheHttpClientInterceptorTests {
 
         // Set up victim http client
         FakeChainedExecuteCallHttpClientReturnResponse httpClient = new FakeChainedExecuteCallHttpClientReturnResponse();
-
+        httpClient.fakeResponse.setEntity(new StringEntity("123456"));
         httpClient.execute(request);
 
         verifyHeaderPropagationResults(request);
@@ -134,6 +137,8 @@ public class ApacheHttpClientInterceptorTests {
         verifyServiceResponseEvent(testListener.responseEvents.get(0));
         assertNull(testListener.responseEvents.get(0).getResponse());
         assertNull(testListener.responseEvents.get(0).getThrown());
+        assertEquals(200, testListener.responseEvents.get(0).getStatusCode());
+        assertEquals(6, testListener.responseEvents.get(0).getContentLength());
 
         assertEquals(3, httpClient.executeCallChainDepth);
     }
@@ -173,7 +178,7 @@ public class ApacheHttpClientInterceptorTests {
 
     private static class TestListener implements Listener {
         List<ServiceRequestEvent> requestEvents = new ArrayList<>();
-        List<ServiceResponseEvent> responseEvents = new ArrayList<>();
+        List<HttpServiceDownstreamResponseEvent> responseEvents = new ArrayList<>();
 
         @Override
         public int getPriority() {
@@ -184,8 +189,8 @@ public class ApacheHttpClientInterceptorTests {
         public void listen(Event e) {
             if (e instanceof ServiceRequestEvent) {
                 requestEvents.add((ServiceRequestEvent) e);
-            } else if (e instanceof ServiceResponseEvent) {
-                responseEvents.add((ServiceResponseEvent) e);
+            } else if (e instanceof HttpServiceDownstreamResponseEvent) {
+                responseEvents.add((HttpServiceDownstreamResponseEvent) e);
             } else {
                 Assert.fail("Unexpected event");
             }

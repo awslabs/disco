@@ -93,10 +93,10 @@ public class HttpRequestAccessor {
     }
 
     /**
-     * Find the FIRST concrete HttpRequest object from a list of objects.
+     * Find the FIRST concrete HttpRequest object of the given type from a list of objects.
      *
-     * @param args The args of HttpClient.execute, in which contains a concrete HttpRequest object to inspect
-     * @return The first concrete HttpRequest object, or null if cannot find any
+     * @param args The args of HttpClient.execute, in which contains a concrete object to inspect
+     * @return The first concrete object of the given type, or null if cannot find any
      */
     static Object findRequestObject(final Object... args) {
         Class<?> httpRequestClass = maybeFindClass(HTTP_REQUEST_CLASS_NAME);

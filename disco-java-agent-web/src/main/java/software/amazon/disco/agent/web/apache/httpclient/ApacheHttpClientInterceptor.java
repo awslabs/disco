@@ -16,7 +16,10 @@
 package software.amazon.disco.agent.web.apache.httpclient;
 
 import software.amazon.disco.agent.concurrent.TransactionContext;
+import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
+import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.web.apache.httpclient.utils.HttpRequestAccessor;
+import software.amazon.disco.agent.web.apache.httpclient.utils.HttpResponseAccessor;
 import software.amazon.disco.agent.web.apache.httpclient.utils.MethodInterceptionCounter;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
@@ -86,13 +89,19 @@ public class ApacheHttpClientInterceptor implements Installable {
         ServiceDownstreamRequestEvent requestEvent = publishRequestEvent(requestAccessor);
 
         Throwable throwable = null;
+        Object response = null;
         try {
-            return call(zuper);
+            response = call(zuper);
         } catch (Throwable t) {
-            throw throwable = t;
+            throwable = t;
         } finally {
             // publish response event
-            publishResponseEvent(requestEvent, throwable);
+            HttpResponseAccessor responseAccessor = new HttpResponseAccessor(response);
+            publishResponseEvent(responseAccessor, requestEvent, throwable);
+            if (throwable != null) {
+                throw throwable;
+            }
+            return response;
         }
     }
 
@@ -169,22 +178,27 @@ public class ApacheHttpClientInterceptor implements Installable {
      * @param requestAccessor The {@link HttpRequestAccessor}
      * @return The published ServiceDownstreamRequestEvent, which is needed when publishing ServiceDownstreamResponseEvent later
      */
-    private static ServiceDownstreamRequestEvent publishRequestEvent(final HttpRequestAccessor requestAccessor) throws Throwable {
-        ServiceDownstreamRequestEvent requestEvent = new ServiceDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, requestAccessor.getUri(), requestAccessor.getMethod());
+    private static HttpServiceDownstreamRequestEvent publishRequestEvent(final HttpRequestAccessor requestAccessor) throws Throwable {
+        HttpServiceDownstreamRequestEvent requestEvent = new HttpServiceDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, requestAccessor.getUri(), requestAccessor.getMethod());
+        requestEvent.withMethod(requestAccessor.getMethod());
+        requestEvent.withUri(requestAccessor.getUri());
         EventBus.publish(requestEvent);
         return requestEvent;
     }
 
     /**
      * Publish a {@link ServiceDownstreamResponseEvent}.
-     *  @param requestEvent Previously published ServiceDownstreamRequestEvent
+     * @param responseAccessor a HttpResponseAccessor to get status code etc.
+     * @param requestEvent Previously published ServiceDownstreamRequestEvent
      * @param throwable The throwable if the request fails
      */
-    private static void publishResponseEvent(final ServiceDownstreamRequestEvent requestEvent, final Throwable throwable) {
-        ServiceDownstreamResponseEvent responseEvent = new ServiceDownstreamResponseEvent(APACHE_HTTP_CLIENT_ORIGIN, requestEvent.getService(), requestEvent.getOperation(), requestEvent);
+    private static void publishResponseEvent(final HttpResponseAccessor responseAccessor, final ServiceDownstreamRequestEvent requestEvent, final Throwable throwable) {
+        HttpServiceDownstreamResponseEvent responseEvent = new HttpServiceDownstreamResponseEvent(APACHE_HTTP_CLIENT_ORIGIN, requestEvent.getService(), requestEvent.getOperation(), requestEvent);
         if(throwable != null) {
             responseEvent.withThrown(throwable);
         }
+        responseEvent.withStatusCode(responseAccessor.getStatusCode());
+        responseEvent.withContentLength(responseAccessor.getContentLength());
         EventBus.publish(responseEvent);
     }
 

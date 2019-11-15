@@ -20,6 +20,8 @@ import org.apache.http.impl.client.HttpClients;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
+import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
+import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
 import net.bytebuddy.agent.builder.AgentBuilder;
@@ -182,13 +184,14 @@ public class ApacheHttpClientInterceptorTests {
         assertEquals(2, events.size());
 
         // Verify the Request Event
-        verifyServiceRequestEvent((ServiceDownstreamRequestEvent) events.get(0));
+        verifyServiceRequestEvent((HttpServiceDownstreamRequestEvent) events.get(0));
 
         // Verify the Response Event
-        ServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (ServiceDownstreamResponseEvent) events.get(1);
+        HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (HttpServiceDownstreamResponseEvent) events.get(1);
         verifyServiceResponseEvent(serviceDownstreamResponseEvent);
         assertNull(serviceDownstreamResponseEvent.getResponse());
         assertNull(serviceDownstreamResponseEvent.getThrown());
+        assertEquals(200, serviceDownstreamResponseEvent.getStatusCode());
 
         assertEquals(3, someHttpClient.executeMethodChainingDepth);
     }
@@ -219,7 +222,7 @@ public class ApacheHttpClientInterceptorTests {
             assertEquals(2, events.size());
 
             // Verify the Request Event
-            verifyServiceRequestEvent((ServiceDownstreamRequestEvent) events.get(0));
+            verifyServiceRequestEvent((HttpServiceDownstreamRequestEvent) events.get(0));
 
             // Verify the Response Event
             ServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (ServiceDownstreamResponseEvent) events.get(1);
@@ -262,9 +265,9 @@ public class ApacheHttpClientInterceptorTests {
         assertEquals(HEADER_VALUE_2, addHeaderValueArgumentCaptor.getAllValues().get(1));
     }
 
-    private static void verifyServiceRequestEvent(final ServiceDownstreamRequestEvent serviceDownstreamRequestEvent) {
-        assertEquals(METHOD, serviceDownstreamRequestEvent.getOperation());
-        assertEquals(URI, serviceDownstreamRequestEvent.getService());
+    private static void verifyServiceRequestEvent(final HttpServiceDownstreamRequestEvent serviceDownstreamRequestEvent) {
+        assertEquals(METHOD, serviceDownstreamRequestEvent.getMethod());
+        assertEquals(URI, serviceDownstreamRequestEvent.getUri());
         assertEquals(ApacheHttpClientInterceptor.APACHE_HTTP_CLIENT_ORIGIN, serviceDownstreamRequestEvent.getOrigin());
         assertNull(serviceDownstreamRequestEvent.getRequest());
     }

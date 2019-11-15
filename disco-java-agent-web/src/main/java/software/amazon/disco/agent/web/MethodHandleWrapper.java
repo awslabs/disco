@@ -106,7 +106,7 @@ public class MethodHandleWrapper {
     public Object invoke(Object receiver, Object... args) {
         Object[] invokeArgs;
 
-        if (handle == null) {
+        if (handle == null || receiver == null) {
             return null;
         } else {
             if (receiver != null) {
