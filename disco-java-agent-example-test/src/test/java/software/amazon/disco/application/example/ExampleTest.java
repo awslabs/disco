@@ -15,10 +15,13 @@
 
 package software.amazon.disco.application.example;
 
+import org.apache.http.client.methods.HttpUriRequest;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.HttpServletNetworkRequestEvent;
 import software.amazon.disco.agent.event.HttpServletNetworkResponseEvent;
 import software.amazon.disco.agent.event.Listener;
+import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
+import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.event.TransactionBeginEvent;
 import software.amazon.disco.agent.event.TransactionEndEvent;
 import software.amazon.disco.agent.reflect.concurrent.TransactionContext;
@@ -29,9 +32,12 @@ import org.mockito.Mockito;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.mockito.Mockito.mock;
 
 public class ExampleTest {
     /**
@@ -69,6 +75,25 @@ public class ExampleTest {
         Assert.assertTrue(l.events.get(1) instanceof HttpServletNetworkRequestEvent);
         Assert.assertTrue(l.events.get(2) instanceof HttpServletNetworkResponseEvent);
         Assert.assertTrue(l.events.get(3) instanceof TransactionEndEvent);
+        EventBus.removeListener(l);
+    }
+
+    /**
+     * Test that our agent installed the Apache Http Client support from the web package.
+     * @throws IOException
+     */
+    @Test
+    public void testHttpClientInterception() throws IOException {
+        MyEventListener l = new MyEventListener();
+        EventBus.addListener(l);
+
+        MyHttpClient client = new MyHttpClient();
+        HttpUriRequest request = mock(HttpUriRequest.class);
+        client.execute(request);
+        Assert.assertTrue(client.executeCallChainDepth > 0);
+        Assert.assertEquals(2, l.events.size());
+        Assert.assertTrue(l.events.get(0) instanceof ServiceDownstreamRequestEvent);
+        Assert.assertTrue(l.events.get(1) instanceof ServiceDownstreamResponseEvent);
         EventBus.removeListener(l);
     }
 
