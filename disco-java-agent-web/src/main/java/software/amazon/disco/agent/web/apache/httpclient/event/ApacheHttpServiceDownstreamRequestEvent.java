@@ -21,7 +21,7 @@ import software.amazon.disco.agent.web.apache.httpclient.utils.HttpRequestAccess
 /**
  * Specialization allowing header replacement.
  */
-public class ApacheHttpServiceDownstreamRequestEvent extends HttpServiceDownstreamRequestEvent {
+class ApacheHttpServiceDownstreamRequestEvent extends HttpServiceDownstreamRequestEvent {
     private final HttpRequestAccessor accessor;
     /**
      * Construct a new ApacheHttpServiceDownstreamRequestEvent

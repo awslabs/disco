@@ -23,7 +23,6 @@ import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
-import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.method.MethodDescription;
@@ -46,7 +45,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import software.amazon.disco.agent.web.apache.httpclient.event.ApacheHttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.web.apache.httpclient.source.MockEventBusListener;
 
 import java.io.IOException;
@@ -170,7 +168,7 @@ public class ApacheHttpClientInterceptorTests {
         ApacheHttpClientInterceptor.intercept(new Object[] {get}, "origin", () -> someHttpClient.execute(get));
 
         List<Event> events = mockEventBusListener.getReceivedEvents();
-        ApacheHttpServiceDownstreamRequestEvent event = (ApacheHttpServiceDownstreamRequestEvent)events.get(0);
+        HttpServiceDownstreamRequestEvent event = (HttpServiceDownstreamRequestEvent)events.get(0);
         event.replaceHeader("foo", "bar3");
 
         assertEquals(1, get.getHeaders("foo").length);
