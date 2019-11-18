@@ -44,8 +44,6 @@ public class TransactionContext {
 
     private static final String REFERENCE_COUNTER_KEY = "$amazon.discoRefCounterKey";
 
-    public static final String PROPAGATE_IN_REQUEST_TAG = "PROPAGATE_IN_REQUEST";
-
     private static final ThreadLocal<ConcurrentMap<String, MetadataItem>> transactionContext = ThreadLocal.withInitial(
             ()-> {
                 ConcurrentMap<String, MetadataItem> map = new ConcurrentHashMap<>();
@@ -169,14 +167,7 @@ public class TransactionContext {
         if (metadata == null) {
             throw new IllegalArgumentException(key + " no metadata object exists for this key");
         } else {
-            if (tag.equals(PROPAGATE_IN_REQUEST_TAG)) {
-                if (metadata.get() instanceof String) {
-                    transactionContext.get().get(key).setTag(tag);
-                } else {
-                    throw new IllegalArgumentException(key + " data tagged for propagation must be of type String");
-                }
-            }
-           transactionContext.get().get(key).setTag(tag);
+            transactionContext.get().get(key).setTag(tag);
         }
     }
 

@@ -15,14 +15,12 @@
 
 package software.amazon.disco.agent.integtest.web.apache.httpclient;
 
-import org.apache.http.HttpEntity;
 import org.apache.http.RequestLine;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.mockito.ArgumentCaptor;
 import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
@@ -41,7 +39,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,21 +46,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class ApacheHttpClientInterceptorTests {
-
-    private static final String PROPAGATE_IN_REQUEST_TAG = "PROPAGATE_IN_REQUEST";
-
     private TestListener testListener;
-
-    // Set the header attributes
-    private static final String HEADER_NAME_1 = "headerName1";
-    private static final String HEADER_VALUE_1 = "headerValue1";
-    private static final String HEADER_NAME_2 = "headerName2";
-    private static final String HEADER_VALUE_2 = "headerValue2";
 
     private static final String SOME_URI = "http://amazon.com/explore/something";
     private static final String METHOD = "GET";
@@ -112,8 +98,6 @@ public class ApacheHttpClientInterceptorTests {
 
     @Test
     public void testExecuteInterceptionChained() throws Exception {
-        prepareToBePropagatedHeaders();
-
         HttpUriRequest request = mock(HttpUriRequest.class);
         setUpRequest(request);
 
@@ -121,8 +105,6 @@ public class ApacheHttpClientInterceptorTests {
         FakeChainedExecuteCallHttpClientReturnResponse httpClient = new FakeChainedExecuteCallHttpClientReturnResponse();
         httpClient.fakeResponse.setEntity(new StringEntity("123456"));
         httpClient.execute(request);
-
-        verifyHeaderPropagationResults(request);
 
         // Verify only one of interceptions does the interceptor business logic even if there is a method chaining,
         // as a result, only two service downstream events are published (request/response)
@@ -145,8 +127,6 @@ public class ApacheHttpClientInterceptorTests {
 
     @Test(expected = IOException.class)
     public void testExecuteInterceptionException() throws Exception {
-        prepareToBePropagatedHeaders();
-
         HttpUriRequest request = mock(HttpUriRequest.class);
         setUpRequest(request);
 
@@ -156,8 +136,6 @@ public class ApacheHttpClientInterceptorTests {
         try {
             httpClient.execute(request);
         } finally {
-            verifyHeaderPropagationResults(request);
-
             // Verify only one of interceptions does the interceptor business logic even if there is a method chaining,
             // as a result, only two service downstream events are published (request/response)
             assertEquals(1, testListener.requestEvents.size());
@@ -197,35 +175,12 @@ public class ApacheHttpClientInterceptorTests {
         }
     }
 
-    private static void prepareToBePropagatedHeaders() throws ClassNotFoundException, InvocationTargetException, IllegalAccessException, NoSuchMethodException {
-        // Add test metadata
-        TransactionContext.putMetadata(HEADER_NAME_1, HEADER_VALUE_1);
-        TransactionContext.setMetadataTag(HEADER_NAME_1, PROPAGATE_IN_REQUEST_TAG);
-        TransactionContext.putMetadata(HEADER_NAME_2, HEADER_VALUE_2);
-        TransactionContext.setMetadataTag(HEADER_NAME_2, PROPAGATE_IN_REQUEST_TAG);
-    }
-
     private static void setUpRequest(final HttpRequest request) {
         RequestLine requestLine = mock(RequestLine.class);
 
         when(request.getRequestLine()).thenReturn(requestLine);
         when(requestLine.getUri()).thenReturn(SOME_URI);
         when(requestLine.getMethod()).thenReturn(METHOD);
-    }
-
-    private static void verifyHeaderPropagationResults(final HttpRequest request) {
-        // Verify header propagation
-        ArgumentCaptor<String> removeHeadersNameArgumentCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<String> addHeaderNameArgumentCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<String> addHeaderValueArgumentCaptor = ArgumentCaptor.forClass(String.class);
-        verify(request, times(2)).removeHeaders(removeHeadersNameArgumentCaptor.capture());
-        verify(request, times(2)).addHeader(addHeaderNameArgumentCaptor.capture(), addHeaderValueArgumentCaptor.capture());
-        assertEquals(HEADER_NAME_1, removeHeadersNameArgumentCaptor.getAllValues().get(0));
-        assertEquals(HEADER_NAME_1, addHeaderNameArgumentCaptor.getAllValues().get(0));
-        assertEquals(HEADER_VALUE_1, addHeaderValueArgumentCaptor.getAllValues().get(0));
-        assertEquals(HEADER_NAME_2, removeHeadersNameArgumentCaptor.getAllValues().get(1));
-        assertEquals(HEADER_NAME_2, addHeaderNameArgumentCaptor.getAllValues().get(1));
-        assertEquals(HEADER_VALUE_2, addHeaderValueArgumentCaptor.getAllValues().get(1));
     }
 
     private static void verifyServiceRequestEvent(final ServiceRequestEvent serviceDownstreamRequestEvent) {

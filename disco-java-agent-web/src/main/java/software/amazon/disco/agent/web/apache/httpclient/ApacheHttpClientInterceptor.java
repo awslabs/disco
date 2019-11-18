@@ -83,9 +83,6 @@ public class ApacheHttpClientInterceptor implements Installable {
 
         HttpRequestAccessor requestAccessor = new HttpRequestAccessor(args);
 
-        // header propagation
-        propagateHeaders(requestAccessor);
-
         // publish request event
         ServiceDownstreamRequestEvent requestEvent = publishRequestEvent(requestAccessor);
 
@@ -120,32 +117,6 @@ public class ApacheHttpClientInterceptor implements Installable {
             return zuper.call();
         } finally {
             METHOD_INTERCEPTION_COUNTER.decrement();
-        }
-    }
-
-    /**
-     * Add headers to the http request if there is any.
-     *
-     * @param requestAccessor The {@link HttpRequestAccessor}
-     */
-    private static void propagateHeaders(final HttpRequestAccessor requestAccessor) throws Throwable {
-        try {
-            // Gather the metadata that must be propagated
-            final Map<String, Object> headerAttributes = TransactionContext.getMetadataWithTag(TransactionContext.PROPAGATE_IN_REQUEST_TAG);
-
-            // Add the metadata as HTTP headers in the request
-            for (final Map.Entry<String, Object> entry : headerAttributes.entrySet()) {
-                if (LogManager.isDebugEnabled()) {
-                    log.debug(String.format("DiSCo(Web) propagates header [Key]: %s, [Value]: %s",
-                            entry.getKey(), entry.getValue()));
-                }
-
-                propagateHeader(requestAccessor, entry.getKey(), entry.getValue());
-            }
-        }
-        catch (final Exception e) {
-            // Exceptions caused by the interceptor must be shadowed so that the original flow is not affected
-            log.error("DiSCo(Web) Failed to propagate headers for Apache http client: " + e.getMessage(), e);
         }
     }
 
