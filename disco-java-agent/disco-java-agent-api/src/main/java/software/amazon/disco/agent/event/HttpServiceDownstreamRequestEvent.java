@@ -85,9 +85,8 @@ public class HttpServiceDownstreamRequestEvent extends ServiceDownstreamRequestE
      * @param name the header name
      * @param value the header value
      * @return true if successful
-     * @throws UnsupportedOperationException if not implemented
      */
     public boolean replaceHeader(String name, String value) {
-        throw new UnsupportedOperationException("replaceHeader not supported");
+        return false;
     }
 }
