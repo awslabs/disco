@@ -15,13 +15,12 @@
 
 package software.amazon.disco.agent.web.apache.httpclient;
 
-import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
-import software.amazon.disco.agent.web.apache.httpclient.event.ApacheEventFactory;
-import software.amazon.disco.agent.web.apache.httpclient.utils.HttpRequestAccessor;
-import software.amazon.disco.agent.web.apache.httpclient.utils.HttpResponseAccessor;
-import software.amazon.disco.agent.web.apache.httpclient.utils.MethodInterceptionCounter;
+import software.amazon.disco.agent.web.apache.event.ApacheEventFactory;
+import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
+import software.amazon.disco.agent.web.apache.utils.HttpResponseAccessor;
+import software.amazon.disco.agent.web.apache.utils.MethodInterceptionCounter;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
@@ -39,7 +38,6 @@ import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**

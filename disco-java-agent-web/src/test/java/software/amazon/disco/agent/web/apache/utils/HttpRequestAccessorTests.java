@@ -13,7 +13,7 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.agent.web.apache.httpclient.utils;
+package software.amazon.disco.agent.web.apache.utils;
 
 import org.apache.http.HttpRequest;
 import org.apache.http.RequestLine;
@@ -21,6 +21,7 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;

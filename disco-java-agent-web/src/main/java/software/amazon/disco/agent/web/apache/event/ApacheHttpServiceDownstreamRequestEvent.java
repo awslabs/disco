@@ -13,10 +13,10 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.agent.web.apache.httpclient.event;
+package software.amazon.disco.agent.web.apache.event;
 
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
-import software.amazon.disco.agent.web.apache.httpclient.utils.HttpRequestAccessor;
+import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
 
 /**
  * Specialization allowing header replacement.
