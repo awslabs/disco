@@ -13,7 +13,7 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.agent.web.apache.httpclient.utils;
+package software.amazon.disco.agent.web.apache.utils;
 
 import org.junit.Before;
 import org.junit.Test;
