@@ -119,30 +119,6 @@ public class ApacheHttpClientInterceptor implements Installable {
     }
 
     /**
-     * Add a header to the http request.
-     *
-     * @param requestAccessor The {@link HttpRequestAccessor}
-     * @param name The name of the header
-     * @param value The value of the header
-     */
-    private static void propagateHeader(final HttpRequestAccessor requestAccessor, final String name, final Object value) throws Throwable {
-        String stringValue;
-        if (value == null) {
-            stringValue = null;
-        } else if (value instanceof String) {
-            stringValue = (String) value;
-        } else {
-            // TODO: better Object to String handling?
-            stringValue = value.toString();
-        }
-
-        // This will aggressively overwrite the header if it's already there. It's necessary so that we don't end up
-        // with duplicate header values by mistake
-        requestAccessor.removeHeaders(name);
-        requestAccessor.addHeader(name, stringValue);
-    }
-
-    /**
      * Publish a {@link ServiceDownstreamRequestEvent}.
      *
      * @param requestAccessor The {@link HttpRequestAccessor}
