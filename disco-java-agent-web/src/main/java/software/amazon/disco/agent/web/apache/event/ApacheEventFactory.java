@@ -21,7 +21,7 @@ import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
  * Create our private events, so that listeners do not have public access to them
  */
 public class ApacheEventFactory {
-    public static ApacheHttpServiceDownstreamRequestEvent createDownstreamRequestEvent(String service, String operation, HttpRequestAccessor accessor) {
-        return new ApacheHttpServiceDownstreamRequestEvent("ApacheHttpClient", service, operation, accessor);
+    public static ApacheHttpServiceDownstreamRequestEvent createDownstreamRequestEvent(String origin, String service, String operation, HttpRequestAccessor accessor) {
+        return new ApacheHttpServiceDownstreamRequestEvent(origin, service, operation, accessor);
     }
 }

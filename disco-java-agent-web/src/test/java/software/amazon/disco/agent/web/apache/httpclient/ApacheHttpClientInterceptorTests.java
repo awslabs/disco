@@ -44,7 +44,7 @@ import org.apache.http.protocol.HttpContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import software.amazon.disco.agent.web.apache.httpclient.source.MockEventBusListener;
+import software.amazon.disco.agent.web.apache.source.MockEventBusListener;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -146,7 +146,7 @@ public class ApacheHttpClientInterceptorTests {
 
     @Test(expected = NoSuchMethodException.class)
     public void testMethodMatcherFailedOnWrongClass() throws Exception {
-        assertEquals(0, methodMatchedCount("service", String.class));
+        assertEquals(0, methodMatchedCount("execute", String.class));
     }
 
     @Test

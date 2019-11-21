@@ -41,12 +41,12 @@ import net.bytebuddy.matcher.ElementMatchers;
 import java.util.concurrent.Callable;
 
 /**
- * When making a HTTP call using ApacheHttpClient the org.apache.http.client#execute method
+ * When making a HTTP call using ApacheHttpClient the org.apache.http.client.HttpClient#execute method
  * is intercepted, to allow recording of the call and header propagation.
  *
  * IMPORTANT NOTE:
  *
- * This interceptor has been tested on Apache-HttpComponents-HttpClient 4.5.x only.
+ * This interceptor has been tested on org.apache.httpcomponents:httpclient 4.5.10 only.
  */
 public class ApacheHttpClientInterceptor implements Installable {
 
@@ -124,8 +124,8 @@ public class ApacheHttpClientInterceptor implements Installable {
      * @param requestAccessor The {@link HttpRequestAccessor}
      * @return The published ServiceDownstreamRequestEvent, which is needed when publishing ServiceDownstreamResponseEvent later
      */
-    private static HttpServiceDownstreamRequestEvent publishRequestEvent(final HttpRequestAccessor requestAccessor) throws Throwable {
-        HttpServiceDownstreamRequestEvent requestEvent = ApacheEventFactory.createDownstreamRequestEvent(requestAccessor.getUri(), requestAccessor.getMethod(), requestAccessor);
+    private static HttpServiceDownstreamRequestEvent publishRequestEvent(final HttpRequestAccessor requestAccessor) {
+        HttpServiceDownstreamRequestEvent requestEvent = ApacheEventFactory.createDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, requestAccessor.getUri(), requestAccessor.getMethod(), requestAccessor);
         requestEvent.withMethod(requestAccessor.getMethod());
         requestEvent.withUri(requestAccessor.getUri());
         EventBus.publish(requestEvent);

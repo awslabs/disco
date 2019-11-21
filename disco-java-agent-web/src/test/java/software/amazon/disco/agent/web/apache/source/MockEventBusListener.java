@@ -13,7 +13,7 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.agent.web.apache.httpclient.source;
+package software.amazon.disco.agent.web.apache.source;
 
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.Listener;
