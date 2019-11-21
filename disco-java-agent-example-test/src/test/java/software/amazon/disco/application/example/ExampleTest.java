@@ -97,6 +97,25 @@ public class ExampleTest {
         EventBus.removeListener(l);
     }
 
+    /**
+     * Test that our agent installed the Apache Http Async Client support from the web package.
+     * @throws IOException
+     */
+    @Test
+    public void testHttpAsyncClientInterception() throws IOException {
+        MyEventListener l = new MyEventListener();
+        EventBus.addListener(l);
+
+        MyHttpAsyncClient client = new MyHttpAsyncClient();
+        HttpUriRequest request = mock(HttpUriRequest.class);
+        client.execute(request, null);
+        Assert.assertTrue(client.executeCallChainDepth > 0);
+        Assert.assertEquals(2, l.events.size());
+        Assert.assertTrue(l.events.get(0) instanceof ServiceDownstreamRequestEvent);
+        Assert.assertTrue(l.events.get(1) instanceof ServiceDownstreamResponseEvent);
+        EventBus.removeListener(l);
+    }
+
     static class MyEventListener implements Listener {
         public List<Event> events = new LinkedList<>();
 

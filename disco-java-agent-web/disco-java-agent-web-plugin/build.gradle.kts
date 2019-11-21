@@ -32,16 +32,18 @@ dependencies {
     //testrun.
     testCompile(project(":disco-java-agent:disco-java-agent-api"))
     testCompile("junit", "junit", "4.12")
+    testCompile("com.tngtech.java", "junit-dataprovider", "1.+")
     testCompile("org.mockito", "mockito-core", "1.+")
     testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
     testCompile("org.apache.httpcomponents", "httpclient", "4.5.10")
+    testCompile("org.apache.httpcomponents", "httpasyncclient", "4+")
 }
 
 tasks.shadowJar  {
     manifest {
         attributes(mapOf(
             //this has to align with the contents of WebSupport.java. Would be good to find a way to avoid this duplication
-            "Disco-Installable-Classes" to "software.amazon.disco.agent.web.servlet.HttpServletServiceInterceptor software.amazon.disco.agent.web.apache.httpclient.ApacheHttpClientInterceptor"
+            "Disco-Installable-Classes" to "software.amazon.disco.agent.web.servlet.HttpServletServiceInterceptor software.amazon.disco.agent.web.apache.httpclient.ApacheHttpClientInterceptor software.amazon.disco.agent.web.apache.httpasyncclient.ApacheHttpAsyncClientInterceptor"
         ))
     }
 }
