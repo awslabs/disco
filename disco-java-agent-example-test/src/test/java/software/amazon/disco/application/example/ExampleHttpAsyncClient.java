@@ -34,7 +34,7 @@ import org.apache.http.protocol.HttpContext;
 import java.io.IOException;
 import java.util.concurrent.Future;
 
-public class MyHttpAsyncClient implements HttpAsyncClient {
+public class ExampleHttpAsyncClient implements HttpAsyncClient {
     public HttpResponse fakeResponse = new BasicHttpResponse(new ProtocolVersion("protocol", 1, 1), 200, "");
     public int executeCallChainDepth = 0;
 

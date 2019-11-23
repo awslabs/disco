@@ -15,9 +15,6 @@
 
 package software.amazon.disco.agent.integtest.web.apache.httpasyncclient;
 
-import com.tngtech.java.junit.dataprovider.DataProvider;
-import com.tngtech.java.junit.dataprovider.DataProviderRunner;
-import com.tngtech.java.junit.dataprovider.UseDataProvider;
 import org.apache.http.HttpResponse;
 import org.apache.http.RequestLine;
 import org.apache.http.client.methods.HttpGet;
@@ -30,6 +27,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.event.Listener;
@@ -43,6 +41,8 @@ import software.amazon.disco.agent.reflect.concurrent.TransactionContext;
 import software.amazon.disco.agent.reflect.event.EventBus;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -55,7 +55,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(DataProviderRunner.class)
 public class ApacheHttpAsyncClientInterceptorTests {
 
     private TestListener testListener;
@@ -135,79 +134,55 @@ public class ApacheHttpAsyncClientInterceptorTests {
         assertEquals(1, testListener.responseEvents.size());
     }
 
-    @Test
-    @UseDataProvider("futureCallbacks")
-    public void testInterceptorSucceededOnCompleted(FutureCallback<HttpResponse> futureCallback) {
-        HttpUriRequest request = mockRequest();
-        FakeAsyncClient client = new FakeAsyncClient(FakeAsyncClient.DesiredState.CALLBACK_COMPLETED);
-        client.execute(request, futureCallback);
+    @RunWith(Parameterized.class)
+    public static class ParameterizedTests {
+        @Parameterized.Parameter()
+        public FutureCallback futureCallback;
 
-        assertTrue(client.executeCallChainDepth > 0);
-        assertEquals(1, testListener.requestEvents.size());
-        assertEquals(1, testListener.responseEvents.size());
-        assertTrue(testListener.requestEvents.get(0) instanceof ServiceDownstreamRequestEvent);
-        // Verify the Request Event
-        verifyServiceRequestEvent(testListener.requestEvents.get(0));
+        private TestListener testListener;
 
-        assertTrue(testListener.responseEvents.get(0) instanceof HttpServiceDownstreamResponseEvent);
-        // Verify the Response Event
-        verifyServiceResponseEvent(testListener.responseEvents.get(0));
-        assertNull(testListener.responseEvents.get(0).getResponse());
-        assertNull(testListener.responseEvents.get(0).getThrown());
-        assertEquals(FakeAsyncClient.fakeResponse.getStatusLine().getStatusCode(), testListener.responseEvents.get(0).getStatusCode());
-    }
+        @Before
+        public void before() {
+            TransactionContext.create();
+            EventBus.addListener(testListener = new TestListener());
+        }
 
-    @Test
-    @UseDataProvider("futureCallbacks")
-    public void testInterceptorSucceededOnFailed(FutureCallback<HttpResponse> futureCallback) {
-        HttpUriRequest request = mockRequest();
-        FakeAsyncClient client = new FakeAsyncClient(FakeAsyncClient.DesiredState.CALLBACK_FAILED);
-        client.execute(request, futureCallback);
+        @After
+        public void after() {
+            TransactionContext.clear();
+            EventBus.removeListener(testListener);
+        }
 
-        assertTrue(client.executeCallChainDepth > 0);
-        assertEquals(1, testListener.requestEvents.size());
-        assertEquals(1, testListener.responseEvents.size());
-        assertTrue(testListener.requestEvents.get(0) instanceof ServiceDownstreamRequestEvent);
-        // Verify the Request Event
-        verifyServiceRequestEvent(testListener.requestEvents.get(0));
+        @Parameterized.Parameters(name="{0}")
+        public static Collection<Object[]> data() {
+            return Arrays.asList(new Object[][] {
+                    { null },
+                    { new FutureCallback<HttpResponse>() {
 
-        assertTrue(testListener.responseEvents.get(0) instanceof HttpServiceDownstreamResponseEvent);
-        // Verify the Response Event
-        verifyServiceResponseEvent(testListener.responseEvents.get(0));
-        assertNull(testListener.responseEvents.get(0).getResponse());
-        assertEquals(FakeAsyncClient.fakeException, testListener.responseEvents.get(0).getThrown());
-    }
+                        @Override
+                        public void completed(final HttpResponse result) {
 
-    @Test
-    @UseDataProvider("futureCallbacks")
-    public void testInterceptorSucceededOnCancelled(FutureCallback<HttpResponse> futureCallback) {
-        HttpUriRequest request = mockRequest();
-        FakeAsyncClient client = new FakeAsyncClient(FakeAsyncClient.DesiredState.CALLBACK_CANCELLED);
-        client.execute(request, futureCallback);
+                        }
 
-        assertTrue(client.executeCallChainDepth > 0);
-        assertEquals(1, testListener.requestEvents.size());
-        assertEquals(1, testListener.responseEvents.size());
-        assertTrue(testListener.requestEvents.get(0) instanceof ServiceDownstreamRequestEvent);
-        // Verify the Request Event
-        verifyServiceRequestEvent(testListener.requestEvents.get(0));
+                        @Override
+                        public void failed(final Exception ex) {
 
-        assertTrue(testListener.responseEvents.get(0) instanceof HttpServiceDownstreamResponseEvent);
-        // Verify the Response Event
-        verifyServiceResponseEvent(testListener.responseEvents.get(0));
-        assertNull(testListener.responseEvents.get(0).getResponse());
-        assertNull(testListener.responseEvents.get(0).getThrown());
-    }
+                        }
 
-    @Test(expected = FakeAsyncClient.FakeRuntimeException.class)
-    @UseDataProvider("futureCallbacks")
-    public void testInterceptorSucceededOnThrowable(FutureCallback<HttpResponse> futureCallback) {
-        HttpUriRequest request = mockRequest();
-        FakeAsyncClient client = new FakeAsyncClient(FakeAsyncClient.DesiredState.THROWABLE_THROWN);
+                        @Override
+                        public void cancelled() {
 
-        try {
+                        }
+                    } }
+            });
+        }
+
+        @Test
+        public void testInterceptorSucceededOnCompleted() {
+            HttpUriRequest request = mockRequest();
+            FakeAsyncClient client = new FakeAsyncClient(FakeAsyncClient.DesiredState.CALLBACK_COMPLETED);
             client.execute(request, futureCallback);
-        } finally {
+
             assertTrue(client.executeCallChainDepth > 0);
             assertEquals(1, testListener.requestEvents.size());
             assertEquals(1, testListener.responseEvents.size());
@@ -217,37 +192,77 @@ public class ApacheHttpAsyncClientInterceptorTests {
 
             assertTrue(testListener.responseEvents.get(0) instanceof HttpServiceDownstreamResponseEvent);
             // Verify the Response Event
-            HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = testListener.responseEvents.get(0);
-            assertNull(serviceDownstreamResponseEvent.getOperation());
-            assertNull(serviceDownstreamResponseEvent.getService());
-            assertEquals("ApacheHttpAsyncClient", serviceDownstreamResponseEvent.getOrigin());
+            verifyServiceResponseEvent(testListener.responseEvents.get(0));
+            assertNull(testListener.responseEvents.get(0).getResponse());
+            assertNull(testListener.responseEvents.get(0).getThrown());
+            assertEquals(FakeAsyncClient.fakeResponse.getStatusLine().getStatusCode(), testListener.responseEvents.get(0).getStatusCode());
+        }
+
+        @Test
+        public void testInterceptorSucceededOnFailed() {
+            HttpUriRequest request = mockRequest();
+            FakeAsyncClient client = new FakeAsyncClient(FakeAsyncClient.DesiredState.CALLBACK_FAILED);
+            client.execute(request, futureCallback);
+
+            assertTrue(client.executeCallChainDepth > 0);
+            assertEquals(1, testListener.requestEvents.size());
+            assertEquals(1, testListener.responseEvents.size());
+            assertTrue(testListener.requestEvents.get(0) instanceof ServiceDownstreamRequestEvent);
+            // Verify the Request Event
+            verifyServiceRequestEvent(testListener.requestEvents.get(0));
+
+            assertTrue(testListener.responseEvents.get(0) instanceof HttpServiceDownstreamResponseEvent);
+            // Verify the Response Event
+            verifyServiceResponseEvent(testListener.responseEvents.get(0));
             assertNull(testListener.responseEvents.get(0).getResponse());
             assertEquals(FakeAsyncClient.fakeException, testListener.responseEvents.get(0).getThrown());
         }
-    }
 
-    @DataProvider
-    public static Object[][] futureCallbacks() {
-        return new Object[][] {
-                { null },
-                { new FutureCallback<HttpResponse>() {
+        @Test
+        public void testInterceptorSucceededOnCancelled() {
+            HttpUriRequest request = mockRequest();
+            FakeAsyncClient client = new FakeAsyncClient(FakeAsyncClient.DesiredState.CALLBACK_CANCELLED);
+            client.execute(request, futureCallback);
 
-                    @Override
-                    public void completed(final HttpResponse result) {
+            assertTrue(client.executeCallChainDepth > 0);
+            assertEquals(1, testListener.requestEvents.size());
+            assertEquals(1, testListener.responseEvents.size());
+            assertTrue(testListener.requestEvents.get(0) instanceof ServiceDownstreamRequestEvent);
+            // Verify the Request Event
+            verifyServiceRequestEvent(testListener.requestEvents.get(0));
 
-                    }
+            assertTrue(testListener.responseEvents.get(0) instanceof HttpServiceDownstreamResponseEvent);
+            // Verify the Response Event
+            verifyServiceResponseEvent(testListener.responseEvents.get(0));
+            assertNull(testListener.responseEvents.get(0).getResponse());
+            assertNull(testListener.responseEvents.get(0).getThrown());
+        }
 
-                    @Override
-                    public void failed(final Exception ex) {
+        @Test(expected = FakeAsyncClient.FakeRuntimeException.class)
+        public void testInterceptorSucceededOnThrowable() {
+            HttpUriRequest request = mockRequest();
+            FakeAsyncClient client = new FakeAsyncClient(FakeAsyncClient.DesiredState.THROWABLE_THROWN);
 
-                    }
+            try {
+                client.execute(request, futureCallback);
+            } finally {
+                assertTrue(client.executeCallChainDepth > 0);
+                assertEquals(1, testListener.requestEvents.size());
+                assertEquals(1, testListener.responseEvents.size());
+                assertTrue(testListener.requestEvents.get(0) instanceof ServiceDownstreamRequestEvent);
+                // Verify the Request Event
+                verifyServiceRequestEvent(testListener.requestEvents.get(0));
 
-                    @Override
-                    public void cancelled() {
-
-                    }
-                } }
-        };
+                assertTrue(testListener.responseEvents.get(0) instanceof HttpServiceDownstreamResponseEvent);
+                // Verify the Response Event
+                HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = testListener.responseEvents.get(0);
+                assertNull(serviceDownstreamResponseEvent.getOperation());
+                assertNull(serviceDownstreamResponseEvent.getService());
+                assertEquals("ApacheHttpAsyncClient", serviceDownstreamResponseEvent.getOrigin());
+                assertNull(testListener.responseEvents.get(0).getResponse());
+                assertEquals(FakeAsyncClient.fakeException, testListener.responseEvents.get(0).getThrown());
+            }
+        }
     }
 
     private void waitForResponseOrTimeoutWithExistingCallback(CountDownLatch lock) throws InterruptedException {

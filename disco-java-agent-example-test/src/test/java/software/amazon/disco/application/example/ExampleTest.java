@@ -64,7 +64,7 @@ public class ExampleTest {
     public void testServletInterception() throws Exception {
         MyEventListener l = new MyEventListener();
         EventBus.addListener(l);
-        MyServlet servlet = new MyServlet();
+        ExampleServlet servlet = new ExampleServlet();
 
         HttpServletRequest req = Mockito.mock(HttpServletRequest.class);
         HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
@@ -87,7 +87,7 @@ public class ExampleTest {
         MyEventListener l = new MyEventListener();
         EventBus.addListener(l);
 
-        MyHttpClient client = new MyHttpClient();
+        ExampleHttpClient client = new ExampleHttpClient();
         HttpUriRequest request = mock(HttpUriRequest.class);
         client.execute(request);
         Assert.assertTrue(client.executeCallChainDepth > 0);
@@ -106,7 +106,7 @@ public class ExampleTest {
         MyEventListener l = new MyEventListener();
         EventBus.addListener(l);
 
-        MyHttpAsyncClient client = new MyHttpAsyncClient();
+        ExampleHttpAsyncClient client = new ExampleHttpAsyncClient();
         HttpUriRequest request = mock(HttpUriRequest.class);
         client.execute(request, null);
         Assert.assertTrue(client.executeCallChainDepth > 0);

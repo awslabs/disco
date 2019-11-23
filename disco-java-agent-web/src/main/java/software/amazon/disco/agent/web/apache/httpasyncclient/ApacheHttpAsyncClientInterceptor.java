@@ -114,13 +114,8 @@ public class ApacheHttpAsyncClientInterceptor implements Installable {
                 Object futureCallback) {
 
             HttpContextAccessor contextAccessor = new HttpContextAccessor(context);
-
-            Object decoratedRequestProducer = Proxy.newProxyInstance(
-                    requestProducer.getClass().getClassLoader(),
-                    new Class[]{ requestProducer.getClass().getSuperclass().getInterfaces()[0] },
-                    Handlers.decorateRequestProducer(requestProducer, contextAccessor));
-
-            Object decoratedFutureCallback = createdecoratedFutureCallback(futureCallback, contextAccessor);
+            Object decoratedRequestProducer = createDecoratedRequestProducer(requestProducer, contextAccessor);
+            Object decoratedFutureCallback = createDecoratedFutureCallback(futureCallback, contextAccessor);
 
             return new Object[] {
                     decoratedRequestProducer,
@@ -152,15 +147,39 @@ public class ApacheHttpAsyncClientInterceptor implements Installable {
         }
 
         /**
+         * Helper method to create decorated HttpAsyncRequestProducer
+         *
+         * @return The decorated HttpAsyncRequestProducer object or the original object if someone has already decorated it
+         */
+        private static Object createDecoratedRequestProducer(Object originalRequestProducer, HttpContextAccessor contextAccessor) {
+            if (Proxy.isProxyClass(originalRequestProducer.getClass())) {
+                // skip if already decorated
+                // catch: there is no way to inject our business logic if the victim app has already decorated this object
+                return originalRequestProducer;
+            }
+
+            return Proxy.newProxyInstance(
+                    originalRequestProducer.getClass().getClassLoader(),
+                    new Class[]{ originalRequestProducer.getClass().getSuperclass().getInterfaces()[0] },
+                    Handlers.decorateRequestProducer(originalRequestProducer, contextAccessor));
+        }
+
+        /**
          * Helper method to create decorated FutureCallback accordingly:
          *      1. if request is sent w/ FutureCallback specified, then decorate to that FutureCallback object
          *      2. otherwise, try to create a new FutureCallback object
          *
-         * @return The decorated FutureCallback object,
-         * could be null if neither FutureCallback object is provided nor the FutureCallback class can be found.
+         * @return The decorated FutureCallback object or the original object if someone has already decorated it.
+         * It could be null if neither FutureCallback object is provided nor the FutureCallback class can be found.
          */
-        private static Object createdecoratedFutureCallback(Object originalFutureCallback, HttpContextAccessor contextAccessor) {
+        private static Object createDecoratedFutureCallback(Object originalFutureCallback, HttpContextAccessor contextAccessor) {
             if (originalFutureCallback != null) {
+                if (Proxy.isProxyClass(originalFutureCallback.getClass())) {
+                    // skip if already decorated
+                    // catch: there is no way to inject our business logic if the victim app has already decorated this object
+                    return originalFutureCallback;
+                }
+
                 // inject response events publishing logic to the originalFutureCallback object
                 return Proxy.newProxyInstance(
                         originalFutureCallback.getClass().getClassLoader(),
@@ -185,7 +204,7 @@ public class ApacheHttpAsyncClientInterceptor implements Installable {
          */
         private static Class maybeFindClass(final String accessClassName) {
             try {
-                return Class.forName(accessClassName, true, ClassLoader.getSystemClassLoader());
+                return Class.forName(accessClassName, true, Thread.currentThread().getContextClassLoader());
             } catch (ClassNotFoundException e) {
                 // do nothing
             }
@@ -210,21 +229,24 @@ public class ApacheHttpAsyncClientInterceptor implements Installable {
         }
 
         /**
-         * Helper method that invokes the reflected method
-         * but suppress exceptions from {@link Method#invoke(Object, Object...)} itself.
+         * Helper method that invokes the reflected method and suppresses exceptions
+         * from {@link Method#invoke(Object, Object...)} itself e.g. {@link IllegalAccessException}.
          *
          * @param target the object the underlying method is invoked from
          * @param method the {@link Method} instance corresponding to the interface method invoked on the proxy instance.
          * @param args an array of objects containing the values of the arguments passed in the method invocation
          *             on the proxy instance, or null if interface method takes no arguments.
          * @return the value to return from the method invocation on the proxy instance.
+         * @throws Throwable the cause of {@link InvocationTargetException}
          */
-        private static Object invokeQuietly (final Object target, final Method method, final Object[] args) {
+        private static Object invokeQuietly (final Object target, final Method method, final Object[] args) throws Throwable {
             Object result = null;
             try {
                 result = method.invoke(target, args);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                // do nothing?
+            } catch (InvocationTargetException e) {
+                throw e.getCause();
+            } catch (IllegalAccessException e) {
+                // do nothing
             }
             return result;
         }
@@ -248,7 +270,7 @@ public class ApacheHttpAsyncClientInterceptor implements Installable {
              * {@inheritDoc}
              */
             @Override
-            public Object invoke(final Object proxy, final Method method, final Object[] args) {
+            public Object invoke(final Object proxy, final Method method, final Object[] args) throws Throwable {
                 Object result = invokeQuietly(requestProducer, method, args);
                 if ("generateRequest".equals(method.getName())) {
                     HttpRequestAccessor requestAccessor = new HttpRequestAccessor(result);
@@ -278,7 +300,7 @@ public class ApacheHttpAsyncClientInterceptor implements Installable {
              * {@inheritDoc}
              */
             @Override
-            public Object invoke(final Object proxy, final Method method, final Object[] args) {
+            public Object invoke(final Object proxy, final Method method, final Object[] args) throws Throwable {
                 if (Arrays.asList("completed", "failed", "cancelled").contains(method.getName())) {
                     HttpServiceDownstreamRequestEvent requestEvent = contextAccessor.removeRequestEvent();
                     HttpResponseAccessor responseAccessor = contextAccessor.getResponseAccessor();

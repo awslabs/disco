@@ -16,7 +16,6 @@
 dependencies {
     compile(project(":disco-java-agent:disco-java-agent-core"))
     testCompile("junit", "junit", "4.12")
-    testCompile("com.tngtech.java", "junit-dataprovider", "1.+")
     testCompile("org.mockito", "mockito-core", "1.+")
     testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
     testCompile("org.apache.httpcomponents", "httpclient", "4.5.10")

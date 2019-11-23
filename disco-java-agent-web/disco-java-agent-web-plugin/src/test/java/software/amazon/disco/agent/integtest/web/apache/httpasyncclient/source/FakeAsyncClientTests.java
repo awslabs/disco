@@ -15,13 +15,14 @@
 
 package software.amazon.disco.agent.integtest.web.apache.httpasyncclient.source;
 
-import com.tngtech.java.junit.dataprovider.DataProvider;
-import com.tngtech.java.junit.dataprovider.DataProviderRunner;
-import com.tngtech.java.junit.dataprovider.UseDataProvider;
 import org.apache.http.RequestLine;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import java.util.Arrays;
+import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -30,18 +31,7 @@ import static org.mockito.Mockito.when;
 /**
  * Internal tests for {@link FakeAsyncClient}
  */
-@RunWith(DataProviderRunner.class)
 public class FakeAsyncClientTests {
-
-    @Test
-    @UseDataProvider("desiredCallbackStates")
-    public void testCallbackStates(FakeAsyncClient.DesiredState state) {
-        HttpUriRequest request = mockRequest();
-        FakeAsyncClient client = new FakeAsyncClient(state);
-        client.execute(request, null);
-
-        assertEquals(4, client.executeCallChainDepth);
-    }
 
     @Test(expected = FakeAsyncClient.FakeRuntimeException.class)
     public void testThrowableThrown() {
@@ -55,13 +45,29 @@ public class FakeAsyncClientTests {
         }
     }
 
-    @DataProvider
-    public static Object[][] desiredCallbackStates() {
-        return new Object[][] {
-                { FakeAsyncClient.DesiredState.CALLBACK_COMPLETED },
-                { FakeAsyncClient.DesiredState.CALLBACK_FAILED },
-                { FakeAsyncClient.DesiredState.CALLBACK_CANCELLED }
-        };
+    @RunWith(Parameterized.class)
+    public static class ParameterizedTests {
+
+        @Parameterized.Parameter()
+        public FakeAsyncClient.DesiredState state;
+
+        @Test
+        public void testCallbackStates() {
+            HttpUriRequest request = mockRequest();
+            FakeAsyncClient client = new FakeAsyncClient(state);
+            client.execute(request, null);
+
+            assertEquals(4, client.executeCallChainDepth);
+        }
+
+        @Parameterized.Parameters(name = "{0}")
+        public static Collection<Object[]> data() {
+            return Arrays.asList(new Object[][]{
+                    {FakeAsyncClient.DesiredState.CALLBACK_COMPLETED},
+                    {FakeAsyncClient.DesiredState.CALLBACK_FAILED},
+                    {FakeAsyncClient.DesiredState.CALLBACK_CANCELLED}
+            });
+        }
     }
 
     private static HttpUriRequest mockRequest() {

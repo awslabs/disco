@@ -15,13 +15,11 @@
 
 package software.amazon.disco.agent.web.apache.httpasyncclient;
 
-import com.tngtech.java.junit.dataprovider.DataProvider;
-import com.tngtech.java.junit.dataprovider.DataProviderRunner;
-import com.tngtech.java.junit.dataprovider.UseDataProvider;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
+import org.apache.http.HttpException;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
@@ -41,6 +39,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
@@ -49,8 +48,12 @@ import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.web.apache.source.MockEventBusListener;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Future;
 
@@ -63,7 +66,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(DataProviderRunner.class)
 public class ApacheHttpAsyncClientInterceptorTests {
 
     private static final String URI = "http://amazon.com/explore/something";
@@ -163,137 +165,200 @@ public class ApacheHttpAsyncClientInterceptorTests {
     }
 
     @Test
-    @UseDataProvider("futureCallbacks")
-    public void testInterceptorSucceededOnCompleted(Object futureCallback) throws Throwable {
-        HttpResponse expectedResponse = new BasicHttpResponse(new ProtocolVersion("protocol", 1, 1), 200, "");
+    public void testFeedingDecoratedRequestProducer() throws IOException, HttpException {
+        HttpAsyncRequestProducer originalRequestProducer = HttpAsyncMethods.create(new HttpGet(URI));
+        Object decoratedRequestProducer = Proxy.newProxyInstance(
+                HttpAsyncRequestProducer.class.getClassLoader(),
+                new Class[]{HttpAsyncRequestProducer.class},
+                (proxy, method, args) -> method.invoke(originalRequestProducer, args));
+        Object[] decoratedArgs = ApacheHttpAsyncClientInterceptor.RequestProducerAdvice.enter(decoratedRequestProducer, mock(HttpContext.class), null);
 
-        HttpClientContext context = HttpClientContext.create();
-        FutureCallback decoratedFutureCallback = mockAndVerifyRequestSending(context, futureCallback);
-
-        // Mock http context change after receiving the response
-        context.setAttribute("http.response", expectedResponse);
-        // Mock the step after receiving the response
-        decoratedFutureCallback.completed(expectedResponse);
-
-        List<Event> events = mockEventBusListener.getReceivedEvents();
-        assertEquals(2, events.size());
-
-        // Verify the Response Event
-        HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (HttpServiceDownstreamResponseEvent) events.get(1);
-        verifyServiceResponseEvent(serviceDownstreamResponseEvent);
-        assertNull(serviceDownstreamResponseEvent.getResponse());
-        assertNull(serviceDownstreamResponseEvent.getThrown());
-        assertEquals(expectedResponse.getStatusLine().getStatusCode(), serviceDownstreamResponseEvent.getStatusCode());
-    }
-
-    @Test
-    @UseDataProvider("futureCallbacks")
-    public void testInterceptorSucceededOnFailed(Object futureCallback) throws Throwable {
-        IllegalStateException expectedException = new IllegalStateException();
-
-        HttpClientContext context = HttpClientContext.create();
-        FutureCallback decoratedFutureCallback = mockAndVerifyRequestSending(context, futureCallback);
-
-        // Mock failed state
-        decoratedFutureCallback.failed(expectedException);
-
-        List<Event> events = mockEventBusListener.getReceivedEvents();
-        assertEquals(2, events.size());
-
-        // Verify the Response Event
-        HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (HttpServiceDownstreamResponseEvent) events.get(1);
-        verifyServiceResponseEvent(serviceDownstreamResponseEvent);
-        assertNull(serviceDownstreamResponseEvent.getResponse());
-        assertEquals(expectedException, serviceDownstreamResponseEvent.getThrown());
-    }
-
-    @Test
-    @UseDataProvider("futureCallbacks")
-    public void testInterceptorSucceededOnCancelled(Object futureCallback) throws Throwable {
-        HttpClientContext context = HttpClientContext.create();
-        FutureCallback decoratedFutureCallback = mockAndVerifyRequestSending(context, futureCallback);
-
-        // Mock cancelled state
-        decoratedFutureCallback.cancelled();
-
-        List<Event> events = mockEventBusListener.getReceivedEvents();
-        assertEquals(2, events.size());
-
-        // Verify the Response Event
-        HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (HttpServiceDownstreamResponseEvent) events.get(1);
-        verifyServiceResponseEvent(serviceDownstreamResponseEvent);
-        assertNull(serviceDownstreamResponseEvent.getResponse());
-        assertNull(serviceDownstreamResponseEvent.getThrown());
-    }
-
-    @Test
-    @UseDataProvider("futureCallbacks")
-    public void testInterceptorSucceededOnThrowable(Object futureCallback) throws Throwable {
-        Throwable expectedThrowable = new IllegalStateException();
-
-        HttpClientContext context = HttpClientContext.create();
-        mockAndVerifyRequestSending(context, futureCallback);
-
-        // Mock throwable caught
-        ApacheHttpAsyncClientInterceptor.RequestProducerAdvice.exit(expectedThrowable);
-
-        List<Event> events = mockEventBusListener.getReceivedEvents();
-        assertEquals(2, events.size());
-
-        // Verify the Response Event
-        HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (HttpServiceDownstreamResponseEvent) events.get(1);
-        assertNull(serviceDownstreamResponseEvent.getOperation());
-        assertNull(serviceDownstreamResponseEvent.getService());
-        assertEquals(ApacheHttpAsyncClientInterceptor.APACHE_HTTP_ASYNC_CLIENT_ORIGIN, serviceDownstreamResponseEvent.getOrigin());
-        assertNull(serviceDownstreamResponseEvent.getResponse());
-        assertEquals(expectedThrowable, serviceDownstreamResponseEvent.getThrown());
-    }
-
-    @DataProvider
-    public static Object[][] futureCallbacks() {
-        return new Object[][] {
-                { null },
-                { new FutureCallback<HttpResponse>() {
-
-                    @Override
-                    public void completed(final HttpResponse result) {
-
-                    }
-
-                    @Override
-                    public void failed(final Exception ex) {
-
-                    }
-
-                    @Override
-                    public void cancelled() {
-
-                    }
-                } }
-        };
-    }
-
-    private FutureCallback mockAndVerifyRequestSending(Object context, Object futureCallback) throws Throwable {
-        HttpGet request = new HttpGet(URI);
-        HttpAsyncRequestProducer requestProducer = HttpAsyncMethods.create(request);
-
-        List<Event> events;
-        Object[] decoratedArgs = ApacheHttpAsyncClientInterceptor.RequestProducerAdvice.enter(requestProducer, context, futureCallback);
-        events = mockEventBusListener.getReceivedEvents();
-        assertEquals(0, events.size());
-
-        // Mock the prep step before sending request
+        // there is no way to directly compare two decorated/Proxy objects, so need to examine some side effects
         ((HttpAsyncRequestProducer) decoratedArgs[0]).generateRequest();
-
-        events = mockEventBusListener.getReceivedEvents();
-        assertEquals(1, events.size());
-
-        // Verify the Request Event
-        verifyServiceRequestEvent((HttpServiceDownstreamRequestEvent) events.get(0));
-
-        return (FutureCallback) decoratedArgs[1];
+        assertEquals(0, mockEventBusListener.getReceivedEvents().size());
     }
 
+    @Test
+    public void testFeedingDecoratedFutureCallback() {
+        HttpAsyncRequestProducer requestProducer = HttpAsyncMethods.create(new HttpGet(URI));
+        FutureCallback<HttpResponse> originalFutureCallback = new FutureCallback<HttpResponse>() {
+            @Override
+            public void completed(final HttpResponse result) {
+
+            }
+
+            @Override
+            public void failed(final Exception ex) {
+
+            }
+
+            @Override
+            public void cancelled() {
+
+            }
+        };
+
+        Object decoratedFutureCallback = Proxy.newProxyInstance(
+                FutureCallback.class.getClassLoader(),
+                new Class[]{FutureCallback.class},
+                (proxy, method, args) -> method.invoke(originalFutureCallback, args));
+        Object[] decoratedArgs = ApacheHttpAsyncClientInterceptor.RequestProducerAdvice.enter(requestProducer, mock(HttpContext.class), decoratedFutureCallback);
+
+        // there is no way to directly compare two decorated/Proxy objects, so need to examine some side effects
+        ((FutureCallback) decoratedArgs[1]).cancelled();
+        assertEquals(0, mockEventBusListener.getReceivedEvents().size());
+    }
+
+    @RunWith(Parameterized.class)
+    public static class ParameterizedTests {
+        @Parameterized.Parameter()
+        public FutureCallback futureCallback;
+
+        private ApacheHttpAsyncClientInterceptor interceptor;
+        private MockEventBusListener mockEventBusListener;
+
+        @Before
+        public void before() {
+            interceptor = new ApacheHttpAsyncClientInterceptor();
+            mockEventBusListener = new MockEventBusListener();
+            TransactionContext.create();
+            EventBus.addListener(mockEventBusListener);
+        }
+
+        @After
+        public void after() {
+            TransactionContext.clear();
+            EventBus.removeListener(mockEventBusListener);
+        }
+
+        @Parameterized.Parameters(name="{0}")
+        public static Collection<Object[]> data() {
+            return Arrays.asList(new Object[][] {
+                    { null },
+                    { new FutureCallback<HttpResponse>() {
+
+                        @Override
+                        public void completed(final HttpResponse result) {
+
+                        }
+
+                        @Override
+                        public void failed(final Exception ex) {
+
+                        }
+
+                        @Override
+                        public void cancelled() {
+
+                        }
+                    } }
+            });
+        }
+
+        @Test
+        public void testInterceptorSucceededOnCompleted() throws Throwable {
+            HttpResponse expectedResponse = new BasicHttpResponse(new ProtocolVersion("protocol", 1, 1), 200, "");
+
+            HttpClientContext context = HttpClientContext.create();
+            FutureCallback decoratedFutureCallback = mockAndVerifyRequestSending(context, futureCallback);
+
+            // Mock http context change after receiving the response
+            context.setAttribute("http.response", expectedResponse);
+            // Mock the step after receiving the response
+            decoratedFutureCallback.completed(expectedResponse);
+
+            List<Event> events = mockEventBusListener.getReceivedEvents();
+            assertEquals(2, events.size());
+
+            // Verify the Response Event
+            HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (HttpServiceDownstreamResponseEvent) events.get(1);
+            verifyServiceResponseEvent(serviceDownstreamResponseEvent);
+            assertNull(serviceDownstreamResponseEvent.getResponse());
+            assertNull(serviceDownstreamResponseEvent.getThrown());
+            assertEquals(expectedResponse.getStatusLine().getStatusCode(), serviceDownstreamResponseEvent.getStatusCode());
+        }
+
+        @Test
+        public void testInterceptorSucceededOnFailed() throws Throwable {
+            IllegalStateException expectedException = new IllegalStateException();
+
+            HttpClientContext context = HttpClientContext.create();
+            FutureCallback decoratedFutureCallback = mockAndVerifyRequestSending(context, futureCallback);
+
+            // Mock failed state
+            decoratedFutureCallback.failed(expectedException);
+
+            List<Event> events = mockEventBusListener.getReceivedEvents();
+            assertEquals(2, events.size());
+
+            // Verify the Response Event
+            HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (HttpServiceDownstreamResponseEvent) events.get(1);
+            verifyServiceResponseEvent(serviceDownstreamResponseEvent);
+            assertNull(serviceDownstreamResponseEvent.getResponse());
+            assertEquals(expectedException, serviceDownstreamResponseEvent.getThrown());
+        }
+
+        @Test
+        public void testInterceptorSucceededOnCancelled() throws Throwable {
+            HttpClientContext context = HttpClientContext.create();
+            FutureCallback decoratedFutureCallback = mockAndVerifyRequestSending(context, futureCallback);
+
+            // Mock cancelled state
+            decoratedFutureCallback.cancelled();
+
+            List<Event> events = mockEventBusListener.getReceivedEvents();
+            assertEquals(2, events.size());
+
+            // Verify the Response Event
+            HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (HttpServiceDownstreamResponseEvent) events.get(1);
+            verifyServiceResponseEvent(serviceDownstreamResponseEvent);
+            assertNull(serviceDownstreamResponseEvent.getResponse());
+            assertNull(serviceDownstreamResponseEvent.getThrown());
+        }
+
+        @Test
+        public void testInterceptorSucceededOnThrowable() throws Throwable {
+            Throwable expectedThrowable = new IllegalStateException();
+
+            HttpClientContext context = HttpClientContext.create();
+            mockAndVerifyRequestSending(context, futureCallback);
+
+            // Mock throwable caught
+            ApacheHttpAsyncClientInterceptor.RequestProducerAdvice.exit(expectedThrowable);
+
+            List<Event> events = mockEventBusListener.getReceivedEvents();
+            assertEquals(2, events.size());
+
+            // Verify the Response Event
+            HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (HttpServiceDownstreamResponseEvent) events.get(1);
+            assertNull(serviceDownstreamResponseEvent.getOperation());
+            assertNull(serviceDownstreamResponseEvent.getService());
+            assertEquals(ApacheHttpAsyncClientInterceptor.APACHE_HTTP_ASYNC_CLIENT_ORIGIN, serviceDownstreamResponseEvent.getOrigin());
+            assertNull(serviceDownstreamResponseEvent.getResponse());
+            assertEquals(expectedThrowable, serviceDownstreamResponseEvent.getThrown());
+        }
+
+        private FutureCallback mockAndVerifyRequestSending(Object context, Object futureCallback) throws Throwable {
+            HttpGet request = new HttpGet(URI);
+            HttpAsyncRequestProducer requestProducer = HttpAsyncMethods.create(request);
+
+            List<Event> events;
+            Object[] decoratedArgs = ApacheHttpAsyncClientInterceptor.RequestProducerAdvice.enter(requestProducer, context, futureCallback);
+            events = mockEventBusListener.getReceivedEvents();
+            assertEquals(0, events.size());
+
+            // Mock the prep step before sending request
+            ((HttpAsyncRequestProducer) decoratedArgs[0]).generateRequest();
+
+            events = mockEventBusListener.getReceivedEvents();
+            assertEquals(1, events.size());
+
+            // Verify the Request Event
+            verifyServiceRequestEvent((HttpServiceDownstreamRequestEvent) events.get(0));
+
+            return (FutureCallback) decoratedArgs[1];
+        }
+    }
 
     private static void verifyServiceRequestEvent(final HttpServiceDownstreamRequestEvent serviceDownstreamRequestEvent) {
         assertEquals(METHOD, serviceDownstreamRequestEvent.getMethod());
