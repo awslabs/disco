@@ -84,7 +84,7 @@ by dispatching work to an ExecutorService.
 One problem we have observed in tooling such as AWS X-Ray, due to deficiencies
 in Java, is that these worker threads have no clear concept of 'caller' or 'parent'. 
 Using Disco, the Java runtime is extended to ensure that the concept of caller/parent
-is passed from thread to head a the time of thread handoff (e.g. when calling Thread.start(),
+is passed from thread to thread at the time of thread handoff (e.g. when calling Thread.start(),
 or someExecutor.submit(), or when using a Java 8 parallel stream), by the 'forking' thread
 giving the 'forked' thread access to its Transaction Context data store.
 
