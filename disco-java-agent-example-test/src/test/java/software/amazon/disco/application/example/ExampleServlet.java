@@ -24,7 +24,7 @@ import java.io.IOException;
 /**
  * A class pretending to be a real Http Servlet
  */
-public class MyServlet extends HttpServlet {
+public class ExampleServlet extends HttpServlet {
     public boolean called;
 
     @Override

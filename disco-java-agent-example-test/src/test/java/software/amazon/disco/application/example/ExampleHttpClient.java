@@ -30,7 +30,7 @@ import org.apache.http.protocol.HttpContext;
 
 import java.io.IOException;
 
-public class MyHttpClient implements HttpClient {
+public class ExampleHttpClient implements HttpClient {
     public int executeCallChainDepth = 0;
     public HttpResponse fakeResponse = new BasicHttpResponse(new ProtocolVersion("protocol", 1, 1), 200, "");
 
