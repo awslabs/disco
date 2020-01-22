@@ -23,6 +23,14 @@ plugins {
     `maven-publish`
 }
 
+//This is not a subproject that contains code, nor produces any artifacts. Disable the jar task
+//to prevent a useless empty jar file being produced as a build side effect.
+tasks {
+    named<Jar>("jar") {
+        setEnabled(false)
+    }
+}
+
 subprojects {
     apply<JavaPlugin>()
 
