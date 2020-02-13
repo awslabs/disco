@@ -101,7 +101,6 @@ public class Injector {
         try {
             JarFile jar = new JarFile(jarFile);
             instrumentation.appendToSystemClassLoaderSearch(jar);
-            addURL(ClassLoader.getSystemClassLoader(), jarFile.toURI().toURL());
             return jar;
         } catch (Throwable t){
             //safely continue

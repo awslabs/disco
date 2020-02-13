@@ -16,24 +16,19 @@
 package software.amazon.disco.agent.inject;
 
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
@@ -42,9 +37,16 @@ public class InjectorTests {
     @ClassRule
     public static TemporaryFolder tempFolder = new TemporaryFolder();
 
+    private static Instrumentation instrumentation;
+
+    @BeforeClass
+    public static void beforeClass() {
+        instrumentation = Injector.createInstrumentation();
+    }
+
     @Test
     public void testLoadAgent() throws Exception {
-        File dummyJarFile = createJar("testLoadAgent");
+        File dummyJarFile = createJar("testLoadAgent", true);
         //pre-check that the class is not on the bootstrap classloader
         try {
             Class.forName(PremainClass.class.getName(), true, null);
@@ -63,31 +65,31 @@ public class InjectorTests {
 
     @Test
     public void testAddToSystemClasspath() throws Exception {
-        File dummyJarFile = createJar("testAddToSystemClasspath");
-        Instrumentation instrumentation = Mockito.mock(Instrumentation.class);
+        final String name = "testAddToSystemClasspath";
+        URL url;
+        url = ClassLoader.getSystemClassLoader().getResource(name);
+        Assert.assertNull(url);
+        File dummyJarFile = createJar(name, false);
         Injector.addToSystemClasspath(instrumentation, dummyJarFile);
-        Mockito.verify(instrumentation).appendToSystemClassLoaderSearch(Mockito.any());
-        URL[] urlArray = ((URLClassLoader) ClassLoader.getSystemClassLoader()).getURLs();
-        List<URL> urlList = Arrays.asList(urlArray);
-        Set<URL> urls = new HashSet<>(urlList);
-        Assert.assertTrue(urls.contains(dummyJarFile.toURI().toURL()));
+        url = ClassLoader.getSystemClassLoader().getResource(name);
+        Assert.assertNotNull(url);
     }
 
     @Test
     public void testAddToBootstrapClasspath() throws Exception {
-        File dummyJarFile = createJar("testAddToBootstrapClasspath");
-        Instrumentation instrumentation = Mockito.mock(Instrumentation.class);
-        Injector.addToBootstrapClasspath(instrumentation, dummyJarFile);
-
+        final String name = "testAddToBootstrapClasspath";
+        URL url;
         Class classFileLocator = Class.forName("net.bytebuddy.dynamic.ClassFileLocator$ForClassLoader");
         Field bootLoaderProxyField = classFileLocator.getDeclaredField("BOOT_LOADER_PROXY");
         bootLoaderProxyField.setAccessible(true);
+        URLClassLoader classLoader = (URLClassLoader) bootLoaderProxyField.get(null);
 
-        Method getURLs = URLClassLoader.class.getDeclaredMethod("getURLs");
-        URL[] urls = (URL[])getURLs.invoke(bootLoaderProxyField.get(null));
-
-        Mockito.verify(instrumentation).appendToBootstrapClassLoaderSearch(Mockito.any());
-        Assert.assertEquals(urls[0], dummyJarFile.toURI().toURL());
+        url = classLoader.getResource(name);
+        Assert.assertNull(url);
+        File dummyJarFile = createJar(name, false);
+        Injector.addToBootstrapClasspath(instrumentation, dummyJarFile);
+        url = classLoader.getResource(name);
+        Assert.assertNotNull(url);
     }
 
     @Test
@@ -111,21 +113,28 @@ public class InjectorTests {
         }
     }
 
-    private static File createJar(String name) throws Exception {
+    private static File createJar(String name, boolean withPremain) throws Exception {
         File file = tempFolder.newFile(name + ".jar");
         try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
             try (JarOutputStream jarOutputStream = new JarOutputStream(fileOutputStream)) {
-                //write a manifest specifying a premain class
-                jarOutputStream.putNextEntry(new ZipEntry("META-INF/"));
-                jarOutputStream.putNextEntry(new ZipEntry("META-INF/MANIFEST.MF"));
-                jarOutputStream.write(("Premain-Class: "+PremainClass.class.getName()+"\n\n").getBytes());
+                //write a sentinal file with the same name as the jar, to test if it becomes readable by getResource.
+                jarOutputStream.putNextEntry(new ZipEntry(name));
+                jarOutputStream.write("foobar".getBytes());
                 jarOutputStream.closeEntry();
 
-                //write the PremainClass below, so that we can add it to bootstrap classloader for the loadAgentTest.
-                jarOutputStream.putNextEntry(new ZipEntry("software/amazon/disco/agent/inject/"));
-                jarOutputStream.putNextEntry(new ZipEntry("software/amazon/disco/agent/inject/InjectorTests$PremainClass.class"));
-                jarOutputStream.write(getBytes(PremainClass.class.getName()));
-                jarOutputStream.closeEntry();
+                if (withPremain) {
+                    //write a manifest specifying a premain class
+                    jarOutputStream.putNextEntry(new ZipEntry("META-INF/"));
+                    jarOutputStream.putNextEntry(new ZipEntry("META-INF/MANIFEST.MF"));
+                    jarOutputStream.write(("Premain-Class: "+PremainClass.class.getName()+"\n\n").getBytes());
+                    jarOutputStream.closeEntry();
+
+                    //write the PremainClass below, so that we can add it to bootstrap classloader for the loadAgentTest.
+                    jarOutputStream.putNextEntry(new ZipEntry("software/amazon/disco/agent/inject/"));
+                    jarOutputStream.putNextEntry(new ZipEntry("software/amazon/disco/agent/inject/InjectorTests$PremainClass.class"));
+                    jarOutputStream.write(getBytes(PremainClass.class.getName()));
+                    jarOutputStream.closeEntry();
+                }
             }
         }
         return file;

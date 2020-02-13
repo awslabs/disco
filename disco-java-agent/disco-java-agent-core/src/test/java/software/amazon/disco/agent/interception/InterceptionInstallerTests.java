@@ -29,7 +29,7 @@ public class InterceptionInstallerTests {
     public void testIgnoreMatcherMatchesJavaInternals() throws Exception {
         //random selections from each of the sun, com.sun and jdk namespaces
         //ForName is used to prevent warnings such as "warning: AbstractMultiResolutionImage is internal proprietary API and may be removed in a future release"
-        Assert.assertTrue(classMatches(Class.forName("sun.awt.image.AbstractMultiResolutionImage")));
+        Assert.assertTrue(classMatches(Class.forName("sun.misc.Unsafe")));
         Assert.assertTrue(classMatches(Class.forName("com.sun.awt.SecurityWarning")));
         Assert.assertTrue(classMatches(Class.forName("jdk.nashorn.api.scripting.AbstractJSObject")));
     }

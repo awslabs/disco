@@ -41,7 +41,7 @@ subprojects {
     }
 
     dependencies {
-        testCompile("org.mockito", "mockito-core", "1.+")
+        testCompile("org.mockito", "mockito-core", "3.+")
     }
 
     configure<JavaPluginConvention> {
