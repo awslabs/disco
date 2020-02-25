@@ -71,7 +71,7 @@ public class HttpServletServiceInterceptor extends HttpServletInterceptor {
         int txStackDepth = TransactionContext.create();
 
         //since service() calls in subclasses may call their parents, this interceptor can stack up
-        //only call it if we were the first call to take place
+        //only perform event publication it if we were the first call to take place
         if (txStackDepth == 0) {
             try {
                 // To reduce the # of dependencies, we use reflection to obtain the basic methods.
@@ -98,14 +98,16 @@ public class HttpServletServiceInterceptor extends HttpServletInterceptor {
             } catch (Throwable e) {
                 log.error("DiSCo(Web) Failed to retrieve request data from servlet service.");
             }
+        }
 
-            // call the original, catching anything it throws
-            try {
-                zuper.call();
-            } catch (Throwable t) {
-                throwable = t;
-            }
+        // call the original, catching anything it throws
+        try {
+            zuper.call();
+        } catch (Throwable t) {
+            throwable = t;
+        }
 
+        if (txStackDepth == 0) {
             try {
                 Object response = args[1];
                 HttpServletResponseAccessor respAccessor = new HttpServletResponseAccessor(response);
@@ -121,7 +123,10 @@ public class HttpServletServiceInterceptor extends HttpServletInterceptor {
             }
         }
 
+        //match the create() call with a destroy() in all cases
         TransactionContext.destroy();
+
+        //rethrow anything
         if (throwable != null) {
             throw throwable;
         }

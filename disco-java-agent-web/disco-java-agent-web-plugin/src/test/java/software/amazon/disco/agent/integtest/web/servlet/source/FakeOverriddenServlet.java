@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class FakeOverriddenServlet extends HttpServlet {
     private boolean ranServiceMethod;
+    protected boolean toThrow = false;
 
     public FakeOverriddenServlet() {
         this.ranServiceMethod = false;
@@ -40,6 +41,9 @@ public class FakeOverriddenServlet extends HttpServlet {
      */
     @Override
     public void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        if (toThrow) {
+            throw new ServletException();
+        }
         ranServiceMethod = true; // Indicator variable to ensure that this was ran.
     }
 }

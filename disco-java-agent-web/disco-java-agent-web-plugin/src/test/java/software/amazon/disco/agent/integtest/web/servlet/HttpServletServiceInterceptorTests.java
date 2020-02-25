@@ -21,6 +21,7 @@ import software.amazon.disco.agent.event.HttpNetworkProtocolRequestEvent;
 import software.amazon.disco.agent.event.HttpNetworkProtocolResponseEvent;
 import software.amazon.disco.agent.event.Listener;
 import software.amazon.disco.agent.integtest.web.servlet.source.FakeChainedServiceCallServlet;
+import software.amazon.disco.agent.integtest.web.servlet.source.FakeOverriddenNestedServlet;
 import software.amazon.disco.agent.integtest.web.servlet.source.FakeOverriddenServlet;
 import software.amazon.disco.agent.integtest.web.servlet.source.FakeOverrideThrowExceptionServlet;
 import software.amazon.disco.agent.integtest.web.servlet.source.FakeServletUseDefaultService;
@@ -108,6 +109,41 @@ public class HttpServletServiceInterceptorTests {
         Assert.assertEquals(2, eventBusListener.events.size());
         Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
         Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
+    }
+
+    @Test
+    public void testNestedServiceInterception() throws Throwable {
+        FakeOverriddenNestedServlet servlet = new FakeOverriddenNestedServlet();
+        servlet.service(request, response);
+
+        // Ensure that we captured only 2 events. Nested servlets reference count via the TX and only emit one pair of events
+        Assert.assertEquals(2, eventBusListener.events.size());
+        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
+        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
+
+        // ensure TX is left in a good state
+        Assert.assertFalse(TransactionContext.isWithinCreatedContext());
+    }
+
+    @Test
+    public void testNestedServiceInterceptionWhenThrows() throws Throwable {
+        FakeOverriddenNestedServlet servlet = new FakeOverriddenNestedServlet();
+        servlet.setThrow();
+
+        try {
+            servlet.service(request, response);
+            Assert.fail();
+        } catch (ServletException e) {
+            //fail() above if this was *not* thrown
+        }
+
+        // Ensure that we captured only 2 events. Nested servlets reference count via the TX and only emit one pair of events
+        Assert.assertEquals(2, eventBusListener.events.size());
+        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
+        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
+
+        // ensure TX is left in a good state
+        Assert.assertFalse(TransactionContext.isWithinCreatedContext());
     }
 
     @Test
