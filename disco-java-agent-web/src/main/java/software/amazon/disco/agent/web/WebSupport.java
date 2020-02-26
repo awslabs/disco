@@ -17,6 +17,7 @@ package software.amazon.disco.agent.web;
 
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.interception.Package;
+import software.amazon.disco.agent.web.apache.httpasyncclient.ApacheHttpAsyncClientInterceptor;
 import software.amazon.disco.agent.web.apache.httpclient.ApacheHttpClientInterceptor;
 import software.amazon.disco.agent.web.servlet.HttpServletServiceInterceptor;
 
@@ -34,7 +35,8 @@ public class WebSupport implements Package {
     public Collection<Installable> get() {
         return Arrays.asList(
             new HttpServletServiceInterceptor(),
-            new ApacheHttpClientInterceptor()
+            new ApacheHttpClientInterceptor(),
+            new ApacheHttpAsyncClientInterceptor()
         );
     }
 }

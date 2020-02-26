@@ -19,6 +19,7 @@ dependencies {
     testCompile("org.mockito", "mockito-core", "1.+")
     testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
     testCompile("org.apache.httpcomponents", "httpclient", "4.5.10")
+    testCompile("org.apache.httpcomponents", "httpasyncclient", "4.+")
 }
 
 configure<PublishingExtension> {
