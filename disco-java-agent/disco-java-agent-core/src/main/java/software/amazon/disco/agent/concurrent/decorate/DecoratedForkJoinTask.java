@@ -16,8 +16,6 @@
 package software.amazon.disco.agent.concurrent.decorate;
 
 
-import java.lang.reflect.Field;
-
 /**
  * ForkJoinTask is an abstract class with many public methods, so cannot enjoy the more natural decoration
  * treatment afforded to Runnables and Callables. Instead of 'decoration' in the strict sense, we - via instrumentation -
@@ -27,35 +25,36 @@ public class DecoratedForkJoinTask extends Decorated {
     public static final String DISCO_DECORATION_FIELD_NAME = "$discoDecoration";
 
     /**
-     * Create DiSCo propagation metadata on the supplied object, assumed to be a ForkJoinTask
-     * @param task the task to decorate
-     * @throws Exception reflection exceptions may be thrown
+     * Private constructor, use factory method for creation.
      */
-    public static void create(Object task) throws Exception {
-        lookup().set(task, new DecoratedForkJoinTask());
+    private DecoratedForkJoinTask() {
     }
 
     /**
-     * Retreive DiSCo propagation metadata from the supplied object, assumed to be a ForkJoinTask
-     * @param task the task from which to obtain the DiSCo propagation data
-     * @return an instance of a 'Decorated'
-     * @throws Exception relection exceptions may be thrown
+     * Create DiSCo propagation metadata for a ForkJoinTask
+     * @return a new instance of the DecoratedForkJoinTask object.
      */
-    public static DecoratedForkJoinTask get(Object task) throws Exception {
-        return DecoratedForkJoinTask.class.cast(lookup().get(task));
+    public static DecoratedForkJoinTask create() {
+        return new DecoratedForkJoinTask();
     }
 
     /**
-     * Helper method to lookup the DiSCo decoration field, which was added to ForkJoinTask during interception
-     * by the treatment in ForkJoinTaskInterceptor
-     * @return a read/write Field representing the added DiSCo decoration field
-     * @throws Exception reflection exceptions may be thrown
+     * An interface we add to decorated ForkJoinTasks, to have bean get/set semantics on the added field.
      */
-    static Field lookup() throws Exception {
-        //have to reflectively lookup the Decorated which exists inside the ForkJoinTask.
-        Class fjtClass = Class.forName("java.util.concurrent.ForkJoinTask", true, ClassLoader.getSystemClassLoader());
-        Field decoratedField = fjtClass.getDeclaredField(DISCO_DECORATION_FIELD_NAME);
-        decoratedField.setAccessible(true);
-        return decoratedField;
+    public interface Accessor {
+        public static final String GET_DISCO_DECORATION_METHOD_NAME = "getDiscoDecoration";
+        public static final String SET_DISCO_DECORATION_METHOD_NAME = "setDiscoDecoration";
+
+        /**
+         * Get the added discoDecoration field from an intercepted ForkJoinTask
+         * @return the discoDecoration field
+         */
+        DecoratedForkJoinTask getDiscoDecoration();
+
+        /**
+         * Set the added discoDecoration field on an intercepted ForkJoinTask
+         * @param decoratedForkJoinTask the new value
+         */
+        void setDiscoDecoration(DecoratedForkJoinTask decoratedForkJoinTask);
     }
 }

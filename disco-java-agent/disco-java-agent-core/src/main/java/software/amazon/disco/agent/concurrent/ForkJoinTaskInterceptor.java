@@ -15,6 +15,8 @@
 
 package software.amazon.disco.agent.concurrent;
 
+import net.bytebuddy.description.modifier.Visibility;
+import net.bytebuddy.implementation.FieldAccessor;
 import software.amazon.disco.agent.concurrent.decorate.DecoratedForkJoinTask;
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.logging.LogManager;
@@ -29,6 +31,7 @@ import net.bytebuddy.matcher.ElementMatcher;
 import java.lang.reflect.Modifier;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
+import static software.amazon.disco.agent.concurrent.decorate.DecoratedForkJoinTask.DISCO_DECORATION_FIELD_NAME;
 
 /**
  * ForkJoinPool and ForkJoinTask are a related pair of Java features for dispatching work to pools of threads
@@ -59,7 +62,16 @@ class ForkJoinTaskInterceptor implements Installable {
                 //for methods on ForkJoinTask, and elsewhere for methods on ForkJoinPool.
                 .type(createForkJoinTaskTypeMatcher())
                 .transform((builder, typeDescription, classLoader, module) -> builder
-                        .defineField(DecoratedForkJoinTask.DISCO_DECORATION_FIELD_NAME, DecoratedForkJoinTask.class, Modifier.PROTECTED)
+                        .implement(DecoratedForkJoinTask.Accessor.class)
+                        .defineField(DISCO_DECORATION_FIELD_NAME, DecoratedForkJoinTask.class, Modifier.PROTECTED)
+
+                        .defineMethod(DecoratedForkJoinTask.Accessor.GET_DISCO_DECORATION_METHOD_NAME, DecoratedForkJoinTask.class, Visibility.PUBLIC)
+                        .intercept(FieldAccessor.ofField(DISCO_DECORATION_FIELD_NAME))
+
+                        .defineMethod(DecoratedForkJoinTask.Accessor.SET_DISCO_DECORATION_METHOD_NAME, void.class, Visibility.PUBLIC).
+                            withParameter(DecoratedForkJoinTask.class)
+                        .intercept(FieldAccessor.ofField(DISCO_DECORATION_FIELD_NAME))
+
                         .method(createForkMethodMatcher())
                         .intercept(Advice.to(ForkAdvice.class))
                 )
@@ -90,7 +102,8 @@ class ForkJoinTaskInterceptor implements Installable {
          */
         public static void methodEnter(Object task) {
             try {
-                DecoratedForkJoinTask.create(task);
+                DecoratedForkJoinTask.Accessor accessor = (DecoratedForkJoinTask.Accessor)task;
+                accessor.setDiscoDecoration(DecoratedForkJoinTask.create());
             } catch (Exception e) {
                 //swallow
             }
@@ -117,10 +130,10 @@ class ForkJoinTaskInterceptor implements Installable {
          */
         public static void methodEnter(Object task) {
             try {
-                DecoratedForkJoinTask discoDecoration = DecoratedForkJoinTask.get(task);
-                discoDecoration.before();
+                DecoratedForkJoinTask.Accessor accessor = (DecoratedForkJoinTask.Accessor)task;
+                accessor.getDiscoDecoration().before();
             } catch (Exception e) {
-                log.error("DiSCo(Concurrency) unable to propagate context in ForkJoinTask " + task);
+                log.error("DiSCo(Concurrency) unable to propagate context in ForkJoinTask");
             }
         }
 
@@ -140,8 +153,8 @@ class ForkJoinTaskInterceptor implements Installable {
          */
         public static void methodExit(Object task) {
             try {
-                DecoratedForkJoinTask discoDecoration = DecoratedForkJoinTask.get(task);
-                discoDecoration.after();
+                DecoratedForkJoinTask.Accessor accessor = (DecoratedForkJoinTask.Accessor)task;
+                accessor.getDiscoDecoration().after();
             } catch (Exception e) {
                 //swallow
             }

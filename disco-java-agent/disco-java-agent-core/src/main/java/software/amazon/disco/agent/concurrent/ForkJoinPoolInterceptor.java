@@ -228,7 +228,8 @@ class ForkJoinPoolInterceptor implements Installable {
          */
         public static void methodEnter(Object task) {
             try {
-                DecoratedForkJoinTask.create(task);
+                DecoratedForkJoinTask.Accessor accessor = (DecoratedForkJoinTask.Accessor)task;
+                accessor.setDiscoDecoration(DecoratedForkJoinTask.create());
             } catch (Exception e ) {
                 log.error("DiSCo(Concurrency) could not propagate context into " + task);
             }
