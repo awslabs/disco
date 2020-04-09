@@ -20,6 +20,7 @@ import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.Listener;
 import software.amazon.disco.agent.inject.Injector;
 import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.agent.interception.Package;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 
@@ -47,7 +48,7 @@ import java.util.jar.Manifest;
  *
  * Each plugin is delivered as a JAR file, containing a Manifest with the following properties:
  *
- * Disco-Installable-Classes: a space-separated list of fully qualified class names which are expected to inherit from Installable
+ * Disco-Installable-Classes: a space-separated list of fully qualified class names which are expected to inherit from either Installable or Package
  *                            and have a no-args constructor. Installables will be processed first, across all scanned plugins
  * Disco-Init-Class: if any further one-off-initialization is required, a fully qualified class may be provided. If this class provides a method
  *                  matching the signature "public static void init(void)", that method will be executed. All plugins will have this init()
@@ -135,12 +136,23 @@ public class PluginDiscovery {
         Set<Installable> installables = new HashSet<>();
         if (installableClasses != null && !installableClasses.isEmpty()) {
             for (ClassInfo info : installableClasses) {
-                try {
-                    Installable installable = (Installable) info.clazz.newInstance();
-                    installables.add(installable);
-                    pluginOutcomes.get(info.pluginName).installables.add(installable);
-                } catch (Exception e) {
-                    log.warn("DiSCo(Core) could not instantiate Installable " + info.clazz.getName(), e);
+                if (Installable.class.isAssignableFrom(info.clazz)) {
+                    try {
+                        Installable installable = (Installable)info.clazz.getDeclaredConstructor().newInstance();
+                        installables.add(installable);
+                        pluginOutcomes.get(info.pluginName).installables.add(installable);
+                    } catch (Exception e) {
+                        log.warn("DiSCo(Core) could not instantiate Installable " + info.clazz.getName(), e);
+                    }
+                } else if (Package.class.isAssignableFrom(info.clazz)) {
+                    try {
+                        Package pkg = (Package)info.clazz.getDeclaredConstructor().newInstance();
+                        Collection<Installable> pkgInstallables = pkg.get();
+                        installables.addAll(pkgInstallables);
+                        pluginOutcomes.get(info.pluginName).installables.addAll(pkgInstallables);
+                    } catch (Exception e) {
+                        log.warn("DiSCo(Core) could not instantiate Package " + info.clazz.getName(), e);
+                    }
                 }
             }
         }
@@ -168,7 +180,7 @@ public class PluginDiscovery {
         if (listenerClasses != null && !listenerClasses.isEmpty()) {
             for (ClassInfo info : listenerClasses) {
                 try {
-                    Listener listener = (Listener) info.clazz.newInstance();
+                    Listener listener = (Listener) info.clazz.getDeclaredConstructor().newInstance();
                     EventBus.addListener(listener);
                     pluginOutcomes.get(info.pluginName).listeners.add(listener);
                 } catch (Exception e) {
@@ -270,7 +282,7 @@ public class PluginDiscovery {
     /**
      * Helper method to discover the Classes specified for Installables in the plugin
      * @param pluginName the name of the plugin JAR file where the classes are defined
-     * @param installableClassNames the names of the Installable classes determined from the Manifest
+     * @param installableClassNames the names of the Installable or Package classes determined from the Manifest
      * @param bootstrap true if the plugin is requesting to be loaded by the bootstrap classloader
      * @throws Exception reflection errors may occur if the class cannot be found
      */
@@ -280,11 +292,11 @@ public class PluginDiscovery {
             for (String className: classNames) {
                 try {
                     Class<?> clazz = classForName(className.trim(), bootstrap);
-                    if (Installable.class.isAssignableFrom(clazz)) {
+                    if (Installable.class.isAssignableFrom(clazz) || Package.class.isAssignableFrom(clazz)) {
                         ClassInfo installableInfo = new ClassInfo(pluginName, clazz, bootstrap);
                         installableClasses.add(installableInfo);
                     } else {
-                        log.warn("DiSCo(Core) specified Installable is not an instance of Installable: " + className);
+                        log.warn("DiSCo(Core) specified Installable is not an instance of Installable or Package: " + className);
                     }
                 } catch (ClassNotFoundException e) {
                     log.warn("DiSCo(Core) cannot locate Installable: " + className);

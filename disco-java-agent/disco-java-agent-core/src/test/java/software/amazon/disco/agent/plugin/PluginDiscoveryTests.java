@@ -21,6 +21,7 @@ import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.plugin.source.PluginInit;
+import software.amazon.disco.agent.plugin.source.PluginInstallable;
 import software.amazon.disco.agent.plugin.source.PluginListener;
 import org.junit.After;
 import org.junit.Assert;
@@ -29,9 +30,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
+import software.amazon.disco.agent.plugin.source.PluginPackage;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -96,7 +99,7 @@ public class PluginDiscoveryTests {
 
     @Test
     public void testPluginInstallableNonBootstrap() throws Exception {
-        createJar("plugin_with_installable",
+        createJar("plugin_with_package",
                 "Disco-Installable-Classes: software.amazon.disco.agent.plugin.source.PluginInstallable",
                 "software.amazon.disco.agent.plugin.source.PluginInstallable");
         Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
@@ -105,6 +108,28 @@ public class PluginDiscoveryTests {
         Mockito.verify(instrumentation).appendToSystemClassLoaderSearch(Mockito.any());
         Assert.assertTrue(installables.contains(installable));
         Assert.assertFalse(outcome.bootstrap);
+    }
+
+    @Test
+    public void testPluginPackageInstallableNonBootstrap() throws Exception {
+        createJar("plugin_with_installable",
+                "Disco-Installable-Classes: software.amazon.disco.agent.plugin.source.PluginPackage",
+                "software.amazon.disco.agent.plugin.source.PluginPackage",
+                "software.amazon.disco.agent.plugin.source.PluginInstallable",
+                "software.amazon.disco.agent.plugin.source.PluginPackage$OtherInstallable");
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        PluginOutcome outcome = outcomes.iterator().next();
+        Installable installable1 = outcome.installables.get(0);
+        Installable installable2 = outcome.installables.get(1);
+        Mockito.verify(instrumentation).appendToSystemClassLoaderSearch(Mockito.any());
+        Assert.assertTrue(installables.contains(installable1));
+        Assert.assertTrue(installables.contains(installable2));
+        Assert.assertFalse(outcome.bootstrap);
+        Set<Class> classes = new HashSet<>();
+        classes.add(installable1.getClass());
+        classes.add(installable2.getClass());
+        Assert.assertTrue(classes.contains(PluginInstallable.class));
+        Assert.assertTrue(classes.contains(PluginPackage.OtherInstallable.class));
     }
 
     @Test
@@ -123,7 +148,7 @@ public class PluginDiscoveryTests {
         return PluginDiscovery.apply();
     }
 
-    private void createJar(String name, String manifestContent, String className) throws Exception {
+    private void createJar(String name, String manifestContent, String... classNames) throws Exception {
         File file = tempFolder.newFile(name + ".jar");
         try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
             try (JarOutputStream jarOutputStream = new JarOutputStream(fileOutputStream)) {
@@ -135,13 +160,19 @@ public class PluginDiscoveryTests {
                 jarOutputStream.closeEntry();
 
                 //write class file
-                if (className != null) {
-                    String classFull = className.replace('.', '/');
-                    String classPackage = classFull.substring(0, classFull.indexOf('/')) + "/";
-                    jarOutputStream.putNextEntry(new ZipEntry(classPackage));
-                    jarOutputStream.putNextEntry(new ZipEntry(classFull));
-                    jarOutputStream.write(getBytes(classFull));
-                    jarOutputStream.closeEntry();
+                if (classNames != null) {
+                    for (String className: classNames) {
+                        String classFull = className.replace('.', '/');
+                        String classPackage = classFull.substring(0, classFull.indexOf('/')) + "/";
+                        try {
+                            jarOutputStream.putNextEntry(new ZipEntry(classPackage));
+                        } catch (IOException e) {
+                            //swallow, if this occurred due to creating an already-present folder
+                        }
+                        jarOutputStream.putNextEntry(new ZipEntry(classFull));
+                        jarOutputStream.write(getBytes(classFull));
+                        jarOutputStream.closeEntry();
+                    }
                 }
             }
         }
