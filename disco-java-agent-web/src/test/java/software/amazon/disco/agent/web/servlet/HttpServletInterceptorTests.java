@@ -157,7 +157,7 @@ public class HttpServletInterceptorTests {
      * @return true if matches else false
      */
     private boolean classMatches(Class clazz) throws ClassNotFoundException {
-        HttpServletInterceptor interceptor = new HttpServletInterceptor() {
+        HttpServletServiceInterceptor interceptor = new HttpServletServiceInterceptor() {
         };
         return interceptor.buildClassMatcher().matches(new TypeDescription.ForLoadedType(clazz));
     }

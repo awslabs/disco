@@ -27,19 +27,18 @@ import java.util.Map;
 import static org.mockito.Mockito.*;
 
 public class HttpServletResponseAccessorTests {
-    HttpServletResponse req;
     HttpServletResponseAccessor accessor;
 
     @Before
     public void before() {
-        req = mock(HttpServletResponse.class);
-        accessor = new HttpServletResponseAccessor(req);
+        accessor = mock(HttpServletResponseAccessor.class);
+        when(accessor.retrieveHeaderMap()).thenCallRealMethod();
     }
 
     @Test
     public void testGetHeaders() {
-        when(req.getHeaderNames()).thenReturn(Arrays.asList("headername"));
-        when(req.getHeader("headername")).thenReturn("headervalue");
+        when(accessor.getHeaderNames()).thenReturn(Arrays.asList("headername"));
+        when(accessor.getHeader("headername")).thenReturn("headervalue");
         Map<String, String> map = accessor.retrieveHeaderMap();
         Assert.assertEquals(1, map.size());
         Assert.assertEquals("headervalue", map.get("headername"));
@@ -47,14 +46,14 @@ public class HttpServletResponseAccessorTests {
 
     @Test
     public void testGetHeadersWhenNull() {
-        when(req.getHeaderNames()).thenReturn(null);
+        when(accessor.getHeaderNames()).thenReturn(null);
         Map<String, String> map = accessor.retrieveHeaderMap();
         Assert.assertEquals(0, map.size());
     }
 
     @Test
     public void testGetStatus() {
-        when(req.getStatus()).thenReturn(202);
+        when(accessor.getStatus()).thenReturn(202);
         Assert.assertEquals(202, accessor.getStatus());
     }
 }

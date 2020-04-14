@@ -33,7 +33,9 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -68,8 +70,10 @@ public class HttpServletServiceInterceptorTests {
         EventBus.addListener(testListener = new TestListener());
         testServlet = new ImplementedServlet();
 
-        request = Mockito.mock(HttpServletRequest.class);
-        response = Mockito.mock(HttpServletResponse.class);
+        request = Mockito.mock(HttpServletRequest.class, Mockito.withSettings().extraInterfaces(HttpServletRequestAccessor.class));
+        Mockito.when(((HttpServletRequestAccessor)request).retrieveHeaderMap()).thenCallRealMethod();
+        response = Mockito.mock(HttpServletResponse.class, Mockito.withSettings().extraInterfaces(HttpServletResponseAccessor.class));
+        Mockito.when(((HttpServletResponseAccessor)response).retrieveHeaderMap()).thenCallRealMethod();
 
         // Custom header
         List<String> headerNames = new ArrayList<>();

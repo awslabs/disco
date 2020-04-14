@@ -18,20 +18,20 @@ package software.amazon.disco.agent.web.apache.utils;
 import software.amazon.disco.agent.interception.annotations.DataAccessPath;
 
 /**
- * Data Accessor for subtypes of HttpResponse.
+ * A streamlined Data Accessor for requests such as HttpGet, HttpDelete and family, to avoid the expensive creation of
+ * a RequestLine, when getting method and URI
  */
-public interface HttpResponseAccessor {
+public interface HttpRequestBaseAccessor {
     /**
-     * Get the status code from the status line in the response
-     * @return the http status code
+     * Get the HTTP method from the HttpRequestBase concrete class
+     * @return the HTTP method e.g. "GET".
      */
-    @DataAccessPath("getStatusLine()/getStatusCode()")
-    int getStatusCode();
+    String getMethod();
 
     /**
-     * Get the content length of the entity in the response
-     * @return the entity content length
+     * Get the URI from the HttpRequestBase concrete class.
+     * @return the URI from this request
      */
-    @DataAccessPath("getEntity()/getContentLength()")
-    long getContentLength();
+    @DataAccessPath("getURI()/toString()")
+    String getUri();
 }

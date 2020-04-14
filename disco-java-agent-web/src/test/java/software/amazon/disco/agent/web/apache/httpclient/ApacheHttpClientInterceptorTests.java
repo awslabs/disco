@@ -16,8 +16,10 @@
 package software.amazon.disco.agent.web.apache.httpclient;
 
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicHttpRequest;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
@@ -45,6 +47,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import software.amazon.disco.agent.web.apache.source.MockEventBusListener;
+import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
+import software.amazon.disco.agent.web.apache.utils.HttpRequestBaseAccessor;
+import software.amazon.disco.agent.web.apache.utils.HttpResponseAccessor;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -57,8 +62,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class ApacheHttpClientInterceptorTests {
 
@@ -151,7 +155,7 @@ public class ApacheHttpClientInterceptorTests {
 
     @Test
     public void testHeaderReplacement() throws Throwable {
-        HttpGet get = new HttpGet(URI);
+        HttpUriRequest get = new InterceptedHttpRequestBase();
         get.addHeader("foo", "bar");
         get.addHeader("foo", "bar2");
 
@@ -173,12 +177,11 @@ public class ApacheHttpClientInterceptorTests {
      */
     @Test
     public void testInterceptorSucceededOnChainedMethods() throws Throwable {
-        HttpUriRequest request = mock(HttpUriRequest.class);
-        setUpRequest(request);
+        HttpUriRequest request = new InterceptedHttpRequestBase();
 
         // Set up victim http client
         SomeChainedExecuteMethodsHttpClient someHttpClient = new SomeChainedExecuteMethodsHttpClient();
-        expectedResponse = new BasicHttpResponse(new ProtocolVersion("protocol", 1, 1), 200, "");
+        expectedResponse = new InterceptedBasicHttpResponse(new ProtocolVersion("protocol", 1, 1), 200, "");
 
         ApacheHttpClientInterceptor.intercept(new Object[] {request}, "origin", () -> someHttpClient.execute(request));
 
@@ -201,17 +204,15 @@ public class ApacheHttpClientInterceptorTests {
     }
 
     /**
-     * Intercepts {@link SomeChainedExecuteMethodsHttpClient#execute(SomeChainedExecuteMethodsHttpClient.WillThrowExceptionOnExecutionHttpRequest)},
+     * Intercepts {@link SomeChainedExecuteMethodsHttpClient#execute(WillThrowExceptionOnExecutionHttpRequest)},
      * where throws {@link ApacheHttpClientInterceptorTests#expectedIOException}
      */
     @Test(expected = IOException.class)
     public void testInterceptorSucceededAndReThrowOnException() throws Throwable {
-        SomeChainedExecuteMethodsHttpClient.WillThrowExceptionOnExecutionHttpRequest request = mock(SomeChainedExecuteMethodsHttpClient.WillThrowExceptionOnExecutionHttpRequest.class);
-        setUpRequest(request);
-
         // Set up victim http client
-        SomeChainedExecuteMethodsHttpClient someHttpClient = new SomeChainedExecuteMethodsHttpClient();
         expectedIOException = new IOException();
+        WillThrowExceptionOnExecutionHttpRequest request = new WillThrowExceptionOnExecutionHttpRequest();
+        SomeChainedExecuteMethodsHttpClient someHttpClient = new SomeChainedExecuteMethodsHttpClient();
 
         try {
             ApacheHttpClientInterceptor.intercept(new Object[]{request}, "origin", () -> someHttpClient.execute(request));
@@ -232,13 +233,6 @@ public class ApacheHttpClientInterceptorTests {
 
             assertEquals(1, someHttpClient.executeMethodChainingDepth);
         }
-    }
-    private static void setUpRequest(final HttpRequest request) {
-        RequestLine requestLine = mock(RequestLine.class);
-
-        when(request.getRequestLine()).thenReturn(requestLine);
-        when(requestLine.getUri()).thenReturn(URI);
-        when(requestLine.getMethod()).thenReturn(METHOD);
     }
 
     private static void verifyServiceRequestEvent(final HttpServiceDownstreamRequestEvent serviceDownstreamRequestEvent) {
@@ -421,6 +415,50 @@ public class ApacheHttpClientInterceptorTests {
         }
 
         abstract class SomeClassSuperTypeIsHttpRequest implements HttpRequest { }
-        abstract class WillThrowExceptionOnExecutionHttpRequest implements HttpRequest {}
+    }
+
+    public class InterceptedHttpRequestBase extends HttpRequestBase implements HttpRequestBaseAccessor, HttpRequestAccessor {
+
+        @Override
+        public String getMethod() {
+            return METHOD;
+        }
+
+        @Override
+        public String getUri() {
+            return URI;
+        }
+
+        @Override
+        public String getMethodFromRequestLine() {
+            return null;
+        }
+
+        @Override
+        public String getUriFromRequestLine() {
+            return null;
+        }
+    }
+
+    public class WillThrowExceptionOnExecutionHttpRequest extends InterceptedHttpRequestBase {
+    }
+
+    /**
+     * A subclass of BasicHttpResponse which pretends that interception occurred, and hence also implements the Accessor
+     */
+    public class InterceptedBasicHttpResponse extends BasicHttpResponse implements HttpResponseAccessor {
+        public InterceptedBasicHttpResponse(final ProtocolVersion ver, final int code, final String reason) {
+            super(ver, code, reason);
+        }
+
+        @Override
+        public int getStatusCode() {
+            return super.getStatusLine().getStatusCode();
+        }
+
+        @Override
+        public long getContentLength() {
+            return 0;
+        }
     }
 }

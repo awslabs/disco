@@ -37,8 +37,6 @@ public class InterceptionInstaller {
     private static final InterceptionInstaller INSTANCE = new InterceptionInstaller();
     private static final Logger log = LogManager.getLogger(InterceptionInstaller.class);
 
-    private Set<Class> alreadyInstalled = new HashSet();
-
     /**
      * Private constructor for singleton semantics
      */
@@ -85,14 +83,7 @@ public class InterceptionInstaller {
             }
 
             log.info("DiSCo(Core) attempting to install "+installable.getClass().getName());
-            if (alreadyInstalled.contains(installable.getClass())) {
-                log.info("DiSCo(Core)" + installable.getClass().getName() + " already installed; skipping.");
-                continue;
-            }
-
-            alreadyInstalled.add(installable.getClass());
             agentBuilder = installable.install(agentBuilder);
-
             if (agentBuilder != null) {
                 agentBuilder.installOn(instrumentation);
             }

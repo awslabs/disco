@@ -28,11 +28,4 @@ public interface HeaderAccessor {
      * @return a String-to-String map of headers
      */
     Map<String, String> retrieveHeaderMap();
-
-    /**
-     * Get a named header from the servlet request or response
-     * @param name the name of the header
-     * @return the value of the header, or null if absent
-     */
-    String getHeader(String name);
 }

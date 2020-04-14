@@ -135,8 +135,7 @@ public class PluginDiscoveryTests {
     @Test
     public void testPluginBootstrapFlag() throws Exception {
         createJar("plugin_with_bootstrap_true",
-                "Disco-Bootstrap-Classloader: true",
-                null);
+                "Disco-Bootstrap-Classloader: true");
         Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
         Mockito.verify(instrumentation).appendToBootstrapClassLoaderSearch(Mockito.any());
         Assert.assertTrue(outcomes.iterator().next().bootstrap);

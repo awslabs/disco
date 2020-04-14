@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License").
  *   You may not use this file except in compliance with the License.
@@ -13,20 +13,20 @@
  *   permissions and limitations under the License.
  */
 
-dependencies {
-    //TODO update BB and ASM to latest
-    compile("net.bytebuddy", "byte-buddy-dep", "1.9.12")
-    compile("org.ow2.asm", "asm", "7.1")
-    compile("org.ow2.asm", "asm-commons", "7.1")
-    compile("org.ow2.asm", "asm-tree", "7.1")
+package software.amazon.disco.agent.interception.templates.integtest.source;
 
-    testCompile("junit", "junit", "4.12")
-}
+public class ExampleOuterClass {
+    private final ExampleDelegatedClass delegatedClass;
 
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            from(components["java"])
-        }
+    public ExampleOuterClass(ExampleDelegatedClass delegatedClass) {
+        this.delegatedClass = delegatedClass;
+    }
+
+    public String getValue() {
+        return "Outer";
+    }
+
+    public ExampleDelegatedClass getDelegate() {
+        return delegatedClass;
     }
 }
