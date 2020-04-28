@@ -180,7 +180,7 @@ in your Maven or Gradle builds with e.g:
 <dependency>
   <groupId>software.amazon.disco</groupId>
   <artifactId>disco-java-agent-api</artifactId>
-  <version>0.9.1</version>
+  <version>0.9.2</version>
 </dependency>
 ```
 
@@ -190,7 +190,7 @@ repositories {
   mavenLocal()
 }
 
-compile 'software.amazon.disco:disco-java-agent-api:0.9.1'
+compile 'software.amazon.disco:disco-java-agent-api:0.9.2'
 ```
 
 #### Using Gradle's Kotlin DSL
@@ -199,7 +199,7 @@ repositories {
   mavenLocal()
 }
 
-compile("software.amazon.disco", "disco-java-agent-api", "0.9.1")
+compile("software.amazon.disco", "disco-java-agent-api", "0.9.2")
 ```
 
 ### Troubleshooting

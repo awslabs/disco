@@ -21,15 +21,16 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class InjectorTest {
     //comment out this annotation to see the test fail, since the agent will not have been loaded.
     @BeforeClass
     public static void beforeClass() throws Exception {
-        //TODO - this string needs a change every version bump. Read it in smartly instead.
-        final String jarPath = "../disco-java-agent-example/build/libs/disco-java-agent-example-0.9.1.jar";
-        Injector.loadAgent(jarPath, "extraverbose");
+        File dir = new File("../disco-java-agent-example/build/libs/");
+        File[] files = dir.listFiles((dir1, name) -> name.startsWith("disco-java-agent-example-") && name.endsWith(".jar"));
+        Injector.loadAgent(files[0].getPath(), "extraverbose");
     }
 
     /**
