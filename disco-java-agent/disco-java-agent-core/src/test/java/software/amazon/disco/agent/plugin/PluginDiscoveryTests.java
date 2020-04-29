@@ -42,6 +42,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
@@ -57,12 +58,6 @@ public class PluginDiscoveryTests {
         agentConfig = new AgentConfigParser().parseCommandLine("pluginPath="+tempFolder.getRoot().getAbsolutePath());
         instrumentation = Mockito.mock(Instrumentation.class);
         installables = new HashSet<>();
-        EventBus.removeAllListeners();
-    }
-
-    @After
-    public void after() {
-        EventBus.removeAllListeners();
     }
 
     @Test
@@ -141,6 +136,40 @@ public class PluginDiscoveryTests {
         Assert.assertTrue(outcomes.iterator().next().bootstrap);
     }
 
+    @Test
+    public void testJarWithoutManifestSafelySkipped() throws Exception {
+        createJar("jar_without_manifest", null);
+        JarFile jar = new JarFile(agentConfig.getPluginPath() + "/jar_without_manifest.jar");
+        Assert.assertNull(jar.getManifest());
+        jar.close();
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        Mockito.verifyNoInteractions(instrumentation);
+        Assert.assertTrue(outcomes.isEmpty());
+
+    }
+
+    @Test
+    public void testManifestWithoutMainAttributesSafelySkipped() throws Exception {
+        createJar("jar_without_main_attributes", "");
+        JarFile jar = new JarFile(agentConfig.getPluginPath() + "/jar_without_main_attributes.jar");
+        Assert.assertTrue(jar.getManifest().getMainAttributes().isEmpty());
+        jar.close();
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        Mockito.verifyNoInteractions(instrumentation);
+        Assert.assertTrue(outcomes.isEmpty());
+    }
+
+    @Test
+    public void testManifestWithoutDiscoAttributesSafelySkipped() throws Exception {
+        createJar("jar_without_disco_attributes", "Foobar: boofar");
+        JarFile jar = new JarFile(agentConfig.getPluginPath() + "/jar_without_disco_attributes.jar");
+        Assert.assertEquals("boofar", jar.getManifest().getMainAttributes().getValue("Foobar"));
+        jar.close();
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        Mockito.verifyNoInteractions(instrumentation);
+        Assert.assertTrue(outcomes.isEmpty());
+    }
+
     private Collection<PluginOutcome> scanAndApply(Instrumentation instrumentation, AgentConfig agentConfig) {
         PluginDiscovery.scan(instrumentation, agentConfig);
         installables.addAll(PluginDiscovery.processInstallables());
@@ -153,10 +182,12 @@ public class PluginDiscoveryTests {
             try (JarOutputStream jarOutputStream = new JarOutputStream(fileOutputStream)) {
 
                 //write manifest
-                jarOutputStream.putNextEntry(new ZipEntry("META-INF/"));
-                jarOutputStream.putNextEntry(new ZipEntry("META-INF/MANIFEST.MF"));
-                jarOutputStream.write((manifestContent+"\n\n").getBytes());
-                jarOutputStream.closeEntry();
+                if (manifestContent != null) {
+                    jarOutputStream.putNextEntry(new ZipEntry("META-INF/"));
+                    jarOutputStream.putNextEntry(new ZipEntry("META-INF/MANIFEST.MF"));
+                    jarOutputStream.write((manifestContent + "\n\n").getBytes());
+                    jarOutputStream.closeEntry();
+                }
 
                 //write class file
                 if (classNames != null) {
