@@ -106,7 +106,6 @@ public class InterceptionInstaller {
             //3rd party libraries
             .or(nameStartsWith("org.jacoco."))
             .or(nameStartsWith("org.junit."))
-            .or(nameStartsWith("org.springframework."))
             .or(nameStartsWith("org.aspectj."))
 
             //disco itself and its internals
