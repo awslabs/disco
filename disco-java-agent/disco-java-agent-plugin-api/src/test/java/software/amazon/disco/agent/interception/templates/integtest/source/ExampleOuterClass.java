@@ -29,4 +29,12 @@ public class ExampleOuterClass {
     public ExampleDelegatedClass getDelegate() {
         return delegatedClass;
     }
+
+    public ExampleDelegatedClass getDelegate(int key) {
+        if (key == 42) {
+            return delegatedClass;
+        } else {
+            return null;
+        }
+    }
 }

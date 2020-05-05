@@ -20,4 +20,11 @@ public class ExampleDelegatedClass {
         return "Delegated";
     }
     public int getIntValue() {return 42;}
+    public String getValue(String secret) {
+        if ("secret".equals(secret)) {
+            return getValue();
+        } else {
+            return null;
+        }
+    }
 }

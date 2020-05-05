@@ -34,6 +34,25 @@ public @interface DataAccessPath {
      * on the result of the getFoo() call (without having to know its type). The result produced at the end of this chain
      * of calls, if any, is then provided as the return value of the instrumented method.
      *
+     * Parameters can also be supplied on the DataAccessPath, when the called methods do not have bean-like getter semantics.
+     * For example, consider the DataAccessPath required to call Bar::getSomethingByName, given an Accessor created for Bar:
+     *
+     * class Bar {
+     *     getSomethingByName(String name);
+     * }
+     *
+     * class Foo {
+     *     getBarByIndex(int index);
+     * }
+     *
+     * class FooAccessor {
+     *     &#64;DataAccessPath("getBarByIndex(0)/getSomethingByName(1)")
+     *     getSomething(int index, String name);
+     * }
+     *
+     * The annotation on getSomething() first calls getBarByIndex with the 0th argument of getSomething(), then, on the
+     * result of that call (which is an object of type Bar), calls getSomethingByName with the 1st argument of getSomething().
+     *
      * @return the data path
      */
     String value();

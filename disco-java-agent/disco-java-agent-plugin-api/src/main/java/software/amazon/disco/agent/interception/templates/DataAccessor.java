@@ -27,7 +27,6 @@ import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.interception.annotations.DataAccessPath;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
@@ -98,10 +97,8 @@ public class DataAccessor implements Installable {
                 for (Method method: accessor.getDeclaredMethods()) {
                     builder = processAccessorMethod(builder, method);
                 }
-
                 return builder;
             }
-
         );
 
         return agentBuilder;
@@ -120,7 +117,7 @@ public class DataAccessor implements Installable {
             builder = builder
                 .define(method)
                     .intercept(Advice.to(ExceptionSafety.class)
-                    .wrap(chainMethodCall(produceCallChain(dap.value()))))
+                    .wrap(chainMethodCall(method, produceCallChain(dap.value()))))
                 ;
 
             //the method must not collide with a method already present in the target type, or its superclasses/interfaces
@@ -146,27 +143,18 @@ public class DataAccessor implements Installable {
     }
 
     /**
-     * From a collection of method call instructions e.g. ["getFoo()", "getBar()"], produce a MethodCall implementation joining them
+     * From a collection of method call instructions e.g. ["getFoo()", "getBar(0)"], produce a MethodCall implementation joining them
      * representing, in pseudo-Java, 'return getFoo().getBar();'
+     * @param accessorMethod the method declared in the accessor
      * @param callChain the Deque of call chain parts
      * @return a MethodCall implementation representing all the calls chained together
      */
-    static MethodCall chainMethodCall(Deque<String> callChain) {
-        //TODO handle param passing.
-        /* will look something like:
-        StringTokenizer params = new StringTokenizer(call, "(,)");
-        while (params.hasMoreTokens()) {
-            String param = params.nextToken();
-            int paramIndex = Integer.parseInt(param);
-            Type paramType = method.getParameters()[paramIndex].getType();
-
-            //produce the next method call with a 'withArgument()' call on the supplied argument
-        }
-        */
-        //TODO for now, just assume methods taking no params
-        MethodCall next = produceNextMethodCall(callChain);
+    static MethodCall chainMethodCall(Method accessorMethod, Deque<String> callChain) {
+        String callString = callChain.removeLast();
+        MethodCall next = produceNextMethodCall(null, accessorMethod, callString);
         while (!callChain.isEmpty()) {
-            next = produceNextMethodCall(callChain).onMethodCall(next);
+            callString = callChain.removeLast();
+            next = produceNextMethodCall(next, accessorMethod, callString);
         }
 
         return next;
@@ -175,15 +163,46 @@ public class DataAccessor implements Installable {
     /**
      * Produce the next chained method call in a chain of them, by creating a single MethodCall of the next one, applying it to
      * the accumulating chain so far
-     * @param callChain the remaining call chain to be processed
+     * @param previous the MethodCall to be chained onto
+     * @param accessorMethod the method declared in the accessor
+     * @param callString the next call in the call chain to be processed e.g. "getFoo(0)"
      * @return the next chained method call of the complete chain
      */
-    static MethodCall.WithoutSpecifiedTarget produceNextMethodCall(Deque<String> callChain) {
-        String s = callChain.removeLast();
-        String call = s.substring(0, s.indexOf('('));
-        ElementMatcher<MethodDescription> methodDescriptionElementMatcher = ElementMatchers.named(call);
+    static MethodCall produceNextMethodCall(MethodCall previous, Method accessorMethod, String callString) {
+        String call = callString.substring(0, callString.indexOf('('));
+        StringTokenizer tokenizer = new StringTokenizer(callString.substring(callString.indexOf('(')), "(),");
+        int[] params = new int[tokenizer.countTokens()];
+        int index = 0;
+        while (tokenizer.hasMoreTokens()) {
+            String token = tokenizer.nextToken();
+            params[index++] = Integer.parseInt(token);
+        }
 
-        return MethodCall.invoke(methodDescriptionElementMatcher);
+        MethodCall.WithoutSpecifiedTarget methodCallWithout = MethodCall.invoke(createParameterizedAccessMethodMatcher(call, accessorMethod, params));
+        MethodCall methodCall = methodCallWithout;
+        if (previous != null) {
+            methodCall = methodCallWithout.onMethodCall(previous);
+        }
+        if (params.length > 0) {
+            methodCall = methodCall.withArgument(params);
+        }
+        return methodCall;
+    }
+
+    /**
+     * Helper method to produce an ElementMatcher matching a unique method in the target class, by fully specifying name and argument signature
+     * @param methodName the name of the method
+     * @param accessorMethod the accessor's method with a DataAccessPath which is being used to supply arguments, from which we determine type signature
+     * @param params array of parameter indices into accessorMethod's formal arguments
+     * @return an ElementMatcher which will uniquely match the method intended to be called.
+     */
+    static ElementMatcher<? super MethodDescription> createParameterizedAccessMethodMatcher(String methodName, Method accessorMethod, int[] params) {
+        ElementMatcher.Junction<MethodDescription> methodDescriptionElementMatcher = ElementMatchers.named(methodName).and(ElementMatchers.takesArguments(params.length));
+        int index = 0;
+        for (int param: params) {
+            methodDescriptionElementMatcher = methodDescriptionElementMatcher.and(ElementMatchers.takesArgument(index++, accessorMethod.getParameterTypes()[param]));
+        }
+        return methodDescriptionElementMatcher;
     }
 
     /**

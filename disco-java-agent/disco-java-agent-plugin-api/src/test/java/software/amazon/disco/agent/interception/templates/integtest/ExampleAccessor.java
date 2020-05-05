@@ -25,4 +25,10 @@ public interface ExampleAccessor {
 
     @DataAccessPath("getDelegate()/getIntValue()")
     int getDelegatedIntValue();
+
+    @DataAccessPath("getDelegate(0)")
+    Object getDelegateByKey(int key);
+
+    @DataAccessPath("getDelegate(0)/getValue(1)")
+    String getDelegatedValueByKeyAndSecret(int key, String secret);
 }
