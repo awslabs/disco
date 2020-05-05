@@ -20,12 +20,8 @@ plugins {
 dependencies {
     //we use the ByteBuddyAgent for an install-after-startup injection strategy, but do not want to inadvertently
     //pull all of BB into the client's code.
-    compile("net.bytebuddy", "byte-buddy-agent", "1.9.12") {
-        isTransitive = false
-    }
-
-    testCompile("net.bytebuddy", "byte-buddy-dep", "1.9.12")
-    testCompile("junit", "junit", "4.12")
+    implementation("net.bytebuddy", "byte-buddy-agent", "1.9.12")
+    testImplementation("net.bytebuddy", "byte-buddy-dep", "1.9.12")
 }
 
 configure<PublishingExtension> {

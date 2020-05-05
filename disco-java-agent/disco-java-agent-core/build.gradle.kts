@@ -14,11 +14,9 @@
  */
 
 dependencies {
-    compile(project(":disco-java-agent:disco-java-agent-plugin-api"))
-    compile(project(":disco-java-agent:disco-java-agent-inject-api"))
-    compile(project(":disco-java-agent:disco-java-agent-api"))
-
-    testCompile("junit", "junit", "4.12")
+    api(project(":disco-java-agent:disco-java-agent-plugin-api"))
+    api(project(":disco-java-agent:disco-java-agent-inject-api"))
+    api(project(":disco-java-agent:disco-java-agent-api"))
 }
 
 configure<PublishingExtension> {

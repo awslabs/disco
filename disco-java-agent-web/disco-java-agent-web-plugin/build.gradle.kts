@@ -30,11 +30,10 @@ dependencies {
 
     //Test target is integ tests for this plugin. Some classes in the integ tests also self-test via little unit tests during this
     //testrun.
-    testCompile(project(":disco-java-agent:disco-java-agent-api"))
-    testCompile("junit", "junit", "4.12")
-    testCompile("org.mockito", "mockito-core", "1.+")
-    testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
-    testCompile("org.apache.httpcomponents", "httpclient", "4.5.10")
+    testImplementation(project(":disco-java-agent:disco-java-agent-api"))
+    testImplementation("org.mockito", "mockito-core", "1.+")
+    testImplementation("javax.servlet", "javax.servlet-api", "3.0.1")
+    testImplementation("org.apache.httpcomponents", "httpclient", "4.5.10")
 }
 
 tasks.shadowJar  {

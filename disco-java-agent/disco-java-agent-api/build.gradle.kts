@@ -13,10 +13,6 @@
  *   permissions and limitations under the License.
  */
 
-dependencies {
-    testCompile("junit", "junit", "4.12")
-}
-
 configure<PublishingExtension> {
     publications {
         named<MavenPublication>("maven") {

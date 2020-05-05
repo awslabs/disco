@@ -18,8 +18,8 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 //common features available to the entire project
 //TODO specify the versions of ByteBuddy and ASM in here, since they are used in a few places.
 plugins {
-    id("com.github.johnrengelman.shadow") version "5.1.0" apply false
-    java
+    id("com.github.johnrengelman.shadow") version "5.2.0" apply false
+    `java-library`
     `maven-publish`
 }
 
@@ -32,7 +32,7 @@ tasks {
 }
 
 subprojects {
-    apply<JavaPlugin>()
+    apply<JavaLibraryPlugin>()
 
     version = "0.9.2"
 
@@ -41,7 +41,8 @@ subprojects {
     }
 
     dependencies {
-        testCompile("org.mockito", "mockito-core", "3.+")
+        testImplementation("junit", "junit", "4.12")
+        testImplementation("org.mockito", "mockito-core", "3.+")
     }
 
     configure<JavaPluginConvention> {

@@ -15,12 +15,10 @@
 
 dependencies {
     //TODO update BB and ASM to latest
-    compile("net.bytebuddy", "byte-buddy-dep", "1.9.12")
-    compile("org.ow2.asm", "asm", "7.1")
-    compile("org.ow2.asm", "asm-commons", "7.1")
-    compile("org.ow2.asm", "asm-tree", "7.1")
-
-    testCompile("junit", "junit", "4.12")
+    api("net.bytebuddy", "byte-buddy-dep", "1.9.12")
+    implementation("org.ow2.asm", "asm", "7.1")
+    implementation("org.ow2.asm", "asm-commons", "7.1")
+    implementation("org.ow2.asm", "asm-tree", "7.1")
 }
 
 configure<PublishingExtension> {
