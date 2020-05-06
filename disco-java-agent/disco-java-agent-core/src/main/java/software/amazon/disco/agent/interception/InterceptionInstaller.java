@@ -15,7 +15,6 @@
 
 package software.amazon.disco.agent.interception;
 
-import software.amazon.disco.agent.utils.FileUtils;
 import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
@@ -23,9 +22,7 @@ import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
-import java.io.File;
 import java.lang.instrument.Instrumentation;
-import java.util.HashSet;
 import java.util.Set;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
@@ -63,19 +60,12 @@ public class InterceptionInstaller {
                         ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
         ElementMatcher<? super TypeDescription> ignoreMatcher = createIgnoreMatcher(customIgnoreMatcher);
 
-        File bootstrapTemp = FileUtils.getInstance().getTempFolder();
-        //if the folder has remnants from a previous run, remove them
-        for (File file : bootstrapTemp.listFiles()) {
-            file.delete();
-        }
 
         for (Installable installable: installables) {
             //We create a new Agent for each Installable, otherwise their matching rules can
             //compete with each other.
             AgentBuilder agentBuilder = new AgentBuilder.Default()
-                    .ignore(ignoreMatcher)
-                    .enableBootstrapInjection(instrumentation, bootstrapTemp)
-                    ;
+                    .ignore(ignoreMatcher);
 
             //The Interception listener is expensive during class loading, and limited value most of the time
             if (config.isExtraverbose()) {
