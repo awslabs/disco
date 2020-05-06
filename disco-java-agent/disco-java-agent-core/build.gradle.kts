@@ -40,11 +40,11 @@ sourceSets {
 
 //create a new empty integ test config - not extending from existing compile or testCompile, since we don't want to
 //be able to compile against Core etc.
-val integtestCompile by configurations.getting {}
+val integtestImplementation: Configuration by configurations.getting {}
 
 dependencies {
-    integtestCompile("junit", "junit", "4.12")
-    integtestCompile(project(":disco-java-agent:disco-java-agent-api"))
+    integtestImplementation("junit", "junit", "4.12")
+    integtestImplementation(project(":disco-java-agent:disco-java-agent-api"))
 }
 
 val ver = project.version
