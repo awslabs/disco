@@ -160,4 +160,13 @@ public class MethodHandleWrapper {
 
         return classes;
     }
+    /**
+     *  Method to provide information whether MethodHandle is loaded or not
+     * eg: returns false if any exceptions are thrown while building MethodHandle
+     * @return the {@link Boolean}
+     */
+    public boolean isHandleLoaded() {
+        return handle != null;
+    }
+
 }
