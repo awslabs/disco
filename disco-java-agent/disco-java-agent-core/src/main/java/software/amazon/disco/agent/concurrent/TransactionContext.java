@@ -117,7 +117,7 @@ public class TransactionContext {
 
     /**
      * Place an arbitrary value into the map
-     * @param key a String to identify the data. May not begin with "disco" - this prefix is reserved for internal use.
+     * @param key a String to identify the data.  May not be "discoTransactionId" which is reserved internally.
      * @param value the metadata value
      */
     public static void putMetadata(String key, Object value) {
@@ -126,6 +126,18 @@ public class TransactionContext {
         }
 
         transactionContext.get().put(key,  new MetadataItem(value));
+    }
+
+    /**
+     * Remove a value from the map
+     *
+     * @param key a String to identify the data.  May not be "discoTransactionId" which is reserved internally.
+     */
+    public static void removeMetadata (String key) {
+        if (TRANSACTION_ID_KEY.equals(key)) {
+            throw new IllegalArgumentException(TRANSACTION_ID_KEY + " may not be used as a metadata key");
+        }
+        transactionContext.get().remove(key);
     }
 
     /**

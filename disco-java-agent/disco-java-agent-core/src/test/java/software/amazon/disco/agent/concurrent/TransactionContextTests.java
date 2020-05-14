@@ -153,6 +153,15 @@ public class TransactionContextTests {
     }
 
     @Test
+    public void testRemoveMetadata() {
+        TransactionContext.putMetadata("foo", "bar");
+        String bar = String.class.cast(TransactionContext.getMetadata("foo"));
+        Assert.assertEquals("bar", bar);
+        TransactionContext.removeMetadata("foo");
+        Assert.assertNull(TransactionContext.getMetadata("foo"));
+    }
+
+    @Test
     public void testTaggedMetadata() {
         TransactionContext.putMetadata("foo1", "bar1");
         TransactionContext.putMetadata("foo2", "bar2");

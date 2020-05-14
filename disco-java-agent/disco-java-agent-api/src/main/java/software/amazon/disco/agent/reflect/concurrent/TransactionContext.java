@@ -102,6 +102,22 @@ public class TransactionContext {
     }
 
     /**
+     * Remove a value in the DiSCo metadata map, or do nothing if the agent is not loaded
+     * @param key the key of the metadata
+     */
+    public static void removeMetadata(String key) {
+        Logger.info("Removing metadata with key " + key);
+        ReflectiveCall call = ReflectiveCall.returningVoid()
+                .ofClass(TRANSACTIONCONTEXT_CLASS)
+                .ofMethod("removeMetadata")
+                .withArgTypes(String.class);
+
+        checkMetadataKey(call, key);
+
+        call.call(key);
+    }
+
+    /**
      * Get a value from the DiSCo metadata map, or null if the agent is not loaded
      * @param key the key of the metadata
      * @return the metadata value
