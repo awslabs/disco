@@ -44,14 +44,9 @@ class ThreadInterceptor implements Installable {
      */
     @Override
     public AgentBuilder install(AgentBuilder agentBuilder) {
-        return agentBuilder
+        //redefinition required, because Thread is already loaded at this point (we are in the main thread!)
+        return InterceptorUtils.configureRedefinition(agentBuilder)
                 .ignore(noneOf(Thread.class))
-
-                //redefinition required, because Thread is already loaded at this point (we are in the main thread!)
-                .with(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
-                .with(AgentBuilder.RedefinitionStrategy.REDEFINITION)
-                .with(AgentBuilder.TypeStrategy.Default.REDEFINE)
-
                 .type(createThreadTypeMatcher())
                 .transform((builder, typeDescription, classLoader, module) -> builder
                     //the familiar idiom of method().intercept() does not work for Thread

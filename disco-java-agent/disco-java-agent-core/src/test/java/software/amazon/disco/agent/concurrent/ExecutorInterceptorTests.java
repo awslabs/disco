@@ -29,6 +29,7 @@ import java.lang.reflect.Method;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 public class ExecutorInterceptorTests {
     ElementMatcher<? super TypeDescription> typeMatcher = ExecutorInterceptor.createTypeMatcher();
@@ -47,6 +48,11 @@ public class ExecutorInterceptorTests {
     @Test
     public void testTypeMatcherMatchesConcrete() {
         Assert.assertTrue(typeMatcher.matches(new TypeDescription.ForLoadedType(ForkJoinPool.class)));
+    }
+
+    @Test
+    public void testTypeMatcherDoesNotMatchScheduledThreadPoolExecutor() {
+        Assert.assertFalse(typeMatcher.matches(new TypeDescription.ForLoadedType(ScheduledThreadPoolExecutor.class)));
     }
 
     @Test

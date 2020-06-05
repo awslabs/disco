@@ -26,6 +26,7 @@ import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
 
@@ -45,21 +46,15 @@ class ExecutorInterceptor implements Installable {
      */
     @Override
     public AgentBuilder install(AgentBuilder agentBuilder) {
-        return agentBuilder
-                //As with the similar code in ThreadInterceptor, we handle situations where given Executors
-                //may already have been used e.g. we know for sure that AspectJ has use-cases where it instantiates
-                //a ThreadPoolExecutor. This gives DiSCo a responsibility to adopt an interception strategy where
-                //we can transform a class that is already loaded. The code below achieves that.
-                .with(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
-                .with(AgentBuilder.RedefinitionStrategy.REDEFINITION)
-                .with(AgentBuilder.TypeStrategy.Default.REDEFINE)
-
+        // Configure redefinition to handle situations where given Executors may already have been used e.g. we know for
+        // sure that AspectJ has use-cases where it instantiates a ThreadPoolExecutor. This gives DiSCo a responsibility
+        // to adopt an interception strategy where we can transform a class that is already loaded
+        return InterceptorUtils.configureRedefinition(agentBuilder)
                 .type(createTypeMatcher())
                 .transform((builder, typeDescription, classLoader, module) -> builder
                     .visit(Advice.to(ExecuteAdvice.class)
                         .on(createMethodMatcher()))
                 );
-
     }
 
     /**
@@ -107,7 +102,8 @@ class ExecutorInterceptor implements Installable {
      * @return a type matcher as above
      */
     static ElementMatcher.Junction<? super TypeDescription> createTypeMatcher() {
-        return isSubTypeOf(Executor.class);
+        return isSubTypeOf(Executor.class)
+                .and(not(isSubTypeOf(ScheduledThreadPoolExecutor.class))); // Handled separately
         //TODO should we exclude ForkJoinPool here, due to it being an impl of Executor, but handled elsewhere?
     }
 

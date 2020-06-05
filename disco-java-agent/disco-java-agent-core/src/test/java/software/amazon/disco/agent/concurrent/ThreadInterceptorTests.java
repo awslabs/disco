@@ -61,10 +61,10 @@ public class ThreadInterceptorTests {
         AgentBuilder.Ignored ignored = Mockito.mock(AgentBuilder.Ignored.class);
         AgentBuilder.RedefinitionListenable.WithoutBatchStrategy withoutBatchStrategy = Mockito.mock(AgentBuilder.RedefinitionListenable.WithoutBatchStrategy.class);
         AgentBuilder.Identified.Narrowable narrowable = Mockito.mock(AgentBuilder.Identified.Narrowable.class);
+        Mockito.when(agentBuilder.with(Mockito.any(AgentBuilder.InitializationStrategy.class))).thenReturn(agentBuilder);
+        Mockito.when(agentBuilder.with(Mockito.any(AgentBuilder.RedefinitionStrategy.class))).thenReturn(withoutBatchStrategy);
+        Mockito.when(withoutBatchStrategy.with(Mockito.any(AgentBuilder.TypeStrategy.class))).thenReturn(agentBuilder);
         Mockito.when(agentBuilder.ignore(Mockito.any(ElementMatcher.class))).thenReturn(ignored);
-        Mockito.when(ignored.with(Mockito.any(AgentBuilder.InitializationStrategy.class))).thenReturn(ignored);
-        Mockito.when(ignored.with(Mockito.any(AgentBuilder.RedefinitionStrategy.class))).thenReturn(withoutBatchStrategy);
-        Mockito.when(withoutBatchStrategy.with(Mockito.any(AgentBuilder.TypeStrategy.class))).thenReturn(ignored);
         Mockito.when(ignored.type(Mockito.any(ElementMatcher.class))).thenReturn(narrowable);
         new ThreadInterceptor().install(agentBuilder);
     }
