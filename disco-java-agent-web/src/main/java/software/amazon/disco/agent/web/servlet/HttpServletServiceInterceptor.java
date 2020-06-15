@@ -42,6 +42,7 @@ import java.util.concurrent.Callable;
 public class HttpServletServiceInterceptor implements Installable {
     private final static Logger log = LogManager.getLogger(HttpServletServiceInterceptor.class);
 
+    private static final String TX_NAMESPACE = "HTTP_SERVLET_SERVICE";
     private static final String EVENT_ORIGIN = "httpServlet";
 
     // Common HTTP Header keys
@@ -87,23 +88,28 @@ public class HttpServletServiceInterceptor implements Installable {
         if (LogManager.isDebugEnabled()) {
             log.debug("DiSCo(Web) interception of " + origin);
         }
-        int txStackDepth = TransactionContext.create();
 
-        //since service() calls in subclasses may call their parents, this interceptor can stack up
-        //only perform event publication it if we were the first call to take place
-        if (txStackDepth == 0) {
-            try {
-                // To reduce the # of dependencies, we use reflection to obtain the basic methods.
-                Object request = args[0];
-                HttpServletRequestAccessor reqAccessor = (HttpServletRequestAccessor)request;
+        if (TransactionContext.isWithinCreatedContext() && TransactionContext.getMetadata(TX_NAMESPACE) != null) {
+            //since service() calls in subclasses may call their parents, this interceptor can stack up
+            //only perform event publication it if we were the first call to take place
+            zuper.call();
+            return;
+        }
+        TransactionContext.create();
+        TransactionContext.putMetadata(TX_NAMESPACE, true);
 
-                // Obtain the metadata information from the host.
-                // If they are null, they are't stored, so retrieval would be null as well.
-                int srcPort = reqAccessor.getRemotePort();
-                int dstPort = reqAccessor.getLocalPort();
-                String srcIP = reqAccessor.getRemoteAddr();
-                String dstIP = reqAccessor.getLocalAddr();
-                requestEvent = new HttpServletNetworkRequestEvent(EVENT_ORIGIN, srcPort, dstPort, srcIP, dstIP)
+        try {
+            // To reduce the # of dependencies, we use reflection to obtain the basic methods.
+            Object request = args[0];
+            HttpServletRequestAccessor reqAccessor = (HttpServletRequestAccessor) request;
+
+            // Obtain the metadata information from the host.
+            // If they are null, they are't stored, so retrieval would be null as well.
+            int srcPort = reqAccessor.getRemotePort();
+            int dstPort = reqAccessor.getLocalPort();
+            String srcIP = reqAccessor.getRemoteAddr();
+            String dstIP = reqAccessor.getLocalAddr();
+            requestEvent = new HttpServletNetworkRequestEvent(EVENT_ORIGIN, srcPort, dstPort, srcIP, dstIP)
                         .withHeaderMap(reqAccessor.retrieveHeaderMap())
                         .withDate(reqAccessor.getHeader(DATE_HEADER))
                         .withHost(reqAccessor.getHeader(HOST_HEADER))
@@ -113,38 +119,33 @@ public class HttpServletServiceInterceptor implements Installable {
                         .withMethod(reqAccessor.getMethod())
                         .withRequest(request)
                         .withURL(reqAccessor.getRequestUrl());
-                EventBus.publish(requestEvent);
-            } catch (Throwable e) {
-                log.error("DiSCo(Web) Failed to retrieve request data from servlet service.");
-            }
-        }
+             EventBus.publish(requestEvent);
+         } catch (Throwable e) {
+            log.error("DiSCo(Web) Failed to retrieve request data from servlet service.");
+         }
 
         // call the original, catching anything it throws
-        try {
+         try {
             zuper.call();
-        } catch (Throwable t) {
+         } catch (Throwable t) {
             throwable = t;
-        }
+         }
 
-        if (txStackDepth == 0) {
-            try {
-                Object response = args[1];
-                HttpServletResponseAccessor respAccessor = (HttpServletResponseAccessor)response;
+         try {
+            Object response = args[1];
+            HttpServletResponseAccessor respAccessor = (HttpServletResponseAccessor)response;
 
-                int statusCode = respAccessor.getStatus();
-                responseEvent = new HttpServletNetworkResponseEvent(EVENT_ORIGIN, requestEvent)
+            int statusCode = respAccessor.getStatus();
+            responseEvent = new HttpServletNetworkResponseEvent(EVENT_ORIGIN, requestEvent)
                         .withHeaderMap(respAccessor.retrieveHeaderMap())
                         .withStatusCode(statusCode)
                         .withResponse(response);
-                EventBus.publish(responseEvent);
-            } catch (Throwable t) {
+            EventBus.publish(responseEvent);
+         } catch (Throwable t) {
                 log.error("DiSCo(Web) Failed to retrieve response data from service.");
-            }
-        }
-
+         }
         //match the create() call with a destroy() in all cases
         TransactionContext.destroy();
-
         //rethrow anything
         if (throwable != null) {
             throw throwable;
