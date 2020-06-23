@@ -200,11 +200,12 @@ public class TransactionContext {
      *           around every activity more reliable, instead of Support package authors having to remember to do it
      * @return true if we think we're currently inside a created Transaction Context, else false
      */
-    public static Boolean isWithinCreatedContext() {
-        return ReflectiveCall.returning(Boolean.class)
+    public static boolean isWithinCreatedContext() {
+        Boolean result = ReflectiveCall.returning(Boolean.class)
             .ofClass(TRANSACTIONCONTEXT_CLASS)
             .ofMethod("isWithinCreatedContext")
             .call();
+        return result == null ? false : result;
     }
 
     /**

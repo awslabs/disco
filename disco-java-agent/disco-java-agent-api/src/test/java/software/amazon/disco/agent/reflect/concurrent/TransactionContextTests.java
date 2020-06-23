@@ -139,6 +139,6 @@ public class TransactionContextTests {
 
     @Test
     public void testIsWithinCreatedContextWhenAgentNotLoaded() {
-        TransactionContext.isWithinCreatedContext();
+        Assert.assertFalse(TransactionContext.isWithinCreatedContext());
     }
 }
