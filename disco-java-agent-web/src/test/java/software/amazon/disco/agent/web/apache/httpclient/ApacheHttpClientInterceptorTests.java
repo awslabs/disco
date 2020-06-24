@@ -15,11 +15,8 @@
 
 package software.amazon.disco.agent.web.apache.httpclient;
 
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicHttpRequest;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
@@ -34,22 +31,21 @@ import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.ProtocolVersion;
-import org.apache.http.RequestLine;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.conn.ClientConnectionManager;
-import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.HttpContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
 import software.amazon.disco.agent.web.apache.source.MockEventBusListener;
-import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
-import software.amazon.disco.agent.web.apache.utils.HttpRequestBaseAccessor;
-import software.amazon.disco.agent.web.apache.utils.HttpResponseAccessor;
+import software.amazon.disco.agent.web.apache.source.ApacheClientTestUtil;
+import software.amazon.disco.agent.web.apache.source.InterceptedBasicHttpResponse;
+import software.amazon.disco.agent.web.apache.source.InterceptedHttpRequestBase;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -65,9 +61,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 public class ApacheHttpClientInterceptorTests {
-
-    private static final String URI = "http://amazon.com/explore/something";
-    private static final String METHOD = "GET";
 
     private ApacheHttpClientInterceptor interceptor;
     private HttpResponse expectedResponse;
@@ -191,11 +184,11 @@ public class ApacheHttpClientInterceptorTests {
         assertEquals(2, events.size());
 
         // Verify the Request Event
-        verifyServiceRequestEvent((HttpServiceDownstreamRequestEvent) events.get(0));
+        ApacheClientTestUtil.verifyServiceRequestEvent((HttpServiceDownstreamRequestEvent) events.get(0));
 
         // Verify the Response Event
         HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (HttpServiceDownstreamResponseEvent) events.get(1);
-        verifyServiceResponseEvent(serviceDownstreamResponseEvent);
+        ApacheClientTestUtil.verifyServiceResponseEvent(serviceDownstreamResponseEvent);
         assertNull(serviceDownstreamResponseEvent.getResponse());
         assertNull(serviceDownstreamResponseEvent.getThrown());
         assertEquals(200, serviceDownstreamResponseEvent.getStatusCode());
@@ -223,11 +216,11 @@ public class ApacheHttpClientInterceptorTests {
             assertEquals(2, events.size());
 
             // Verify the Request Event
-            verifyServiceRequestEvent((HttpServiceDownstreamRequestEvent) events.get(0));
+            ApacheClientTestUtil.verifyServiceRequestEvent((HttpServiceDownstreamRequestEvent) events.get(0));
 
             // Verify the Response Event
             ServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (ServiceDownstreamResponseEvent) events.get(1);
-            verifyServiceResponseEvent(serviceDownstreamResponseEvent);
+            ApacheClientTestUtil.verifyServiceResponseEvent(serviceDownstreamResponseEvent);
             assertNull(serviceDownstreamResponseEvent.getResponse());
             assertEquals(expectedIOException, serviceDownstreamResponseEvent.getThrown());
 
@@ -235,18 +228,6 @@ public class ApacheHttpClientInterceptorTests {
         }
     }
 
-    private static void verifyServiceRequestEvent(final HttpServiceDownstreamRequestEvent serviceDownstreamRequestEvent) {
-        assertEquals(METHOD, serviceDownstreamRequestEvent.getMethod());
-        assertEquals(URI, serviceDownstreamRequestEvent.getUri());
-        assertEquals(ApacheHttpClientInterceptor.APACHE_HTTP_CLIENT_ORIGIN, serviceDownstreamRequestEvent.getOrigin());
-        assertNull(serviceDownstreamRequestEvent.getRequest());
-    }
-
-    private static void verifyServiceResponseEvent(final ServiceDownstreamResponseEvent serviceDownstreamResponseEvent) {
-        assertEquals(METHOD, serviceDownstreamResponseEvent.getOperation());
-        assertEquals(URI, serviceDownstreamResponseEvent.getService());
-        assertEquals(ApacheHttpClientInterceptor.APACHE_HTTP_CLIENT_ORIGIN, serviceDownstreamResponseEvent.getOrigin());
-    }
 
     /**
      * Helper method to test the class matcher matching
@@ -417,48 +398,11 @@ public class ApacheHttpClientInterceptorTests {
         abstract class SomeClassSuperTypeIsHttpRequest implements HttpRequest { }
     }
 
-    public class InterceptedHttpRequestBase extends HttpRequestBase implements HttpRequestBaseAccessor, HttpRequestAccessor {
-
-        @Override
-        public String getMethod() {
-            return METHOD;
-        }
-
-        @Override
-        public String getUri() {
-            return URI;
-        }
-
-        @Override
-        public String getMethodFromRequestLine() {
-            return null;
-        }
-
-        @Override
-        public String getUriFromRequestLine() {
-            return null;
-        }
-    }
-
     public class WillThrowExceptionOnExecutionHttpRequest extends InterceptedHttpRequestBase {
     }
 
     /**
      * A subclass of BasicHttpResponse which pretends that interception occurred, and hence also implements the Accessor
      */
-    public class InterceptedBasicHttpResponse extends BasicHttpResponse implements HttpResponseAccessor {
-        public InterceptedBasicHttpResponse(final ProtocolVersion ver, final int code, final String reason) {
-            super(ver, code, reason);
-        }
 
-        @Override
-        public int getStatusCode() {
-            return super.getStatusLine().getStatusCode();
-        }
-
-        @Override
-        public long getContentLength() {
-            return 0;
-        }
-    }
 }

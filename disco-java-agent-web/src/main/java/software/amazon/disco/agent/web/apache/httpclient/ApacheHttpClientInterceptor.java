@@ -16,10 +16,8 @@
 package software.amazon.disco.agent.web.apache.httpclient;
 
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
-import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.web.apache.event.ApacheEventFactory;
 import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
-import software.amazon.disco.agent.web.apache.utils.HttpRequestBaseAccessor;
 import software.amazon.disco.agent.web.apache.utils.HttpResponseAccessor;
 import software.amazon.disco.agent.web.apache.utils.MethodInterceptionCounter;
 import software.amazon.disco.agent.event.EventBus;
@@ -53,7 +51,6 @@ public class ApacheHttpClientInterceptor implements Installable {
 
     private static final Logger log = LogManager.getLogger(ApacheHttpClientInterceptor.class);
     private static final MethodInterceptionCounter METHOD_INTERCEPTION_COUNTER = new MethodInterceptionCounter();
-
     static final String APACHE_HTTP_CLIENT_ORIGIN = "ApacheHttpClient";
 
     /**
@@ -142,21 +139,7 @@ public class ApacheHttpClientInterceptor implements Installable {
      * @return The published ServiceDownstreamRequestEvent, which is needed when publishing ServiceDownstreamResponseEvent later
      */
     private static HttpServiceDownstreamRequestEvent publishRequestEvent(final HttpRequestAccessor requestAccessor) {
-        String uri;
-        String method;
-        if (requestAccessor instanceof HttpRequestBaseAccessor) {
-            //we can retrieve the data in a streamlined way, avoiding internal production of the RequestLine
-            HttpRequestBaseAccessor baseAccessor = (HttpRequestBaseAccessor)requestAccessor;
-            uri = baseAccessor.getUri();
-            method = baseAccessor.getMethod();
-        } else {
-            uri = requestAccessor.getUriFromRequestLine();
-            method = requestAccessor.getMethodFromRequestLine();
-        }
-        //TODO - using uri and method as service and operation name is unsatisfactory.
-        HttpServiceDownstreamRequestEvent requestEvent = ApacheEventFactory.createDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, uri, method, requestAccessor);
-        requestEvent.withMethod(method);
-        requestEvent.withUri(uri);
+        HttpServiceDownstreamRequestEvent requestEvent = ApacheEventFactory.createDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, requestAccessor);
         EventBus.publish(requestEvent);
         return requestEvent;
     }
@@ -168,14 +151,7 @@ public class ApacheHttpClientInterceptor implements Installable {
      * @param throwable The throwable if the request fails
      */
     private static void publishResponseEvent(final HttpResponseAccessor responseAccessor, final ServiceDownstreamRequestEvent requestEvent, final Throwable throwable) {
-        HttpServiceDownstreamResponseEvent responseEvent = new HttpServiceDownstreamResponseEvent(APACHE_HTTP_CLIENT_ORIGIN, requestEvent.getService(), requestEvent.getOperation(), requestEvent);
-        if(throwable != null) {
-            responseEvent.withThrown(throwable);
-        }
-        if (responseAccessor != null) {
-            responseEvent.withStatusCode(responseAccessor.getStatusCode());
-            responseEvent.withContentLength(responseAccessor.getContentLength());
-        }
+        ServiceDownstreamResponseEvent responseEvent = ApacheEventFactory.createServiceResponseEvent(responseAccessor, requestEvent, throwable);
         EventBus.publish(responseEvent);
     }
 
