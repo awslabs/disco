@@ -67,17 +67,19 @@ public class HttpServiceDownstreamResponseEvent extends ServiceDownstreamRespons
 
     /**
      * Get the status code stored in the Event
-     * @return the HTTP status code
+     * @return the HTTP status code, or -1 if not available
      */
     public int getStatusCode() {
-        return (int)getData(DataKey.STATUS_CODE.name());
+        Object statusCode = getData(DataKey.STATUS_CODE.name());
+        return statusCode == null ? -1 : (int)statusCode;
     }
 
     /**
      * Get the content length stored in the Event
-     * @return the HTTP content length
+     * @return the HTTP content length, or -1 if not available
      */
     public long getContentLength() {
-        return (long)getData(DataKey.CONTENT_LENGTH.name());
+        Object contentLength = getData(DataKey.CONTENT_LENGTH.name());
+        return contentLength == null ? -1L : (long)contentLength;
     }
 }

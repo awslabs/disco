@@ -66,6 +66,30 @@ public class ServiceEventTests {
         Assert.assertEquals(thrown, event.getThrown());
     }
 
+    @Test
+    public void testHttpServiceDownstreamResponseEvent() {
+        ServiceDownstreamRequestEvent requestEvent = Mockito.mock(ServiceDownstreamRequestEvent.class);
+        HttpServiceDownstreamResponseEvent responseEvent = new HttpServiceDownstreamResponseEvent("Origin", "Service", "Operation", requestEvent)
+                .withStatusCode(200)
+                .withContentLength(42L);
+
+        test(responseEvent);
+
+        Assert.assertEquals(200, responseEvent.getStatusCode());
+        Assert.assertEquals(42L, responseEvent.getContentLength());
+    }
+
+    @Test
+    public void testHttpServiceDownstreamResponseEventWithoutResponse() {
+        ServiceDownstreamRequestEvent requestEvent = Mockito.mock(ServiceDownstreamRequestEvent.class);
+        HttpServiceDownstreamResponseEvent responseEvent = new HttpServiceDownstreamResponseEvent("Origin", "Service", "Operation", requestEvent);
+
+        test(responseEvent);
+
+        Assert.assertEquals(-1, responseEvent.getStatusCode());
+        Assert.assertEquals(-1L, responseEvent.getContentLength());
+    }
+
     private void test(AbstractServiceEvent event) {
         Assert.assertEquals("Origin", event.getOrigin());
         Assert.assertEquals("Service", event.getService());
