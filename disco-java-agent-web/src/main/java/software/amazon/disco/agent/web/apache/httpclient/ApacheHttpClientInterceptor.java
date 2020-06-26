@@ -90,7 +90,11 @@ public class ApacheHttpClientInterceptor implements Installable {
             throwable = t;
         } finally {
             // publish response event
-            HttpResponseAccessor responseAccessor = (HttpResponseAccessor)response;
+            HttpResponseAccessor responseAccessor = null;
+            //we currently do not support the flavors of execute() which take a ResponseHandler<T> and return the T.
+            if (response instanceof HttpResponseAccessor) {
+                responseAccessor = (HttpResponseAccessor)response;
+            }
             publishResponseEvent(responseAccessor, requestEvent, throwable);
             if (throwable != null) {
                 throw throwable;

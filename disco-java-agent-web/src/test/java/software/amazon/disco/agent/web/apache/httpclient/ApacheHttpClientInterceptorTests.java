@@ -17,6 +17,7 @@ package software.amazon.disco.agent.web.apache.httpclient;
 
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.mockito.Mockito;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
@@ -226,6 +227,29 @@ public class ApacheHttpClientInterceptorTests {
 
             assertEquals(1, someHttpClient.executeMethodChainingDepth);
         }
+    }
+
+    @Test
+    public void testInterceptorSucceedsOnResponseHandlerExecute() throws Throwable {
+        HttpUriRequest get = new InterceptedHttpRequestBase();
+
+        SomeChainedExecuteMethodsHttpClient someHttpClient = new SomeChainedExecuteMethodsHttpClient();
+        ResponseHandler<Object> responseHandler = Mockito.mock(ResponseHandler.class);
+        Mockito.when(responseHandler.handleResponse(Mockito.any())).thenReturn(new Object());
+        ApacheHttpClientInterceptor.intercept(new Object[] {get}, "origin", () -> someHttpClient.execute(get, responseHandler));
+
+        List<Event> events = mockEventBusListener.getReceivedEvents();
+
+        // Verify only one of interceptions does the interceptor business logic even if there is a method chaining,
+        // as a result, only two service downstream events are published (request/response)
+        assertEquals(2, events.size());
+
+        // Verify the Request Event
+        ApacheClientTestUtil.verifyServiceRequestEvent((HttpServiceDownstreamRequestEvent) events.get(0));
+
+        // Verify the Response Event
+        ServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (ServiceDownstreamResponseEvent) events.get(1);
+        ApacheClientTestUtil.verifyServiceResponseEvent(serviceDownstreamResponseEvent);
     }
 
 

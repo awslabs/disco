@@ -18,6 +18,7 @@ package software.amazon.disco.agent.integtest.web.apache.httpclient;
 import org.apache.http.HttpHost;
 import org.apache.http.ProtocolVersion;
 import org.apache.http.RequestLine;
+import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
@@ -25,6 +26,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHttpRequest;
 import org.apache.http.message.BasicRequestLine;
+import org.mockito.Mockito;
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
@@ -85,6 +87,27 @@ public class ApacheHttpClientInterceptorTests {
     }
 
     @Test
+    public void testMinimalClientWithResponseHandler() throws Exception {
+        ResponseHandler<Object> responseHandler = Mockito.mock(ResponseHandler.class);
+        try (CloseableHttpClient httpClient = HttpClients.createMinimal()) {
+            HttpGet request = new HttpGet("https://amazon.com");
+
+            try {
+                Mockito.when(responseHandler.handleResponse(Mockito.any())).thenReturn(new Object());
+                httpClient.execute(request, responseHandler);
+            } catch (IOException e) {
+                //swallow
+            } catch (Exception e) {
+                Assert.fail();
+            }
+        }
+
+        Mockito.verify(responseHandler).handleResponse(Mockito.any());
+        assertEquals(1, testListener.requestEvents.size());
+        assertEquals(1, testListener.responseEvents.size());
+    }
+
+    @Test
     public void testDefaultClient() throws Exception {
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpGet request = new HttpGet("https://amazon.com");
@@ -95,6 +118,26 @@ public class ApacheHttpClientInterceptorTests {
             }
         }
 
+        assertEquals(1, testListener.requestEvents.size());
+        assertEquals(1, testListener.responseEvents.size());
+    }
+
+    @Test
+    public void testDefaultClientWithResponseHandler() throws Exception {
+        ResponseHandler<Object> responseHandler = Mockito.mock(ResponseHandler.class);
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+            HttpGet request = new HttpGet("https://amazon.com");
+            try {
+                Mockito.when(responseHandler.handleResponse(Mockito.any())).thenReturn(new Object());
+                httpClient.execute(request, responseHandler);
+            } catch (IOException e) {
+                //swallow
+            } catch (Exception e) {
+                Assert.fail();
+            }
+        }
+
+        Mockito.verify(responseHandler).handleResponse(Mockito.any());
         assertEquals(1, testListener.requestEvents.size());
         assertEquals(1, testListener.responseEvents.size());
     }
