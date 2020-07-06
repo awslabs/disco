@@ -170,6 +170,14 @@ public class PluginDiscoveryTests {
         Assert.assertTrue(outcomes.isEmpty());
     }
 
+    @Test
+    public void testSplitString() {
+        String[] result = PluginDiscovery.splitString("    com.foo.Foo        com.foo.Bar     ");
+        Assert.assertEquals(2, result.length);
+        Assert.assertEquals("com.foo.Foo", result[0]);
+        Assert.assertEquals("com.foo.Bar", result[1]);
+    }
+
     private Collection<PluginOutcome> scanAndApply(Instrumentation instrumentation, AgentConfig agentConfig) {
         PluginDiscovery.scan(instrumentation, agentConfig);
         installables.addAll(PluginDiscovery.processInstallables());

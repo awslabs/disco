@@ -300,7 +300,7 @@ public class PluginDiscovery {
      */
     static void processInstallableClasses(String pluginName, String installableClassNames, boolean bootstrap) throws Exception {
         if (installableClassNames != null) {
-            String[] classNames = installableClassNames.trim().split("\\s");
+            String[] classNames = splitString(installableClassNames);
             for (String className: classNames) {
                 try {
                     Class<?> clazz = classForName(className.trim(), bootstrap);
@@ -326,7 +326,7 @@ public class PluginDiscovery {
      */
     static void processListenerClasses(String pluginName, String listenerClassNames, boolean bootstrap) throws Exception {
         if (listenerClassNames != null) {
-            String[] classNames = listenerClassNames.trim().split("\\s");
+            String[] classNames = splitString(listenerClassNames);
             for (String className : classNames) {
                 if (LogManager.isDebugEnabled()) {
                     log.debug("DiSCo(Core) attempting to add Listener from plugin using class: " + className);
@@ -358,6 +358,15 @@ public class PluginDiscovery {
             //to instantiate the class
             ? Class.forName(name, false, null)
             : Class.forName(name, false, ClassLoader.getSystemClassLoader());
+    }
+
+    /**
+     * Helper method to take a list of items e.g. Disco-Installable-Classes and produce a Collection of the individual entries
+     * @param input the String from the manifest e.g. "    com.foo.Foo        com.foo.Bar     "
+     * @return the split results e.g. ["com.foo.Foo", "com.foo.Bar"]
+     */
+    static String[] splitString(String input) {
+        return input.trim().split("\\s+");
     }
 
 }
