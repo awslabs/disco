@@ -39,7 +39,6 @@ public class TransactionContext {
      * @return the tx stack depth.
      */
     public static int create() {
-        Logger.info("Creating a new random transactionId and an empty transaction Context.");
         return ReflectiveCall.returning(int.class)
                 .ofClass(TRANSACTIONCONTEXT_CLASS)
                 .ofMethod("create")
@@ -54,7 +53,6 @@ public class TransactionContext {
      * this will do nothing.
      */
     public static void destroy() {
-        Logger.info("Creating a new random transactionId and an empty transaction Context.");
         ReflectiveCall.returningVoid()
                 .ofClass(TRANSACTIONCONTEXT_CLASS)
                 .ofMethod("destroy")
@@ -65,7 +63,6 @@ public class TransactionContext {
      * @param value - the value to set
      */
     public static void set(String value) {
-        Logger.info("Setting transaction Id to" + value);
         ReflectiveCall.returningVoid()
                 .ofClass(TRANSACTIONCONTEXT_CLASS)
                 .ofMethod("set")
@@ -90,7 +87,6 @@ public class TransactionContext {
      * @param value the metadata value
      */
     public static void putMetadata(String key, Object value) {
-        Logger.info("Putting metadata to key " + key);
         ReflectiveCall call = ReflectiveCall.returningVoid()
                 .ofClass(TRANSACTIONCONTEXT_CLASS)
                 .ofMethod("putMetadata")
@@ -106,7 +102,6 @@ public class TransactionContext {
      * @param key the key of the metadata
      */
     public static void removeMetadata(String key) {
-        Logger.info("Removing metadata with key " + key);
         ReflectiveCall call = ReflectiveCall.returningVoid()
                 .ofClass(TRANSACTIONCONTEXT_CLASS)
                 .ofMethod("removeMetadata")
@@ -164,7 +159,6 @@ public class TransactionContext {
      * Clear the DiSCo TransactionContext to revert to its default value, or a no-op if Agent not loaded
      */
     public static void clear() {
-        Logger.info("Clearing transaction context");
         ReflectiveCall.returningVoid()
                 .ofClass(TRANSACTIONCONTEXT_CLASS)
                 .ofMethod("clear")

@@ -143,13 +143,6 @@ public class ReflectiveCall<T> {
     public T call(Object... args) {
         String fullClassName = DISCO_AGENT_PACKAGE_ROOT + className;
         try {
-            Logger.debug("Trying to reflectively call " + fullClassName + ":" + methodName + " with parameter types:");
-            Logger.debug("with arguments:");
-            if (args != null) for (Object arg: args) {
-                if (arg != null) {
-                    Logger.debug(String.valueOf(arg));
-                }
-            }
 
             if (method == null) {
                 createMethod();
@@ -259,15 +252,10 @@ public class ReflectiveCall<T> {
     private void createMethod() {
         String fullClassName = DISCO_AGENT_PACKAGE_ROOT + className;
         try {
-            Logger.debug("Trying to reflectively create " + fullClassName + ":" + methodName + " with parameter types:");
-            if (argTypes != null) for (Class clazz: argTypes) {
-                Logger.debug(clazz.getName());
-                Logger.debug(clazz.getName());
-            }
             Class clazz = Class.forName(fullClassName);
             method = clazz.getDeclaredMethod(methodName, argTypes);
         } catch (Throwable t) {
-            Logger.debug("Method " + fullClassName + ":" + methodName + " was not found.");
+            //do nothing
         }
     }
 }
