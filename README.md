@@ -228,6 +228,7 @@ a few layers and families of projects in here:
 1. Canonical Pluggable agent, capable of plugin discovery, in disco-java-agent/disco-java-agent
 1. A facility to 'Inject' a Disco Agent into managed runtimes like AWS Lambda
 1. A Plugin to support Servlets and Apache HTTP clients, in disco-java-agent-web-plugin
+1. A Plugin to support SQL connections & queries using JDBC, in disco-java-agent-sql-plugin
 1. Example code in anything with '-example' in the project name.
 1. Tests in anything with '-test' in the project name.
 
