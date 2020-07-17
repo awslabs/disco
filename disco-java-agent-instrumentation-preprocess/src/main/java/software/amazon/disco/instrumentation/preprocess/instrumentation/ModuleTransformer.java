@@ -27,7 +27,6 @@ import software.amazon.disco.instrumentation.preprocess.export.ModuleExportStrat
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.AgentLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.modules.ModuleInfo;
 import software.amazon.disco.instrumentation.preprocess.loaders.modules.ModuleLoader;
-import software.amazon.disco.instrumentation.preprocess.serialization.InstrumentationState;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.util.Map;
@@ -46,7 +45,6 @@ public class ModuleTransformer {
 
     private final ModuleLoader jarLoader;
     private final AgentLoader agentLoader;
-    private final InstrumentationState instrumentationState;
     private final String suffix;
     private final Level logLevel;
 
@@ -91,7 +89,7 @@ public class ModuleTransformer {
             }
         }
 
-        moduleInfo.getExportStrategy().export(moduleInfo, getInstrumentedClasses(), instrumentationState, suffix);
+        moduleInfo.getExportStrategy().export(moduleInfo, getInstrumentedClasses(), suffix);
 
         // empty the map in preparation for transforming another package
         getInstrumentedClasses().clear();

@@ -147,7 +147,7 @@ public class ModuleTransformerTest {
         spyTransformer.applyInstrumentation(moduleInfos.get(0));
 
         Mockito.verify(moduleInfos.get(0)).getClassNames();
-        Mockito.verify(s1).export(moduleInfos.get(0), instrumentedClasses, null, PACKAGE_SUFFIX);
+        Mockito.verify(s1).export(moduleInfos.get(0), instrumentedClasses, PACKAGE_SUFFIX);
         Assert.assertTrue(instrumentedClasses.isEmpty());
     }
 }

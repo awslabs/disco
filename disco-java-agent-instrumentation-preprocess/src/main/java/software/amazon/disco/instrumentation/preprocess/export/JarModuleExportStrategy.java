@@ -21,7 +21,6 @@ import software.amazon.disco.instrumentation.preprocess.exceptions.ModuleExportE
 import software.amazon.disco.instrumentation.preprocess.exceptions.UnableToReadJarEntryException;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentedClassState;
 import software.amazon.disco.instrumentation.preprocess.loaders.modules.ModuleInfo;
-import software.amazon.disco.instrumentation.preprocess.serialization.InstrumentationState;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.io.File;
@@ -68,13 +67,12 @@ public class JarModuleExportStrategy implements ModuleExportStrategy {
      * Exports all transformed classes to a Jar file. A temporary Jar File will be created to store all
      * the transformed classes and then be renamed to replace the original Jar.
      *
-     * @param moduleInfo           Information of the original Jar
-     * @param instrumented         a map of instrumented classes with their bytecode
-     * @param instrumentationState state to be passed to the runtime agent to dynamically skip already instrumented classes
-     * @param suffix               suffix of the transformed package
+     * @param moduleInfo   Information of the original Jar
+     * @param instrumented a map of instrumented classes with their bytecode
+     * @param suffix       suffix of the transformed package
      */
     @Override
-    public void export(final ModuleInfo moduleInfo, final Map<String, InstrumentedClassState> instrumented, final InstrumentationState instrumentationState, final String suffix) {
+    public void export(final ModuleInfo moduleInfo, final Map<String, InstrumentedClassState> instrumented, final String suffix) {
         log.debug(PreprocessConstants.MESSAGE_PREFIX + "Saving changes to Jar");
 
         final File file = createTempFile(moduleInfo);
@@ -223,10 +221,8 @@ public class JarModuleExportStrategy implements ModuleExportStrategy {
             final Path destination = Paths.get(destinationStrWithSuffix);
             destination.toFile().getParentFile().mkdirs();
 
-            final boolean isOverride = outputDir == null && suffix == null;
-
-            if (!isOverride && destination.toFile().exists()) {
-                throw new ModuleExportException("Failed move transformed package to output directory, package with same name already present: " + destinationStrWithSuffix, null);
+            if (moduleInfo.getFile().getAbsolutePath().equals(destination.toFile().getAbsolutePath())) {
+                log.info(PreprocessConstants.MESSAGE_PREFIX + "Overriding original file: " + moduleInfo.getFile().getName());
             }
 
             final Path filePath = Files.move(

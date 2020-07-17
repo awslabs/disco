@@ -28,9 +28,10 @@ import java.util.List;
 @Builder
 @Getter
 public class PreprocessConfig {
-    private final String outputDir;
     @Singular
     private final List<String> jarPaths;
+
+    private final String outputDir;
     private final String agentPath;
     private final String suffix;
     private final Level logLevel;

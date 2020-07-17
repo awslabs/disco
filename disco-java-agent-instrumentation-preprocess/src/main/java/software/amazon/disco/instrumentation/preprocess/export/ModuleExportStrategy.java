@@ -17,7 +17,6 @@ package software.amazon.disco.instrumentation.preprocess.export;
 
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentedClassState;
 import software.amazon.disco.instrumentation.preprocess.loaders.modules.ModuleInfo;
-import software.amazon.disco.instrumentation.preprocess.serialization.InstrumentationState;
 
 import java.util.Map;
 
@@ -30,8 +29,7 @@ public interface ModuleExportStrategy {
      *
      * @param info                 Information of the original Jar
      * @param instrumented         a map of instrumented classes with their bytecode
-     * @param instrumentationState state to be passed to the runtime agent to dynamically skip already instrumented classes
      * @param suffix               suffix to be appended to the transformed package
      */
-    void export(final ModuleInfo info, final Map<String, InstrumentedClassState> instrumented, final InstrumentationState instrumentationState, final String suffix);
+    void export(final ModuleInfo info, final Map<String, InstrumentedClassState> instrumented, final String suffix);
 }
