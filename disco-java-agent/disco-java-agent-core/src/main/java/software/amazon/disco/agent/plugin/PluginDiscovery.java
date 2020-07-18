@@ -114,7 +114,7 @@ public class PluginDiscovery {
             if (files != null) {
                 for (File jarFile : files) {
                     if (jarFile.getName().substring(jarFile.getName().lastIndexOf(".")).equalsIgnoreCase(".jar")) {
-                        processJarFile(instrumentation, jarFile);
+                        processJarFile(instrumentation, jarFile, config.isRuntimeOnly());
                     } else {
                         //ignore non JAR file
                         log.info("DiSCo(Core) non JAR file found on plugin path, skipping this file");
@@ -196,9 +196,10 @@ public class PluginDiscovery {
      * Process a single JAR file which is assumed to be a plugin
      * @param instrumentation and instrumentation instance, used to add discovered plugins to classpaths
      * @param jarFile the jar file to be processed
+     * @param runtimeOnly if the Agent is configured as runtime only, Installables will not be considered from plugins. Init plugins and Listener plugins are unaffected.
      * @throws Exception class reflection or file i/o errors may occur
      */
-    static void processJarFile(Instrumentation instrumentation, File jarFile) throws Exception {
+    static void processJarFile(Instrumentation instrumentation, File jarFile, boolean runtimeOnly) throws Exception {
         JarFile jar = new JarFile(jarFile);
         Manifest manifest = jar.getManifest();
         jar.close();
@@ -237,7 +238,7 @@ public class PluginDiscovery {
         boolean bootstrap = loadJar(instrumentation, jarFile, bootstrapClassloader);
         pluginOutcomes.get(pluginName).bootstrap = bootstrap;
         processInitClass(pluginName, initClassName, bootstrap);
-        processInstallableClasses(pluginName, installableClassNames, bootstrap);
+        processInstallableClasses(pluginName, installableClassNames, bootstrap, runtimeOnly);
         processListenerClasses(pluginName, listenerClassNames, bootstrap);
     }
 
@@ -296,12 +297,18 @@ public class PluginDiscovery {
      * @param pluginName the name of the plugin JAR file where the classes are defined
      * @param installableClassNames the names of the Installable or Package classes determined from the Manifest
      * @param bootstrap true if the plugin is requesting to be loaded by the bootstrap classloader
+     * @param runtimeOnly true if the agent is configured to be runtime only, thus no Installables will be used for instrumentation.
      * @throws Exception reflection errors may occur if the class cannot be found
      */
-    static void processInstallableClasses(String pluginName, String installableClassNames, boolean bootstrap) throws Exception {
+    static void processInstallableClasses(String pluginName, String installableClassNames, boolean bootstrap, boolean runtimeOnly) throws Exception {
         if (installableClassNames != null) {
             String[] classNames = splitString(installableClassNames);
             for (String className: classNames) {
+                if (runtimeOnly) {
+                    log.info("DiSCo(Core) Installable/Package declared in plugin will be ignored because agent is configured as runtime only: " + className);
+                    continue;
+                }
+
                 try {
                     Class<?> clazz = classForName(className.trim(), bootstrap);
                     if (Installable.class.isAssignableFrom(clazz) || Package.class.isAssignableFrom(clazz)) {
@@ -311,7 +318,7 @@ public class PluginDiscovery {
                         log.warn("DiSCo(Core) specified Installable is not an instance of Installable or Package: " + className);
                     }
                 } catch (ClassNotFoundException e) {
-                    log.warn("DiSCo(Core) cannot locate Installable: " + className);
+                    log.warn("DiSCo(Core) cannot locate Installable: " + className, e);
                 }
             }
         }
@@ -340,7 +347,7 @@ public class PluginDiscovery {
                         log.warn("DiSCo(Core) specified Listener is not an instance of Listener: " + className);
                     }
                 } catch (ClassNotFoundException e) {
-                    log.warn("DiSCo(Core) failed to instantiate Listener: " + className);
+                    log.warn("DiSCo(Core) failed to instantiate Listener: " + className, e);
                 }
             }
         }

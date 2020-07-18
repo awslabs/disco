@@ -43,12 +43,17 @@ import static org.junit.Assert.assertEquals;
 public class DiscoAgentTemplateTests {
     @Mock
     private InterceptionInstaller mockInterceptionInstaller;
+
+    @Mock
+    private Instrumentation instrumentation;
+
     @Captor
     private ArgumentCaptor<Set<Installable>> installableSetArgumentCaptor;
 
     @Before
     public void before() {
         MockitoAnnotations.initMocks(this);
+        Mockito.doCallRealMethod().when(mockInterceptionInstaller).install(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
         TransactionContext.create();
     }
 
@@ -57,23 +62,15 @@ public class DiscoAgentTemplateTests {
         TransactionContext.clear();
     }
 
-    @Test
-    public void testDefaultInstallables() {
-        Installable mockInstallable = Mockito.mock(Installable.class);
-        Set<Installable> installables = new HashSet<>();
-        installables.add(mockInstallable);
-        install(createDiscoAgentTemplate(), installables);
-        Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any(), Mockito.any());
-        Assert.assertTrue(installableSetArgumentCaptor.getValue().contains(mockInstallable));
-    }
 
     @Test
-    public void testNoDefaultInstallables() {
-        Installable mockInstallable = Mockito.mock(Installable.class);
+    public void testRuntimeOnly() {
+        Installable mockInstallable = new DummyInstallable();
         Set<Installable> installables = new HashSet<>();
         installables.add(mockInstallable);
-        install(createDiscoAgentTemplate("noDefaultInstallables"), installables);
+        install(createDiscoAgentTemplate("runtimeOnly"), installables);
         Mockito.verify(mockInterceptionInstaller).install(Mockito.any(), installableSetArgumentCaptor.capture(), Mockito.any(), Mockito.any());
+        Mockito.verifyNoInteractions(instrumentation);
         Assert.assertTrue(installableSetArgumentCaptor.getValue().isEmpty());
     }
 
@@ -107,7 +104,7 @@ public class DiscoAgentTemplateTests {
     }
 
     private DiscoAgentTemplate install(DiscoAgentTemplate discoAgentTemplate, Set<Installable> installables) {
-        discoAgentTemplate.install(Mockito.mock(Instrumentation.class), installables);
+        discoAgentTemplate.install(instrumentation, installables);
         return discoAgentTemplate;
     }
 
@@ -115,12 +112,10 @@ public class DiscoAgentTemplateTests {
         return install(discoAgentTemplate, new HashSet<>());
     }
 
-    //not genuinely using this object, just using it to produce a classname which implements Installable
-    //Cannot use a Mockito 1.x mock due to the reliance on the default method in the ArgumentHandler base interface.
-    static class MockInstallable implements Installable {
+    static class DummyInstallable implements Installable {
         @Override
         public AgentBuilder install(AgentBuilder agentBuilder) {
-            return null;
+            return agentBuilder;
         }
     }
 }

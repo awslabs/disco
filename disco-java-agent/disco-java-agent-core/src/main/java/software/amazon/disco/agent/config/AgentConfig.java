@@ -22,7 +22,7 @@ import java.util.List;
  */
 public class AgentConfig {
     private List<String> args;
-    private boolean installDefaultInstallables = true;
+    private boolean isRuntimeOnly = false;
     private String pluginPath = null;
     private boolean verbose = false;
     private boolean extraverbose = false;
@@ -46,11 +46,15 @@ public class AgentConfig {
     }
 
     /**
-     * Return if we are configured to install the default installables (i.e. the ones expressly listed out in the Agent startup).
-     * @return true if default installables should be installed, else false
+     * Return true if configured to perform no instrumentation of classes. The agent in this mode only acts as a way to install
+     * the Disco runtime (TransactionContext, EventBus and so on) such that it is on the correct classloader as demanded by
+     * the agent manifest (usually the bootstrap such that Concurrency support works correctly). This mode is used when running an
+     * application which does not need runtime instrumentation, e.g. if all Event-publishing classes are integrated explicitly, or
+     * if classes have been transformed ahead of time by a build tool.
+     * @return true if the agent should be a container for the runtime only, thus disabling all Installable interceptions
      */
-    public boolean isInstallDefaultInstallables() {
-        return installDefaultInstallables;
+    public boolean isRuntimeOnly() {
+        return isRuntimeOnly;
     }
 
     /**
@@ -78,11 +82,11 @@ public class AgentConfig {
     }
 
     /**
-     * Set whether to install the default installables for this agent
-     * @param installDefaultInstallables true to install the default installables, else false
+     * Set whether this Agent should install no installables and be a runtime-only agent.
+     * @param isRuntimeOnly true for a runtime-only agent, else false (the default)
      */
-    protected void setInstallDefaultInstallables(boolean installDefaultInstallables) {
-        this.installDefaultInstallables = installDefaultInstallables;
+    protected void setRuntimeOnly(boolean isRuntimeOnly) {
+        this.isRuntimeOnly = isRuntimeOnly;
     }
 
     /**

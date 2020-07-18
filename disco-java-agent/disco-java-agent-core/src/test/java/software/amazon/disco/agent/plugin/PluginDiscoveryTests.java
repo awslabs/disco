@@ -128,6 +128,32 @@ public class PluginDiscoveryTests {
     }
 
     @Test
+    public void testPluginInstallableRuntimeOnly() throws Exception {
+        agentConfig = new AgentConfigParser().parseCommandLine("runtimeOnly");
+        createJar("plugin_runtime_only",
+                "Disco-Installable-Classes: software.amazon.disco.agent.plugin.source.PluginInstallable",
+                "software.amazon.disco.agent.plugin.source.PluginInstallable");
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        Assert.assertTrue(outcomes.isEmpty());
+        Assert.assertTrue(installables.isEmpty());
+        Mockito.verifyNoInteractions(instrumentation);
+    }
+
+    @Test
+    public void testPluginPackageInstallableRuntimeOnly() throws Exception {
+        agentConfig = new AgentConfigParser().parseCommandLine("runtimeOnly");
+        createJar("plugin_package_runtime_only",
+                "Disco-Installable-Classes: software.amazon.disco.agent.plugin.source.PluginPackage",
+                "software.amazon.disco.agent.plugin.source.PluginPackage",
+                "software.amazon.disco.agent.plugin.source.PluginInstallable",
+                "software.amazon.disco.agent.plugin.source.PluginPackage$OtherInstallable");
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        Assert.assertTrue(outcomes.isEmpty());
+        Assert.assertTrue(installables.isEmpty());
+        Mockito.verifyNoInteractions(instrumentation);
+    }
+
+    @Test
     public void testPluginBootstrapFlag() throws Exception {
         createJar("plugin_with_bootstrap_true",
                 "Disco-Bootstrap-Classloader: true");

@@ -39,9 +39,9 @@ import java.util.Set;
  * agent able to configure which actual Installable hooks are present in the Agent instance.
  */
 public class DiscoAgentTemplate {
-    private static Logger log = LogManager.getLogger(DiscoAgentTemplate.class);
+    private static final Logger log = LogManager.getLogger(DiscoAgentTemplate.class);
 
-    private AgentConfig config;
+    private final AgentConfig config;
     private InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
     private ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher = ElementMatchers.none();
     private boolean allowPlugins = true;
@@ -110,8 +110,8 @@ public class DiscoAgentTemplate {
      * @return information about any loaded plugins
      */
     public Collection<PluginOutcome> install(Instrumentation instrumentation, Set<Installable> installables, ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
-        if (!config.isInstallDefaultInstallables()) {
-            log.info("DiSCo(Core) removing all default installables as requested");
+        if (config.isRuntimeOnly()) {
+            log.info("DiSCo(Core) setting agent as runtime-only. Ignoring all Installables, including those in Plugins.");
             installables.clear();
         }
 

@@ -17,17 +17,17 @@ package software.amazon.disco.agent.config;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class AgentConfigParserTest {
     @Test
     public void testArgumentParsing() {
-        final String argLine = "agent.jar:verbose:nodefaultinstallables";
+        final String argLine = "verbose:runtimeonly:pluginpath=path/to/plugins";
 
         AgentConfig config = new AgentConfigParser().parseCommandLine(argLine);
-        assertFalse(config.isInstallDefaultInstallables());
+        assertTrue(config.isRuntimeOnly());
         assertTrue(config.isVerbose());
         assertFalse(config.isExtraverbose());
+        assertEquals("path/to/plugins", config.getPluginPath());
     }
 }
