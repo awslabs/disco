@@ -16,6 +16,7 @@
 dependencies {
     implementation(project(":disco-java-agent:disco-java-agent-core"))
     testImplementation("org.mockito", "mockito-core", "1.+")
+    testImplementation("mysql", "mysql-connector-java", "8.+")
 }
 
 configure<PublishingExtension> {

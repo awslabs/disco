@@ -39,7 +39,7 @@ dependencies {
 tasks.shadowJar  {
     manifest {
         attributes(mapOf(
-            "Disco-Installable-Classes" to "software.amazon.disco.agent.sql.SQLSupport"
+            "Disco-Installable-Classes" to "software.amazon.disco.agent.sql.SqlSupport"
         ))
     }
 }

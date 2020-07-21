@@ -6,9 +6,27 @@ Event producer for popular frameworks used in service oriented software, this su
 1. In this folder, the Installables to intercept SQL interactions, and issue appropriate Event Bus Events.
 1. In the disco-java-agent-sql-plugin subfolder, a proper Disco plugin, bundled as a plugin JAR file with Manifest.
 
+## Feature Status
+
+All methods in the table below are intercepted and published to the Event Bus as a pair of 
+`ServiceDownstreamRequestEvent`, published immediately before the DB Driver begins their implementation of the method,
+and `ServiceDownstreamResponseEvent`, published immediately after the method ends either successfully or due to an
+exception. 
+
+The Statement object will be captured as the request, the Database name as the service, and the query string as the
+operation on a best-effort basis. If you can't retrieve query strings from PreparedStatement objects, disco cannot
+include them in events.
+
+|                   | execute            | executeQuery       | executeUpdate      | executeLargeUpdate | executeBatch             |
+|-------------------|--------------------|--------------------|--------------------|--------------------|--------------------------|
+| Statement         | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_multiplication_x: |
+| PreparedStatement | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_multiplication_x: |
+| CallableStatement | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_multiplication_x: |
+
 ## Package description
 
-TODO
+`SqlSupport` is a Disco Package that can be installed by standalone Agents to gain interception and
+event publication for the features described above.
 
 ## Why the separation into two projects?
 
