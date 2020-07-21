@@ -15,8 +15,14 @@
 
 package software.amazon.disco.instrumentation.preprocess.loaders.agents;
 
+import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.inject.Injector;
+import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.instrumentation.preprocess.exceptions.NoPathProvidedException;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.TransformationListener;
+
+import java.io.File;
+import java.lang.instrument.Instrumentation;
 
 /**
  * Agent loader used to dynamically load a Java Agent at runtime by calling the
@@ -39,11 +45,27 @@ public class DiscoAgentLoader implements AgentLoader {
 
     /**
      * {@inheritDoc}
-     * Install a monolithic agent by directly invoking the {@link Injector} api.
+     * Install an agent by directly invoking the {@link Injector} api.
      */
     @Override
     public void loadAgent() {
-        Injector.loadAgent(path, null);
+        final Instrumentation instrumentation = Injector.createInstrumentation();
+        Injector.addToBootstrapClasspath(instrumentation, new File(path));
+
+        AgentConfig.setAgentBuilderTransformer(
+                (agentBuilder, installable) -> agentBuilder.with(new TransformationListener(uuidGenerate(installable))));
+
+        Injector.loadAgent(instrumentation, path, null);
+    }
+
+    /**
+     * Generate a uuid to identify the {@link Installable} being passed in.
+     *
+     * @param installable an Installable that will have a TransformationListener installed on.
+     * @return a uuid that identifies the Installable passed in.
+     */
+    private String uuidGenerate(Installable installable) {
+        return "mock uuid"; //TODO
     }
 }
 

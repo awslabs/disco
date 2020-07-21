@@ -15,12 +15,18 @@
 
 package software.amazon.disco.agent.config;
 
+import net.bytebuddy.agent.builder.AgentBuilder;
+import software.amazon.disco.agent.interception.Installable;
+
 import java.util.List;
+import java.util.function.BiFunction;
 
 /**
  * Holds agent configuration parsed during bootstrap.
  */
 public class AgentConfig {
+    private static BiFunction<AgentBuilder, Installable, AgentBuilder> agentBuilderTransformer = new NoOpAgentBuilderTransformer();
+
     private List<String> args;
     private boolean isRuntimeOnly = false;
     private String pluginPath = null;
@@ -35,6 +41,36 @@ public class AgentConfig {
      */
     public AgentConfig(List<String> args) {
         this.args = args;
+    }
+
+    /**
+     * A default, 'identity', AgentBuilderTransformer, that just returns the inputted AgentBuilder
+     */
+    private static class NoOpAgentBuilderTransformer implements BiFunction<AgentBuilder, Installable, AgentBuilder> {
+        @Override
+        public AgentBuilder apply(AgentBuilder agentBuilder, Installable installable) {
+            return agentBuilder;
+        }
+    }
+
+    /**
+     * Set a Transformer (a function taking an AgentBuilder, an Installable, and returning an AgentBuilder).
+     * This transformer will be invoked in InterceptionInstaller to apply transformations on all Installables of
+     * a given agent. Passing a null value will reset the AgentBuilderTransformer to the default value: {@link NoOpAgentBuilderTransformer}
+     *
+     * @param agentBuilderTransformer the AgentBuilder Transformer to be applied to an AgentBuilder
+     */
+    public static void setAgentBuilderTransformer(BiFunction<AgentBuilder, Installable, AgentBuilder> agentBuilderTransformer) {
+        AgentConfig.agentBuilderTransformer = agentBuilderTransformer == null ? new NoOpAgentBuilderTransformer() : agentBuilderTransformer;
+    }
+
+    /**
+     * Get the registered Transformer (a function taking an AgentBuilder, an Installable, and returning an AgentBuilder)
+     *
+     * @return a transformed AgentBuilder instance, which may not be the same instance that was passed.
+     */
+    public BiFunction<AgentBuilder, Installable, AgentBuilder> getAgentBuilderTransformer() {
+        return AgentConfig.agentBuilderTransformer;
     }
 
     /**

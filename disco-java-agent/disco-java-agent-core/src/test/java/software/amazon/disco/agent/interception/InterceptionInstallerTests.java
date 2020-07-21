@@ -16,19 +16,21 @@
 package software.amazon.disco.agent.interception;
 
 import net.bytebuddy.agent.builder.AgentBuilder;
-import net.bytebuddy.matcher.ElementMatcher;
-import org.mockito.Mockito;
-import software.amazon.disco.agent.config.AgentConfig;
 import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.config.AgentConfigParser;
 
 import java.lang.instrument.Instrumentation;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 public class InterceptionInstallerTests {
@@ -62,7 +64,7 @@ public class InterceptionInstallerTests {
     @Test
     public void testNullAgentBuilderIsSafe() {
         InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
-        Installable installable = (agentBuilder)->null;
+        Installable installable = (agentBuilder) -> null;
         Set<Installable> installables = new HashSet<>();
         installables.add(installable);
         interceptionInstaller.install(null, installables, new AgentConfig(null), ElementMatchers.none());
@@ -124,6 +126,134 @@ public class InterceptionInstallerTests {
             Mockito.verify(installable).install(factory.agentBuilder);
         }
         interceptionInstaller.setAgentBuilderFactory(original);
+    }
+
+    @Test
+    public void testInstallWorksWithACollectionOfInstallables() {
+        InterceptionInstaller interceptionInstaller = Mockito.spy(InterceptionInstaller.getInstance());
+        Instrumentation instrumentation = Mockito.mock(Instrumentation.class);
+
+        Installable installable_a = Mockito.mock(Installable.class);
+        Installable installable_b = Mockito.mock(Installable.class);
+        AgentBuilder builder_a = Mockito.mock(AgentBuilder.class);
+        AgentBuilder builder_b = Mockito.mock(AgentBuilder.class);
+
+        Mockito.doReturn(builder_a).when(installable_a).install(Mockito.any());
+        Mockito.doReturn(builder_b).when(installable_b).install(Mockito.any());
+
+        interceptionInstaller.install(instrumentation, new HashSet<>(Arrays.asList(installable_a, installable_b)), new AgentConfig(null), null);
+
+        Mockito.verify(installable_a).install(Mockito.any());
+        Mockito.verify(installable_b).install(Mockito.any());
+
+        Mockito.verify(builder_a).installOn(instrumentation);
+        Mockito.verify(builder_b).installOn(instrumentation);
+    }
+
+    @Test
+    public void testDefaultAgentBuilderTransformerDoesNothing() {
+        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
+
+        MockAgentBuilderFactory factory = new MockAgentBuilderFactory();
+        interceptionInstaller.setAgentBuilderFactory(factory);
+
+        AgentBuilder builder = factory.get();
+        AgentConfig agentConfig = Mockito.spy(new AgentConfig(null));
+        Installable installable = Mockito.mock(Installable.class);
+
+        //spy on the real default transformer
+        BiFunction<AgentBuilder, Installable, AgentBuilder> agentBuilderTransformer = Mockito.spy(agentConfig.getAgentBuilderTransformer());
+
+        interceptionInstaller.setAgentBuilderFactory(factory);
+
+        //return the spied instance of the default transformer instead.
+        Mockito.when(agentConfig.getAgentBuilderTransformer()).thenReturn(agentBuilderTransformer);
+
+        interceptionInstaller.install(
+                Mockito.mock(Instrumentation.class),
+                new HashSet(Arrays.asList(installable)),
+                agentConfig,
+                ElementMatchers.none());
+
+        Mockito.verify(agentBuilderTransformer).apply(builder, installable);
+
+        //first interaction occurs when an ignore matcher is being added to the builder which is an intended operation.
+        Mockito.verify(builder).ignore(Mockito.any(ElementMatcher.class));
+        Mockito.verifyNoMoreInteractions(builder);
+        Mockito.verify(installable).install(Mockito.eq(builder));
+    }
+
+    @Test
+    public void testNonDefaultAgentBuilderTransformerReturningSameInstance(){
+        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
+
+        MockAgentBuilderFactory factory = new MockAgentBuilderFactory();
+        interceptionInstaller.setAgentBuilderFactory(factory);
+
+        AgentBuilder builder = factory.get();
+        AgentConfig agentConfig = Mockito.spy(new AgentConfig(null));
+        Installable installable = Mockito.mock(Installable.class);
+
+        BiFunction<AgentBuilder, Installable, AgentBuilder> agentBuilderTransformer = Mockito.spy(new BiFunction<AgentBuilder, Installable, AgentBuilder>() {
+            @Override
+            public AgentBuilder apply(AgentBuilder agentBuilder, Installable installable) {
+                agentBuilder.disableClassFormatChanges();
+                return agentBuilder;
+            }
+        });
+
+        Mockito.when(agentConfig.getAgentBuilderTransformer()).thenReturn(agentBuilderTransformer);
+
+        interceptionInstaller.install(
+                Mockito.mock(Instrumentation.class),
+                new HashSet(Arrays.asList(installable)),
+                agentConfig,
+                ElementMatchers.none());
+
+        Mockito.verify(agentBuilderTransformer).apply(builder, installable);
+
+        //first interaction occurs when an ignore matcher is being added to the builder which is an intended operation.
+        Mockito.verify(builder).ignore(Mockito.any(ElementMatcher.class));
+        Mockito.verify(builder).disableClassFormatChanges();
+        Mockito.verify(installable).install(Mockito.eq(builder));
+    }
+
+    @Test
+    public void testNonDefaultAgentBuilderTransformerReturningDifferentInstance(){
+        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
+
+        MockAgentBuilderFactory factory = new MockAgentBuilderFactory();
+        interceptionInstaller.setAgentBuilderFactory(factory);
+
+        AgentBuilder originalBuilder = factory.get();
+        AgentBuilder differentBuilder = Mockito.mock(AgentBuilder.class);
+        AgentConfig agentConfig = Mockito.spy(new AgentConfig(null));
+        Installable installable = Mockito.mock(Installable.class);
+
+        BiFunction<AgentBuilder, Installable, AgentBuilder> agentBuilderTransformer = Mockito.spy(new BiFunction<AgentBuilder, Installable, AgentBuilder>() {
+            @Override
+            public AgentBuilder apply(AgentBuilder agentBuilder, Installable installable) {
+                return differentBuilder;
+            }
+        });
+
+        Mockito.when(agentConfig.getAgentBuilderTransformer()).thenReturn(agentBuilderTransformer);
+
+        interceptionInstaller.install(
+                Mockito.mock(Instrumentation.class),
+                new HashSet(Arrays.asList(installable)),
+                agentConfig,
+                ElementMatchers.none());
+
+        Mockito.verify(agentBuilderTransformer).apply(originalBuilder, installable);
+
+        //first interaction occurs when an ignore matcher is being added to the builder which is an intended operation.
+        Mockito.verify(originalBuilder).ignore(Mockito.any(ElementMatcher.class));
+
+        ArgumentCaptor<AgentBuilder> agentBuilderArgumentCaptor = ArgumentCaptor.forClass(AgentBuilder.class);
+        Mockito.verify(installable).install(agentBuilderArgumentCaptor.capture());
+        Assert.assertEquals(differentBuilder, agentBuilderArgumentCaptor.getValue());
+        Assert.assertNotEquals(originalBuilder, differentBuilder);
     }
 
     private boolean classMatches(Class clazz) {

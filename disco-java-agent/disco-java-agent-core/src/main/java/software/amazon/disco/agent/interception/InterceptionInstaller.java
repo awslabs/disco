@@ -60,8 +60,7 @@ public class InterceptionInstaller {
      */
     public void install(Instrumentation instrumentation, Set<Installable> installables, AgentConfig config,
                         ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
-        ElementMatcher<? super TypeDescription> ignoreMatcher = createIgnoreMatcher(customIgnoreMatcher);
-
+        final ElementMatcher<? super TypeDescription> ignoreMatcher = createIgnoreMatcher(customIgnoreMatcher);
 
         for (Installable installable: installables) {
             //We create a new Agent for each Installable, otherwise their matching rules can
@@ -74,8 +73,11 @@ public class InterceptionInstaller {
                 agentBuilder = agentBuilder.with(InterceptionListener.create(installable));
             }
 
+            agentBuilder = config.getAgentBuilderTransformer().apply(agentBuilder, installable);
+
             log.info("DiSCo(Core) attempting to install "+installable.getClass().getName());
             agentBuilder = installable.install(agentBuilder);
+
             if (agentBuilder != null) {
                 agentBuilder.installOn(instrumentation);
             }
