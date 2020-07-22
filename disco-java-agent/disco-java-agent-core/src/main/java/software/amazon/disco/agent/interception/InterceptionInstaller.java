@@ -24,6 +24,7 @@ import net.bytebuddy.matcher.ElementMatcher;
 
 import java.lang.instrument.Instrumentation;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
 
@@ -33,12 +34,13 @@ import static net.bytebuddy.matcher.ElementMatchers.*;
 public class InterceptionInstaller {
     private static final InterceptionInstaller INSTANCE = new InterceptionInstaller();
     private static final Logger log = LogManager.getLogger(InterceptionInstaller.class);
+    private Supplier<AgentBuilder> agentBuilderFactory;
 
     /**
      * Private constructor for singleton semantics
      */
     private InterceptionInstaller() {
-
+        agentBuilderFactory = new DefaultAgentBuilderFactory();
     }
 
     /**
@@ -64,7 +66,7 @@ public class InterceptionInstaller {
         for (Installable installable: installables) {
             //We create a new Agent for each Installable, otherwise their matching rules can
             //compete with each other.
-            AgentBuilder agentBuilder = new AgentBuilder.Default()
+            AgentBuilder agentBuilder = agentBuilderFactory.get()
                     .ignore(ignoreMatcher);
 
             //The Interception listener is expensive during class loading, and limited value most of the time
@@ -104,5 +106,30 @@ public class InterceptionInstaller {
 
         return excludedNamespaces.or(customIgnoreMatcher);
 
+    }
+
+    /**
+     * Override the default AgentBuilder factory. Expected to be used only in tests, so package-private.
+     * @param agentBuilderFactory the new (probably mock) AgentBuilder factory to use.
+     * @return the previous AgentBuilder factory
+     */
+    Supplier<AgentBuilder> setAgentBuilderFactory(Supplier<AgentBuilder> agentBuilderFactory) {
+        Supplier<AgentBuilder> ret = this.agentBuilderFactory;
+        this.agentBuilderFactory = agentBuilderFactory;
+        return ret;
+    }
+
+    /**
+     * A default Factory for creation of AgentBuilder instances
+     */
+    private static class DefaultAgentBuilderFactory implements Supplier<AgentBuilder> {
+        /**
+         * Factory method to produce a real AgentBuilder
+         * @return an AgentBuilder in the default case
+         */
+        @Override
+        public AgentBuilder get() {
+            return new AgentBuilder.Default();
+        }
     }
 }

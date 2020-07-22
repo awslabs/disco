@@ -15,6 +15,7 @@
 
 package software.amazon.disco.agent;
 
+import org.mockito.Spy;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.interception.InterceptionInstaller;
@@ -41,7 +42,7 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 
 public class DiscoAgentTemplateTests {
-    @Mock
+    @Spy
     private InterceptionInstaller mockInterceptionInstaller;
 
     @Mock
