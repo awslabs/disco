@@ -95,7 +95,7 @@ public class JarModuleExportStrategy implements ModuleExportStrategy {
                 tempDir = Files.createTempDirectory("disco");
             }
 
-            return Files.createTempFile(tempDir, moduleInfo.getJarFile().getName(), null).toFile();
+            return Files.createTempFile(tempDir, moduleInfo.getFile().getName(), null).toFile();
         } catch (IOException e) {
             throw new ModuleExportException("Failed to create temp Jar file", e);
         }

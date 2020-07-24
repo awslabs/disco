@@ -15,12 +15,14 @@
 
 plugins {
     id("io.freefair.lombok") version "5.1.0"
+    id("com.github.johnrengelman.shadow")
 }
 
 dependencies {
-    implementation(project(":disco-java-agent:disco-java-agent-core"))
-    implementation(project(":disco-java-agent:disco-java-agent-api"))
+    compileOnly(project(":disco-java-agent:disco-java-agent-core"))
+    compileOnly(project(":disco-java-agent:disco-java-agent-api"))
     implementation(project(":disco-java-agent:disco-java-agent-inject-api"))
-
     implementation("org.apache.logging.log4j", "log4j-core", "2.13.3")
+    testImplementation(project(":disco-java-agent:disco-java-agent-core"))
+    testImplementation(project(":disco-java-agent:disco-java-agent-api"))
 }

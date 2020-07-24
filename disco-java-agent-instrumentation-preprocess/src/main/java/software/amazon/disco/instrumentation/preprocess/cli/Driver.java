@@ -15,9 +15,13 @@
 
 package software.amazon.disco.instrumentation.preprocess.cli;
 
+import software.amazon.disco.agent.inject.Injector;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.ModuleTransformer;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.DiscoAgentLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.modules.JarModuleLoader;
+
+import java.io.File;
+import java.lang.instrument.Instrumentation;
 
 /**
  * Entry point of the library. A {@link ModuleTransformer} instance is being created to orchestrate the instrumentation
@@ -27,9 +31,15 @@ public class Driver {
     public static void main(String[] args) {
         final PreprocessConfig config = new PreprocessConfigParser().parseCommandLine(args);
 
-        if(config == null){
+        if (config == null) {
             System.exit(1);
         }
+
+        final Instrumentation instrumentation = Injector.createInstrumentation();
+
+        // inject the agent jar into the classpath as earlier as possible to avoid ClassNotFound exception when resolving
+        // types imported from libraries such as ByteBuddy shaded in the agent JAR
+        Injector.addToBootstrapClasspath(instrumentation, new File(config.getAgentPath()));
 
         ModuleTransformer.builder()
                 .agentLoader(new DiscoAgentLoader(config.getAgentPath(), config.getCoreAgentConfig()))
