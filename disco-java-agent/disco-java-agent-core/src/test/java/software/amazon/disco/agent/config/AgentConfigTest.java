@@ -21,14 +21,14 @@ public class AgentConfigTest {
         BiFunction<AgentBuilder, Installable, AgentBuilder> defaultTransformer = config.getAgentBuilderTransformer();
         BiFunction<AgentBuilder, Installable, AgentBuilder> mockTransformer = Mockito.mock(BiFunction.class);
 
-        AgentConfig.setAgentBuilderTransformer(mockTransformer);
+        config.setAgentBuilderTransformer(mockTransformer);
 
         Assert.assertNotEquals(defaultTransformer, config.getAgentBuilderTransformer());
     }
 
     @Test
     public void testSetNullAgentBuilderTransformerResetsToDefaultTransformer(){
-        AgentConfig.setAgentBuilderTransformer(null);
+        config.setAgentBuilderTransformer(null);
 
         Assert.assertNotNull(config.getAgentBuilderTransformer());
     }

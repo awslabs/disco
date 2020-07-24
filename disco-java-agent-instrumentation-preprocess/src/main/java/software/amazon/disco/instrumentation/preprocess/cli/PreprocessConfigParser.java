@@ -19,6 +19,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.Level;
+import software.amazon.disco.agent.config.AgentConfig;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -49,7 +50,7 @@ public class PreprocessConfigParser {
         }
 
         setupAcceptedFlags();
-        PreprocessConfig.PreprocessConfigBuilder builder = PreprocessConfig.builder();
+        PreprocessConfig.PreprocessConfigBuilder builder = PreprocessConfig.builder().coreAgentConfig(new AgentConfig(null));
 
         OptionToMatch flagBeingMatched = null;
 

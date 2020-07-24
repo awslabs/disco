@@ -27,18 +27,23 @@ import software.amazon.disco.instrumentation.preprocess.instrumentation.Transfor
 public class DiscoAgentLoaderTest {
     @Test(expected = NoPathProvidedException.class)
     public void testConstructorFailOnNullPaths() throws NoPathProvidedException {
-        new DiscoAgentLoader(null);
+        new DiscoAgentLoader(null, null);
     }
 
     @Test
     public void testLoadAgentCallsSetAgentBuilderTransformer(){
-        DiscoAgentLoader loader = Mockito.spy(new DiscoAgentLoader("a path"));
+        AgentConfig agentConfig = new AgentConfig(null);
+        DiscoAgentLoader loader = new DiscoAgentLoader("a path", agentConfig);
+        loader.loadAgent();
+        Assert.assertEquals(agentConfig.getAgentBuilderTransformer(), DiscoAgentLoader.getAgentBuilderTransformer());
+
+    }
+
+    @Test
+    public void testAgentBuilderTransformerTransforms() {
         AgentBuilder builder = Mockito.mock(AgentBuilder.class);
         Installable installable = Mockito.mock(Installable.class);
-
-        loader.loadAgent();
-        new AgentConfig(null).getAgentBuilderTransformer().apply(builder, installable);
-
+        DiscoAgentLoader.getAgentBuilderTransformer().apply(builder, installable);
         Mockito.verify(builder).with(Mockito.any(TransformationListener.class));
     }
 }

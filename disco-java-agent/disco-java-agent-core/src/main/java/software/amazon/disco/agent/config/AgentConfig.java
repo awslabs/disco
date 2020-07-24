@@ -25,7 +25,7 @@ import java.util.function.BiFunction;
  * Holds agent configuration parsed during bootstrap.
  */
 public class AgentConfig {
-    private static BiFunction<AgentBuilder, Installable, AgentBuilder> agentBuilderTransformer = new NoOpAgentBuilderTransformer();
+    private BiFunction<AgentBuilder, Installable, AgentBuilder> agentBuilderTransformer = new NoOpAgentBuilderTransformer();
 
     private List<String> args;
     private boolean isRuntimeOnly = false;
@@ -60,8 +60,8 @@ public class AgentConfig {
      *
      * @param agentBuilderTransformer the AgentBuilder Transformer to be applied to an AgentBuilder
      */
-    public static void setAgentBuilderTransformer(BiFunction<AgentBuilder, Installable, AgentBuilder> agentBuilderTransformer) {
-        AgentConfig.agentBuilderTransformer = agentBuilderTransformer == null ? new NoOpAgentBuilderTransformer() : agentBuilderTransformer;
+    public void setAgentBuilderTransformer(BiFunction<AgentBuilder, Installable, AgentBuilder> agentBuilderTransformer) {
+        this.agentBuilderTransformer = agentBuilderTransformer == null ? new NoOpAgentBuilderTransformer() : agentBuilderTransformer;
     }
 
     /**
@@ -70,7 +70,7 @@ public class AgentConfig {
      * @return a transformed AgentBuilder instance, which may not be the same instance that was passed.
      */
     public BiFunction<AgentBuilder, Installable, AgentBuilder> getAgentBuilderTransformer() {
-        return AgentConfig.agentBuilderTransformer;
+        return agentBuilderTransformer;
     }
 
     /**

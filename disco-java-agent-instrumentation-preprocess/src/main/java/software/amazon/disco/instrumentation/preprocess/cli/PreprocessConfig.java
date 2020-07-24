@@ -19,6 +19,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Singular;
 import org.apache.logging.log4j.Level;
+import software.amazon.disco.agent.config.AgentConfig;
 
 import java.util.List;
 
@@ -36,4 +37,6 @@ public class PreprocessConfig {
     private final String suffix;
     private final Level logLevel;
     private final String serializationJarPath;
+
+    private final AgentConfig coreAgentConfig;
 }

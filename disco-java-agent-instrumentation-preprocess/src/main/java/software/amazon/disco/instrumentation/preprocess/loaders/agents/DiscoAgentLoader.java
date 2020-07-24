@@ -15,6 +15,7 @@
 
 package software.amazon.disco.instrumentation.preprocess.loaders.agents;
 
+import net.bytebuddy.agent.builder.AgentBuilder;
 import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.inject.Injector;
 import software.amazon.disco.agent.interception.Installable;
@@ -23,6 +24,7 @@ import software.amazon.disco.instrumentation.preprocess.instrumentation.Transfor
 
 import java.io.File;
 import java.lang.instrument.Instrumentation;
+import java.util.function.BiFunction;
 
 /**
  * Agent loader used to dynamically load a Java Agent at runtime by calling the
@@ -30,17 +32,19 @@ import java.lang.instrument.Instrumentation;
  */
 public class DiscoAgentLoader implements AgentLoader {
     protected String path;
+    private final AgentConfig agentConfig;
 
     /**
      * Constructor
      *
      * @param path path of the agent to be loaded
      */
-    public DiscoAgentLoader(final String path) {
+    public DiscoAgentLoader(final String path, AgentConfig agentConfig) {
         if (path == null) {
             throw new NoPathProvidedException();
         }
         this.path = path;
+        this.agentConfig = agentConfig;
     }
 
     /**
@@ -52,8 +56,7 @@ public class DiscoAgentLoader implements AgentLoader {
         final Instrumentation instrumentation = Injector.createInstrumentation();
         Injector.addToBootstrapClasspath(instrumentation, new File(path));
 
-        AgentConfig.setAgentBuilderTransformer(
-                (agentBuilder, installable) -> agentBuilder.with(new TransformationListener(uuidGenerate(installable))));
+        agentConfig.setAgentBuilderTransformer(getAgentBuilderTransformer());
 
         Injector.loadAgent(instrumentation, path, null);
     }
@@ -64,8 +67,16 @@ public class DiscoAgentLoader implements AgentLoader {
      * @param installable an Installable that will have a TransformationListener installed on.
      * @return a uuid that identifies the Installable passed in.
      */
-    private String uuidGenerate(Installable installable) {
+    private static String uuidGenerate(Installable installable) {
         return "mock uuid"; //TODO
+    }
+
+    /**
+     * Access the AgentBuilder transformer that DiscoAgentLoader will use. Package-private for tests.
+     * @return an AgentBuilder transformer suitable for the code InterceptionInstaller.
+     */
+    static BiFunction<AgentBuilder, Installable, AgentBuilder> getAgentBuilderTransformer() {
+        return (agentBuilder, installable) -> agentBuilder.with(new TransformationListener(uuidGenerate(installable)));
     }
 }
 

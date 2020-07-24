@@ -32,7 +32,7 @@ public class Driver {
         }
 
         ModuleTransformer.builder()
-                .agentLoader(new DiscoAgentLoader(config.getAgentPath()))
+                .agentLoader(new DiscoAgentLoader(config.getAgentPath(), config.getCoreAgentConfig()))
                 .jarLoader(new JarModuleLoader(config.getJarPaths()))
                 .suffix(config.getSuffix())
                 .logLevel(config.getLogLevel())
