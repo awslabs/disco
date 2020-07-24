@@ -43,7 +43,7 @@ import static org.junit.Assert.assertEquals;
 
 public class DiscoAgentTemplateTests {
     @Spy
-    private InterceptionInstaller mockInterceptionInstaller;
+    private InterceptionInstaller mockInterceptionInstaller = InterceptionInstaller.getInstance();
 
     @Mock
     private Instrumentation instrumentation;

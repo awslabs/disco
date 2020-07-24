@@ -32,15 +32,15 @@ import static net.bytebuddy.matcher.ElementMatchers.*;
  * Class to control installation of interceptions/advice on target methods.
  */
 public class InterceptionInstaller {
-    private static final InterceptionInstaller INSTANCE = new InterceptionInstaller();
+    private static final InterceptionInstaller INSTANCE = new InterceptionInstaller(new DefaultAgentBuilderFactory());
     private static final Logger log = LogManager.getLogger(InterceptionInstaller.class);
-    private Supplier<AgentBuilder> agentBuilderFactory;
+    private final Supplier<AgentBuilder> agentBuilderFactory;
 
     /**
-     * Private constructor for singleton semantics
+     * Non-public constructor for singleton semantics. Package-private for tests
      */
-    private InterceptionInstaller() {
-        agentBuilderFactory = new DefaultAgentBuilderFactory();
+    InterceptionInstaller(Supplier<AgentBuilder> agentBuilderFactory) {
+        this.agentBuilderFactory = agentBuilderFactory;
     }
 
     /**
@@ -108,17 +108,6 @@ public class InterceptionInstaller {
 
         return excludedNamespaces.or(customIgnoreMatcher);
 
-    }
-
-    /**
-     * Override the default AgentBuilder factory. Expected to be used only in tests, so package-private.
-     * @param agentBuilderFactory the new (probably mock) AgentBuilder factory to use.
-     * @return the previous AgentBuilder factory
-     */
-    Supplier<AgentBuilder> setAgentBuilderFactory(Supplier<AgentBuilder> agentBuilderFactory) {
-        Supplier<AgentBuilder> ret = this.agentBuilderFactory;
-        this.agentBuilderFactory = agentBuilderFactory;
-        return ret;
     }
 
     /**

@@ -63,8 +63,9 @@ public class InterceptionInstallerTests {
 
     @Test
     public void testNullAgentBuilderIsSafe() {
-        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
-        Installable installable = (agentBuilder) -> null;
+        AgentBuilder agentBuilder = Mockito.mock(AgentBuilder.class);
+        InterceptionInstaller interceptionInstaller = new InterceptionInstaller(()->agentBuilder);
+        Installable installable = (ab) -> null;
         Set<Installable> installables = new HashSet<>();
         installables.add(installable);
         interceptionInstaller.install(null, installables, new AgentConfig(null), ElementMatchers.none());
@@ -73,64 +74,55 @@ public class InterceptionInstallerTests {
     @Test
     public void testAgentBuilderHasDefaultIgnoreMatcher() {
         ElementMatcher<? super TypeDescription> ignoreMatcher = InterceptionInstaller.createIgnoreMatcher(ElementMatchers.none());
-        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
         AgentBuilder agentBuilder = Mockito.mock(AgentBuilder.class);
-        Supplier<AgentBuilder> original = interceptionInstaller.setAgentBuilderFactory(()->agentBuilder);
+        InterceptionInstaller interceptionInstaller = new InterceptionInstaller(()->agentBuilder);
         interceptionInstaller.install(Mockito.mock(Instrumentation.class), new HashSet<>(Arrays.asList((a)->a)), new AgentConfig(null), ElementMatchers.none());
         Mockito.verify(agentBuilder).ignore(Mockito.eq(ignoreMatcher));
-        interceptionInstaller.setAgentBuilderFactory(original);
     }
 
     @Test
     public void testAgentBuilderNotHasListenerWhenNotVerbose() {
-        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
         MockAgentBuilderFactory factory = new MockAgentBuilderFactory();
-        Supplier<AgentBuilder> original = interceptionInstaller.setAgentBuilderFactory(factory);
+        InterceptionInstaller interceptionInstaller = new InterceptionInstaller(factory);
         interceptionInstaller.install(Mockito.mock(Instrumentation.class), new HashSet<>(Arrays.asList((a)->a)), new AgentConfig(null), ElementMatchers.none());
         Mockito.verify(factory.agentBuilder, Mockito.never()).with(Mockito.any(AgentBuilder.Listener.class));
-        interceptionInstaller.setAgentBuilderFactory(original);
     }
 
     @Test
     public void testAgentBuilderHasListenerWhenVerbose() {
-        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
         MockAgentBuilderFactory factory = new MockAgentBuilderFactory();
-        Supplier<AgentBuilder> original = interceptionInstaller.setAgentBuilderFactory(factory);
+        InterceptionInstaller interceptionInstaller = new InterceptionInstaller(factory);
         AgentConfig agentConfig = new AgentConfigParser().parseCommandLine("extraverbose");
         interceptionInstaller.install(Mockito.mock(Instrumentation.class), new HashSet<>(Arrays.asList((a)->a)), agentConfig, ElementMatchers.none());
         Mockito.verify(factory.agentBuilder).with(Mockito.any(AgentBuilder.Listener.class));
-        interceptionInstaller.setAgentBuilderFactory(original);
     }
 
     @Test
     public void testAgentBuilderIsInstalledOnInstrumentation() {
-        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
         MockAgentBuilderFactory factory = new MockAgentBuilderFactory();
-        Supplier<AgentBuilder> original = interceptionInstaller.setAgentBuilderFactory(factory);
+        InterceptionInstaller interceptionInstaller = new InterceptionInstaller(factory);
         Instrumentation instrumentation = Mockito.mock(Instrumentation.class);
         interceptionInstaller.install(instrumentation, new HashSet<>(Arrays.asList((a)->a)), new AgentConfig(null), ElementMatchers.none());
         Mockito.verify(factory.agentBuilder).installOn(instrumentation);
-        interceptionInstaller.setAgentBuilderFactory(original);
     }
 
 
     @Test
     public void testInstallablesInstallMethodCalled() {
-        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
         MockAgentBuilderFactory factory = new MockAgentBuilderFactory();
-        Supplier<AgentBuilder> original = interceptionInstaller.setAgentBuilderFactory(factory);
+        InterceptionInstaller interceptionInstaller = new InterceptionInstaller(factory);
         Instrumentation instrumentation = Mockito.mock(Instrumentation.class);
         Set<Installable> installables = new HashSet<>(Arrays.asList(Mockito.mock(Installable.class)));
         interceptionInstaller.install(instrumentation, installables, new AgentConfig(null), ElementMatchers.none());
         for (Installable installable: installables) {
             Mockito.verify(installable).install(factory.agentBuilder);
         }
-        interceptionInstaller.setAgentBuilderFactory(original);
     }
 
     @Test
     public void testInstallWorksWithACollectionOfInstallables() {
-        InterceptionInstaller interceptionInstaller = Mockito.spy(InterceptionInstaller.getInstance());
+        AgentBuilder agentBuilder = Mockito.mock(AgentBuilder.class);
+        InterceptionInstaller interceptionInstaller = Mockito.spy(new InterceptionInstaller(()->agentBuilder));
         Instrumentation instrumentation = Mockito.mock(Instrumentation.class);
 
         Installable installable_a = Mockito.mock(Installable.class);
@@ -152,10 +144,9 @@ public class InterceptionInstallerTests {
 
     @Test
     public void testDefaultAgentBuilderTransformerDoesNothing() {
-        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
-
         MockAgentBuilderFactory factory = new MockAgentBuilderFactory();
-        interceptionInstaller.setAgentBuilderFactory(factory);
+        InterceptionInstaller interceptionInstaller = new InterceptionInstaller(factory);
+
 
         AgentBuilder builder = factory.get();
         AgentConfig agentConfig = Mockito.spy(new AgentConfig(null));
@@ -164,7 +155,6 @@ public class InterceptionInstallerTests {
         //spy on the real default transformer
         BiFunction<AgentBuilder, Installable, AgentBuilder> agentBuilderTransformer = Mockito.spy(agentConfig.getAgentBuilderTransformer());
 
-        interceptionInstaller.setAgentBuilderFactory(factory);
 
         //return the spied instance of the default transformer instead.
         Mockito.when(agentConfig.getAgentBuilderTransformer()).thenReturn(agentBuilderTransformer);
@@ -185,10 +175,8 @@ public class InterceptionInstallerTests {
 
     @Test
     public void testNonDefaultAgentBuilderTransformerReturningSameInstance(){
-        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
-
         MockAgentBuilderFactory factory = new MockAgentBuilderFactory();
-        interceptionInstaller.setAgentBuilderFactory(factory);
+        InterceptionInstaller interceptionInstaller = new InterceptionInstaller(factory);
 
         AgentBuilder builder = factory.get();
         AgentConfig agentConfig = Mockito.spy(new AgentConfig(null));
@@ -220,10 +208,8 @@ public class InterceptionInstallerTests {
 
     @Test
     public void testNonDefaultAgentBuilderTransformerReturningDifferentInstance(){
-        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
-
         MockAgentBuilderFactory factory = new MockAgentBuilderFactory();
-        interceptionInstaller.setAgentBuilderFactory(factory);
+        InterceptionInstaller interceptionInstaller = new InterceptionInstaller(factory);
 
         AgentBuilder originalBuilder = factory.get();
         AgentBuilder differentBuilder = Mockito.mock(AgentBuilder.class);
