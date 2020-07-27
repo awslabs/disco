@@ -15,6 +15,8 @@
 
 package software.amazon.disco.instrumentation.preprocess.loaders.modules;
 
+import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
+
 import java.util.List;
 
 /**
@@ -25,7 +27,9 @@ public interface ModuleLoader {
      * Loads all the modules found under the paths specified and aggregate them into a single list of {@link ModuleInfo}.
      * Names of all the classes within each package are discovered and stored inside {@link ModuleInfo}.
      *
+     * @param config a PreprocessConfig containing information to perform module instrumentation
+     *
      * @return list of {@link ModuleInfo} loaded by this package loader. Empty if no modules found.
      */
-    List<ModuleInfo> loadPackages();
+    List<ModuleInfo> loadPackages(PreprocessConfig config);
 }

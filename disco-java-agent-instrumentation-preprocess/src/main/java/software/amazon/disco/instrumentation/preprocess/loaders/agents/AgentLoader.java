@@ -16,14 +16,18 @@
 package software.amazon.disco.instrumentation.preprocess.loaders.agents;
 
 import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
+
+import java.lang.instrument.Instrumentation;
 
 /**
  * Agent loader interface that loads Java Agents and {@link Installable}
  */
 public interface AgentLoader {
-
     /**
      * load and install the agent dynamically at runtime.
+     * @param config          a PreprocessConfig containing information to perform module instrumentation
+     * @param instrumentation instrumentation instance that will be used to load the agent
      */
-    void loadAgent();
+    void loadAgent(PreprocessConfig config, Instrumentation instrumentation);
 }

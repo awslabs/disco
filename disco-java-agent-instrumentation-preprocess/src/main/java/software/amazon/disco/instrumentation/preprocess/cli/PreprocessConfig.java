@@ -21,7 +21,7 @@ import lombok.Singular;
 import org.apache.logging.log4j.Level;
 import software.amazon.disco.agent.config.AgentConfig;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * Container for the config created from the command line args
@@ -30,13 +30,14 @@ import java.util.List;
 @Getter
 public class PreprocessConfig {
     @Singular
-    private final List<String> jarPaths;
+    private final Set<String> jarPaths;
 
     private final String outputDir;
     private final String agentPath;
     private final String suffix;
     private final Level logLevel;
     private final String serializationJarPath;
+    private final String javaVersion;
 
     private final AgentConfig coreAgentConfig;
 }

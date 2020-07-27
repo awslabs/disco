@@ -15,19 +15,20 @@
 
 package software.amazon.disco.instrumentation.preprocess.exceptions;
 
-import software.amazon.disco.instrumentation.preprocess.loaders.agents.AgentLoader;
-import software.amazon.disco.instrumentation.preprocess.loaders.modules.ModuleLoader;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 /**
- * Exception thrown when initializing {@link ModuleLoader}
- * or {@link AgentLoader} with no path provided.
+ * Exception thrown when encountering an entry from {@link software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig}
+ * that is invalid.
  */
-public class NoPathProvidedException extends RuntimeException {
+public class InvalidConfigEntryException extends RuntimeException {
     /**
-     * Constructor invoking the parent constructor with a fixed error message
+     * Constructor that calls its parent with a fixed message
+     *
+     * @param configEntry config entry that is invalid
+     * @pram t cause of the error
      */
-    public NoPathProvidedException() {
-        super(PreprocessConstants.MESSAGE_PREFIX + "No path provided to load agent or package");
+    public InvalidConfigEntryException(String configEntry, Throwable t) {
+        super(PreprocessConstants.MESSAGE_PREFIX + "Invalid configuration entry: " + configEntry, t);
     }
 }

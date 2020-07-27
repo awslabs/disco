@@ -17,6 +17,7 @@ package software.amazon.disco.agent;
 
 import org.mockito.Spy;
 import software.amazon.disco.agent.concurrent.TransactionContext;
+import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.interception.InterceptionInstaller;
 import software.amazon.disco.agent.logging.LogManager;
@@ -38,6 +39,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 
@@ -61,6 +63,7 @@ public class DiscoAgentTemplateTests {
     @After
     public void after() {
         TransactionContext.clear();
+        DiscoAgentTemplate.setAgentConfigFactory(null);
     }
 
 
@@ -93,6 +96,28 @@ public class DiscoAgentTemplateTests {
         install(createDiscoAgentTemplate("key=value"), new HashSet<>(Arrays.asList(Installable.class.cast(mock))));
         List<String> args = new LinkedList<>(Arrays.asList("key=value", "domain=DOMAIN", "realm=REALM"));
         Mockito.verify(mock).handleArguments(Mockito.eq(args));
+    }
+
+    @Test
+    public void testSetAgentConfigFactory(){
+        Assert.assertNull(DiscoAgentTemplate.getAgentConfigFactory());
+        DiscoAgentTemplate.setAgentConfigFactory(()->null);
+        Assert.assertNotNull(DiscoAgentTemplate.getAgentConfigFactory());
+    }
+
+    @Test
+    public void testConstructorInvokesAgentConfigFactory(){
+        List<String> args = Mockito.mock(List.class);
+        Supplier<AgentConfig> factory = Mockito.mock(Supplier.class);
+
+        Mockito.when(factory.get()).thenReturn(new AgentConfig(args));
+        DiscoAgentTemplate.setAgentConfigFactory(factory);
+
+        DiscoAgentTemplate template = new DiscoAgentTemplate(null);
+
+        Mockito.verify(factory).get();
+        Assert.assertNotNull(DiscoAgentTemplate.getAgentConfigFactory());
+        Assert.assertSame(args, template.config.getArgs());
     }
 
     private DiscoAgentTemplate createDiscoAgentTemplate(String... args) {

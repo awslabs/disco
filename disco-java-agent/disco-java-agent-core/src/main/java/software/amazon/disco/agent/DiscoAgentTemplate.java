@@ -32,6 +32,7 @@ import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * All agent products have different needs and use-cases, but initialization is super similar between them.
@@ -40,8 +41,9 @@ import java.util.Set;
  */
 public class DiscoAgentTemplate {
     private static final Logger log = LogManager.getLogger(DiscoAgentTemplate.class);
+    private static Supplier<AgentConfig> agentConfigFactory = null;
 
-    private final AgentConfig config;
+    protected final AgentConfig config;
     private InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
     private ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher = ElementMatchers.none();
     private boolean allowPlugins = true;
@@ -53,7 +55,12 @@ public class DiscoAgentTemplate {
      * @param agentArgs any arguments passed as part of the -javaagent argument string
      */
     public DiscoAgentTemplate(String agentArgs) {
-        this.config = new AgentConfigParser().parseCommandLine(agentArgs);
+        if (agentConfigFactory == null) {
+            this.config = new AgentConfigParser().parseCommandLine(agentArgs);
+        } else {
+            this.config = agentConfigFactory.get();
+        }
+
         if (config.getLoggerFactoryClass() != null) {
             try {
                 LoggerFactory loggerFactory = LoggerFactory.class.cast(Class.forName(config.getLoggerFactoryClass(), true, ClassLoader.getSystemClassLoader()).newInstance());
@@ -158,5 +165,23 @@ public class DiscoAgentTemplate {
         InterceptionInstaller old = this.interceptionInstaller;
         this.interceptionInstaller = interceptionInstaller;
         return old;
+    }
+
+    /**
+     * Override the default AgentConfig behavior, which is to read from the command line, if there is an alternative source of configuration.
+     * Must be called before constructing DiscoAgentTemplate.
+     * @param factory the new supplier of an AgentConfig to use.
+     */
+    public static void setAgentConfigFactory(Supplier<AgentConfig> factory) {
+        agentConfigFactory = factory;
+    }
+
+    /**
+     * Retrieve the current AgentConfigFactory
+     *
+     * @return the currently configured AgentConfigFactory, null if unset.
+     */
+    public static Supplier<AgentConfig> getAgentConfigFactory() {
+        return agentConfigFactory;
     }
 }

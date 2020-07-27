@@ -21,7 +21,10 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
+import software.amazon.disco.agent.inject.Injector;
+import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.AgentLoaderNotProvidedException;
+import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.ModuleLoaderNotProvidedException;
 import software.amazon.disco.instrumentation.preprocess.export.ModuleExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.AgentLoader;
@@ -45,31 +48,40 @@ public class ModuleTransformer {
 
     private final ModuleLoader jarLoader;
     private final AgentLoader agentLoader;
-    private final String suffix;
-    private final Level logLevel;
+    private final PreprocessConfig config;
 
     /**
-     * This method initiates the transformation process of all packages found under the provided paths.
+     * This method initiates the transformation process of all packages found under the provided paths. All Runtime exceptions
+     * thrown by the library are handled in this method. A detailed error message along with any available Cause will be logged
+     * and trigger the program to exit with status 1
      */
     public void transform() {
-        if (logLevel == null) {
-            Configurator.setRootLevel(Level.INFO);
-        }else{
-            Configurator.setRootLevel(logLevel);
-        }
+        try {
+            if (config == null) {throw new InvalidConfigEntryException("No configuration provided", null);}
 
-        if (agentLoader == null) throw new AgentLoaderNotProvidedException();
+            if (config.getLogLevel() == null) {
+                Configurator.setRootLevel(Level.INFO);
+            } else {
+                Configurator.setRootLevel(config.getLogLevel());
+            }
 
-        agentLoader.loadAgent();
+            if (agentLoader == null) {throw new AgentLoaderNotProvidedException();}
+            if (jarLoader == null) {throw new ModuleLoaderNotProvidedException();}
 
-        if (jarLoader == null) {
-            throw new ModuleLoaderNotProvidedException();
-        }
+            agentLoader.loadAgent(config, Injector.createInstrumentation());
 
-        // Apply instrumentation on all jars
-        for (final ModuleInfo info : jarLoader.loadPackages()) {
-            applyInstrumentation(info);
-            //todo: store serialized instrumentation state to target jar
+            if (jarLoader == null) {
+                throw new ModuleLoaderNotProvidedException();
+            }
+
+            // Apply instrumentation on all jars
+            for (final ModuleInfo info : jarLoader.loadPackages(config)) {
+                applyInstrumentation(info);
+                //todo: store serialized instrumentation state to target jar
+            }
+        } catch (RuntimeException e) {
+            log.error(e);
+            System.exit(1);
         }
     }
 
@@ -89,7 +101,7 @@ public class ModuleTransformer {
             }
         }
 
-        moduleInfo.getExportStrategy().export(moduleInfo, getInstrumentedClasses(), suffix);
+        moduleInfo.getExportStrategy().export(moduleInfo, getInstrumentedClasses(), config.getSuffix());
 
         // empty the map in preparation for transforming another package
         getInstrumentedClasses().clear();

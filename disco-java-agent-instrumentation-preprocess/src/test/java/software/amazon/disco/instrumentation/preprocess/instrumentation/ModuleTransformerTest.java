@@ -24,14 +24,14 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
-import software.amazon.disco.instrumentation.preprocess.exceptions.AgentLoaderNotProvidedException;
-import software.amazon.disco.instrumentation.preprocess.exceptions.ModuleLoaderNotProvidedException;
+import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.export.JarModuleExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.DiscoAgentLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.modules.JarModuleLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.modules.ModuleInfo;
 import software.amazon.disco.instrumentation.preprocess.util.MockEntities;
 
+import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -49,19 +49,27 @@ public class ModuleTransformerTest {
     @Mock
     JarModuleLoader mockJarPackageLoader;
 
+    PreprocessConfig config;
     List<ModuleInfo> moduleInfos;
 
     @Before
     public void before() {
+        config = PreprocessConfig.builder()
+                .agentPath("a path")
+                .jarPath("a path")
+                .suffix(PACKAGE_SUFFIX)
+                .build();
+
         spyTransformer = Mockito.spy(
                 ModuleTransformer.builder()
                         .jarLoader(mockJarPackageLoader)
                         .agentLoader(mockAgentLoader)
-                        .suffix(PACKAGE_SUFFIX)
+                        .config(config)
                         .build()
         );
 
-        Mockito.doReturn(Arrays.asList(MockEntities.makeMockPackageInfo())).when(mockJarPackageLoader).loadPackages();
+        Mockito.doReturn(Arrays.asList(MockEntities.makeMockPackageInfo()))
+                .when(mockJarPackageLoader).loadPackages(Mockito.any(PreprocessConfig.class));
 
         moduleInfos = new ArrayList<>();
         moduleInfos.add(Mockito.mock(ModuleInfo.class));
@@ -69,46 +77,27 @@ public class ModuleTransformerTest {
     }
 
     @Test
-    public void testTransformWorksWithDefaultLogLevel(){
+    public void testTransformWorksWithDefaultLogLevel() {
         spyTransformer.transform();
 
         Assert.assertEquals(LogManager.getLogger().getLevel(), Level.INFO);
     }
 
     @Test
-    public void testTransformWorksWithVerboseLogLevel(){
-        spyTransformer = Mockito.spy(
-                ModuleTransformer.builder()
-                        .jarLoader(mockJarPackageLoader)
-                        .agentLoader(mockAgentLoader)
-                        .logLevel(Level.TRACE)
-                        .build()
-        );
+    public void testTransformWorksWithVerboseLogLevel() {
+        config = PreprocessConfig.builder()
+                .agentPath("a path")
+                .jarPath("a path")
+                .logLevel(Level.TRACE)
+                .build();
 
-        spyTransformer.transform();
+        ModuleTransformer.builder()
+                .jarLoader(mockJarPackageLoader)
+                .agentLoader(mockAgentLoader)
+                .config(config)
+                .build().transform();
 
         Assert.assertEquals(Level.TRACE, LogManager.getLogger().getLevel());
-    }
-
-    @Test(expected = AgentLoaderNotProvidedException.class)
-    public void testTransformFailsWhenNoAgentLoaderProvided(){
-        spyTransformer = Mockito.spy(
-                ModuleTransformer.builder()
-                        .jarLoader(mockJarPackageLoader)
-                        .build()
-        );
-        spyTransformer.transform();
-    }
-
-
-    @Test(expected = ModuleLoaderNotProvidedException.class)
-    public void testTransformFailsWhenNoPackageLoaderProvided() {
-        spyTransformer = Mockito.spy(
-                ModuleTransformer.builder()
-                        .agentLoader(mockAgentLoader)
-                        .build()
-        );
-        spyTransformer.transform();
     }
 
     @Test
@@ -117,19 +106,20 @@ public class ModuleTransformerTest {
                 ModuleTransformer.builder()
                         .jarLoader(mockJarPackageLoader)
                         .agentLoader(mockAgentLoader)
+                        .config(config)
                         .build()
         );
         spyTransformer.transform();
 
-        Mockito.verify(mockAgentLoader).loadAgent();
-        Mockito.verify(mockJarPackageLoader).loadPackages();
+        Mockito.verify(mockAgentLoader).loadAgent(Mockito.any(PreprocessConfig.class), Mockito.any(Instrumentation.class));
+        Mockito.verify(mockJarPackageLoader).loadPackages(Mockito.any(PreprocessConfig.class));
     }
 
     @Test
     public void testTransformWorksAndInvokesPackageLoader() {
         spyTransformer.transform();
 
-        Mockito.verify(mockJarPackageLoader).loadPackages();
+        Mockito.verify(mockJarPackageLoader).loadPackages(Mockito.any(PreprocessConfig.class));
         Mockito.verify(spyTransformer).applyInstrumentation(Mockito.any());
     }
 

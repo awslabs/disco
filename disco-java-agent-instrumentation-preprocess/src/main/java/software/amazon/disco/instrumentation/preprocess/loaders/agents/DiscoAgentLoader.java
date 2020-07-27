@@ -15,14 +15,21 @@
 
 package software.amazon.disco.instrumentation.preprocess.loaders.agents;
 
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.ClassFileVersion;
 import net.bytebuddy.agent.builder.AgentBuilder;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import software.amazon.disco.agent.DiscoAgentTemplate;
 import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.inject.Injector;
 import software.amazon.disco.agent.interception.Installable;
-import software.amazon.disco.instrumentation.preprocess.exceptions.NoPathProvidedException;
+import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
+import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
+import software.amazon.disco.instrumentation.preprocess.exceptions.NoAgentToLoadException;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.TransformationListener;
+import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
-import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.util.function.BiFunction;
 
@@ -31,34 +38,32 @@ import java.util.function.BiFunction;
  * {@link Injector} api.
  */
 public class DiscoAgentLoader implements AgentLoader {
-    protected String path;
-    private final AgentConfig agentConfig;
-
-    /**
-     * Constructor
-     *
-     * @param path path of the agent to be loaded
-     */
-    public DiscoAgentLoader(final String path, AgentConfig agentConfig) {
-        if (path == null) {
-            throw new NoPathProvidedException();
-        }
-        this.path = path;
-        this.agentConfig = agentConfig;
-    }
+    private final static Logger log = LogManager.getLogger(DiscoAgentLoader.class);
 
     /**
      * {@inheritDoc}
+     *
      * Install an agent by directly invoking the {@link Injector} api.
      */
     @Override
-    public void loadAgent() {
-        final Instrumentation instrumentation = Injector.createInstrumentation();
-        Injector.addToBootstrapClasspath(instrumentation, new File(path));
+    public void loadAgent(final PreprocessConfig config, Instrumentation instrumentation) {
+        if (config == null || config.getAgentPath() == null) {
+            throw new NoAgentToLoadException();
+        }
 
-        agentConfig.setAgentBuilderTransformer(getAgentBuilderTransformer());
+        instrumentation = instrumentation == null ? Injector.createInstrumentation() : instrumentation;
 
-        Injector.loadAgent(instrumentation, path, null);
+        final ClassFileVersion version = parseClassFileVersionFromConfig(config);
+
+        DiscoAgentTemplate.setAgentConfigFactory(() -> {
+            //todo if we want to pass on any args from the tool to Core, pass them here.
+            final AgentConfig coreConfig = new AgentConfig(null);
+
+            coreConfig.setAgentBuilderTransformer(getAgentBuilderTransformer(version));
+            return coreConfig;
+        });
+
+        Injector.loadAgent(instrumentation, config.getAgentPath(), null);
     }
 
     /**
@@ -72,11 +77,35 @@ public class DiscoAgentLoader implements AgentLoader {
     }
 
     /**
-     * Access the AgentBuilder transformer that DiscoAgentLoader will use. Package-private for tests.
+     * Parses a java version supplied by the {@link PreprocessConfig} file. Default is java 8 if not specified.
+     *
+     * @param config a PreprocessConfig containing information to perform module instrumentation
+     * @return a parsed instance of ClassFileVersion
+     * @throws InvalidConfigEntryException if supplied config value is invalid
+     */
+    protected static ClassFileVersion parseClassFileVersionFromConfig(PreprocessConfig config) {
+        try {
+            if (config.getJavaVersion() == null) {
+                log.info(PreprocessConstants.MESSAGE_PREFIX + "Java version to compile transformed classes not specified, set to Java 8 by default");
+                return ClassFileVersion.ofJavaVersion(8);
+            } else {
+                return ClassFileVersion.ofJavaVersion(Integer.parseInt(config.getJavaVersion()));
+            }
+        } catch (IllegalArgumentException e) {
+            throw new InvalidConfigEntryException("java version: " + config.getJavaVersion(), e);
+        }
+    }
+
+    /**
+     * Returns an AgentBuilder transformer that DiscoAgentTemplate will use to transform an AgentBuilder.
+     *
+     * @param version java version used to compile the transformed classes
      * @return an AgentBuilder transformer suitable for the code InterceptionInstaller.
      */
-    static BiFunction<AgentBuilder, Installable, AgentBuilder> getAgentBuilderTransformer() {
-        return (agentBuilder, installable) -> agentBuilder.with(new TransformationListener(uuidGenerate(installable)));
+    private BiFunction<AgentBuilder, Installable, AgentBuilder> getAgentBuilderTransformer(ClassFileVersion version) {
+        return (agentBuilder, installable) -> agentBuilder
+                .with(new ByteBuddy(version))
+                .with(new TransformationListener(uuidGenerate(installable)));
     }
 }
 

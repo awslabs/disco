@@ -58,6 +58,9 @@ public class AgentConfig {
      * This transformer will be invoked in InterceptionInstaller to apply transformations on all Installables of
      * a given agent. Passing a null value will reset the AgentBuilderTransformer to the default value: {@link NoOpAgentBuilderTransformer}
      *
+     * If a brand new instance is created by the transformer and returned while ignoring the passed in AgentBuilder, the default ignore rule and debugger listener
+     * set by disco core will be lost. See {@link software.amazon.disco.agent.interception.InterceptionInstaller} for more detail on how they are set.
+     *
      * @param agentBuilderTransformer the AgentBuilder Transformer to be applied to an AgentBuilder
      */
     public void setAgentBuilderTransformer(BiFunction<AgentBuilder, Installable, AgentBuilder> agentBuilderTransformer) {

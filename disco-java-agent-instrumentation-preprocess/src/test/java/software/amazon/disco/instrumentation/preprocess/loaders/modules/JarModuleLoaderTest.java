@@ -22,14 +22,13 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
+import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.NoModuleToInstrumentException;
-import software.amazon.disco.instrumentation.preprocess.exceptions.NoPathProvidedException;
 import software.amazon.disco.instrumentation.preprocess.export.JarModuleExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.export.ModuleExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.util.MockEntities;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.jar.JarEntry;
@@ -43,6 +42,7 @@ public class JarModuleLoaderTest {
     static final List<JarEntry> MOCK_JAR_ENTRIES = MockEntities.makeMockJarEntries();
 
     JarModuleLoader loader;
+    PreprocessConfig config;
 
     @Mock
     JarFile jarFile;
@@ -51,21 +51,27 @@ public class JarModuleLoaderTest {
     File mockFile;
 
     @Before
-    public void before() throws NoPathProvidedException {
-        loader = new JarModuleLoader(PATHS);
+    public void before(){
+        config = PreprocessConfig.builder().jarPaths(PATHS).build();
+        loader = new JarModuleLoader();
 
         Mockito.when(mockFile.isDirectory()).thenReturn(false);
         Mockito.when(mockFile.getName()).thenReturn("ATestJar.jar");
     }
 
-    @Test(expected = NoPathProvidedException.class)
-    public void testConstructorFailWithEmptyPathList() throws NoPathProvidedException {
-        new JarModuleLoader(new ArrayList<>());
+    @Test(expected = NoModuleToInstrumentException.class)
+    public void testConstructorFailWithEmptyPathList() {
+        new JarModuleLoader().loadPackages(config);
     }
 
-    @Test(expected = NoPathProvidedException.class)
-    public void testConstructorFailWithNullPathList() throws NoPathProvidedException {
-        new JarModuleLoader(null);
+    @Test(expected = NoModuleToInstrumentException.class)
+    public void testConstructorFailWithNullConfig() {
+        new JarModuleLoader().loadPackages(null);
+    }
+
+    @Test(expected = NoModuleToInstrumentException.class)
+    public void testConstructorFailWithNullPathList() {
+        new JarModuleLoader().loadPackages(PreprocessConfig.builder().build());
     }
 
     @Test
@@ -74,19 +80,10 @@ public class JarModuleLoaderTest {
     }
 
     @Test
-    public void testConstructorWorksAndNoDuplicatePaths() {
-        Assert.assertTrue(loader.getPaths().size() == PATHS.size() - 1);
-
-        for (String path : PATHS) {
-            Assert.assertTrue(loader.getPaths().contains(path));
-        }
-    }
-
-    @Test
     public void testConstructorWorksWithNonDefaultStrategy() {
         ModuleExportStrategy mockStrategy = Mockito.mock(ModuleExportStrategy.class);
 
-        loader = new JarModuleLoader(mockStrategy, PATHS);
+        loader = new JarModuleLoader(mockStrategy);
         Assert.assertNotEquals(JarModuleExportStrategy.class, loader.getStrategy().getClass());
     }
 
@@ -127,48 +124,43 @@ public class JarModuleLoaderTest {
         Mockito.verify(packageLoader).injectFileToSystemClassPath(mockFile);
     }
 
-    @Test(expected = NoModuleToInstrumentException.class)
-    public void testLoadPackagesFailOnEmptyPackageInfoList() {
-        loader.loadPackages();
-    }
-
     @Test
     public void testLoadPackagesWorksWithOnePackageInfo() {
-        JarModuleLoader packageLoader = Mockito.spy(new JarModuleLoader(Arrays.asList(PATHS.get(0))));
+        JarModuleLoader packageLoader = Mockito.spy(new JarModuleLoader());
 
-        Mockito.doCallRealMethod().when(packageLoader).loadPackages();
+        Mockito.doCallRealMethod().when(packageLoader).loadPackages(Mockito.any(PreprocessConfig.class));
         Mockito.when(packageLoader.discoverFilesInPath(PATHS.get(0))).thenReturn(Arrays.asList(MOCK_FILES.get(0)));
         Mockito.doReturn(MockEntities.makeMockPackageInfo()).when(packageLoader).loadPackage(MOCK_FILES.get(0));
 
-        packageLoader.loadPackages();
+        packageLoader.loadPackages(config);
 
         Mockito.verify(packageLoader).loadPackage(Mockito.any());
     }
 
     @Test(expected = NoModuleToInstrumentException.class)
     public void testLoadPackagesFailsWithNoPackageInfoCreated() {
-        JarModuleLoader packageLoader = Mockito.spy(new JarModuleLoader(Arrays.asList(PATHS.get(0))));
+        JarModuleLoader packageLoader = Mockito.spy(new JarModuleLoader());
 
-        Mockito.doCallRealMethod().when(packageLoader).loadPackages();
+        Mockito.doCallRealMethod().when(packageLoader).loadPackages(Mockito.any(PreprocessConfig.class));
         Mockito.when(packageLoader.discoverFilesInPath(PATHS.get(0))).thenReturn(Arrays.asList(MOCK_FILES.get(0)));
 
-        packageLoader.loadPackages();
+        packageLoader.loadPackages(config);
 
         Mockito.verify(packageLoader).loadPackage(Mockito.any());
     }
 
     @Test
     public void testLoadPackagesWorksAndCalledThreeTimesWithThreePaths() {
-        JarModuleLoader packageLoader = Mockito.spy(new JarModuleLoader(PATHS));
+        JarModuleLoader packageLoader = Mockito.spy(new JarModuleLoader());
 
-        Mockito.doCallRealMethod().when(packageLoader).loadPackages();
+        Mockito.doCallRealMethod().when(packageLoader).loadPackages(config);
 
         Mockito.when(packageLoader.discoverFilesInPath(PATHS.get(1))).thenReturn(Arrays.asList(MOCK_FILES.get(0)));
         Mockito.when(packageLoader.discoverFilesInPath(PATHS.get(2))).thenReturn(Arrays.asList(MOCK_FILES.get(1)));
         Mockito.when(packageLoader.discoverFilesInPath(PATHS.get(3))).thenReturn(Arrays.asList(MOCK_FILES.get(2)));
 
         try {
-            packageLoader.loadPackages();
+            packageLoader.loadPackages(config);
         } catch (NoModuleToInstrumentException e) {
             // swallow
         }
@@ -178,7 +170,7 @@ public class JarModuleLoaderTest {
 
     @Test
     public void testLoadPackagesWorksAndReturnsValidPackageInfoObjectAndInvokesProcessFile() {
-        JarModuleLoader packageLoader = Mockito.spy(new JarModuleLoader(new JarModuleExportStrategy(), PATHS));
+        JarModuleLoader packageLoader = Mockito.spy(new JarModuleLoader(new JarModuleExportStrategy()));
 
         List<String> classes = MOCK_JAR_ENTRIES
                 .stream()

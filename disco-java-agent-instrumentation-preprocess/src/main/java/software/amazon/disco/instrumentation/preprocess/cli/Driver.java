@@ -42,10 +42,9 @@ public class Driver {
         Injector.addToBootstrapClasspath(instrumentation, new File(config.getAgentPath()));
 
         ModuleTransformer.builder()
-                .agentLoader(new DiscoAgentLoader(config.getAgentPath(), config.getCoreAgentConfig()))
-                .jarLoader(new JarModuleLoader(config.getJarPaths()))
-                .suffix(config.getSuffix())
-                .logLevel(config.getLogLevel())
+                .agentLoader(new DiscoAgentLoader())
+                .jarLoader(new JarModuleLoader())
+                .config(config)
                 .build()
                 .transform();
     }

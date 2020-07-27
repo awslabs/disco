@@ -19,8 +19,8 @@ import lombok.Getter;
 import software.amazon.disco.agent.inject.Injector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.NoModuleToInstrumentException;
-import software.amazon.disco.instrumentation.preprocess.exceptions.NoPathProvidedException;
 import software.amazon.disco.instrumentation.preprocess.export.JarModuleExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.export.ModuleExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
@@ -30,9 +30,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -43,31 +41,21 @@ public class JarModuleLoader implements ModuleLoader {
     private static final Logger log = LogManager.getLogger(JarModuleLoader.class);
 
     @Getter
-    private final Set<String> paths;
-
-    @Getter
     private final ModuleExportStrategy strategy;
 
     /**
-     * Constructor that sets default package export strategy as {@link JarModuleExportStrategy}
-     *
-     * @param paths list of paths to load Jar files
+     * Default constructor that sets {@link #strategy} to {@link JarModuleExportStrategy}
      */
-    public JarModuleLoader(final List<String> paths) throws NoPathProvidedException {
-        if (paths == null || paths.size() == 0) throw new NoPathProvidedException();
-        this.paths = new HashSet<>(paths);
+    public JarModuleLoader() {
         this.strategy = new JarModuleExportStrategy();
     }
 
     /**
-     * Constructor
+     * Constructor accepting a custom export strategy
      *
      * @param strategy {@link ModuleExportStrategy strategy} for exporting transformed classes under this path. Default strategy is {@link JarModuleExportStrategy}
-     * @param paths    list of paths to load Jar files
      */
-    public JarModuleLoader(final ModuleExportStrategy strategy, final List<String> paths) throws NoPathProvidedException {
-        if (paths == null || paths.size() == 0) throw new NoPathProvidedException();
-        this.paths = new HashSet<>(paths);
+    public JarModuleLoader(final ModuleExportStrategy strategy) {
         this.strategy = strategy;
     }
 
@@ -75,10 +63,14 @@ public class JarModuleLoader implements ModuleLoader {
      * {@inheritDoc}
      */
     @Override
-    public List<ModuleInfo> loadPackages() {
+    public List<ModuleInfo> loadPackages(PreprocessConfig config) {
+        if (config == null || config.getJarPaths() == null) {
+            throw new NoModuleToInstrumentException();
+        }
+
         final List<ModuleInfo> packageEntries = new ArrayList<>();
 
-        for (String path : paths) {
+        for (String path : config.getJarPaths()) {
             for (File file : discoverFilesInPath(path)) {
                 final ModuleInfo info = loadPackage(file);
 

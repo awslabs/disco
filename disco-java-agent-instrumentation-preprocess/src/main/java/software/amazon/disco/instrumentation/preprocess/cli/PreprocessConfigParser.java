@@ -50,7 +50,7 @@ public class PreprocessConfigParser {
         }
 
         setupAcceptedFlags();
-        PreprocessConfig.PreprocessConfigBuilder builder = PreprocessConfig.builder().coreAgentConfig(new AgentConfig(null));
+        PreprocessConfig.PreprocessConfigBuilder builder = PreprocessConfig.builder();
 
         OptionToMatch flagBeingMatched = null;
 
@@ -74,7 +74,7 @@ public class PreprocessConfigParser {
             } else {
                 // previous flag still expecting an argument but another flag is discovered
                 if (ACCEPTED_FLAGS.containsKey(argLowered) && !flagBeingMatched.isMatched()) {
-                    System.err.println("Flag: [" + flagBeingMatched + "] requires an argument");
+                    System.err.println("Flag: [" + flagBeingMatched.getFlag() + "] requires an argument");
                     return null;
                 }
 
@@ -98,8 +98,8 @@ public class PreprocessConfigParser {
         }
 
         // the last flag discovered is missing its arg
-        if (flagBeingMatched != null) {
-            System.err.println("Flag: [" + flagBeingMatched + "] requires an argument");
+        if (flagBeingMatched != null && !flagBeingMatched.isMatched) {
+            System.err.println("Flag: [" + flagBeingMatched.getFlag() + "] requires an argument");
             return null;
         }
 
@@ -119,12 +119,14 @@ public class PreprocessConfigParser {
         ACCEPTED_FLAGS.put("--agentpath", new OptionToMatch("--agentpath", true, false));
         ACCEPTED_FLAGS.put("--serializationpath", new OptionToMatch("--serializationpath", true, false));
         ACCEPTED_FLAGS.put("--suffix", new OptionToMatch("--suffix", true, false));
+        ACCEPTED_FLAGS.put("--javaversion", new OptionToMatch("--javaversion", true, false));
 
         ACCEPTED_FLAGS.put("-out", new OptionToMatch("-out", true, false));
         ACCEPTED_FLAGS.put("-jps", new OptionToMatch("-jps", true, true));
         ACCEPTED_FLAGS.put("-ap", new OptionToMatch("-ap", true, false));
         ACCEPTED_FLAGS.put("-sp", new OptionToMatch("-sp", true, false));
         ACCEPTED_FLAGS.put("-suf", new OptionToMatch("-suf", true, false));
+        ACCEPTED_FLAGS.put("-jv", new OptionToMatch("-jv", true, false));
     }
 
     /**
@@ -139,6 +141,7 @@ public class PreprocessConfigParser {
                 + "\t\t --serializationPath | -sp       <Path to the jar where the serialized instrumentation state will be stored>\n"
                 + "\t\t --agentPath | -ap               <Path to the Disco Agent that will be applied to the packages supplied>\n"
                 + "\t\t --suffix | -suf                 <Suffix to be appended to the transformed packages>\n"
+                + "\t\t --javaversion | -jv             <Version of java to compile the transformed classes>\n"
                 + "\t\t --verbose                       Set the log level to log everything.\n"
                 + "\t\t --silent                        Disable logging to the console.\n\n"
                 + "The default behavior of the library will replace the original package scheduled for instrumentation if NO destination AND suffix are supplied.\n"
@@ -179,6 +182,10 @@ public class PreprocessConfigParser {
             case "-suf":
             case "--suffix":
                 builder.suffix(argument);
+                break;
+            case "-jv":
+            case "--javaversion":
+                builder.javaVersion(argument);
                 break;
             default:
                 // will never be invoked since flags are already validated.

@@ -22,6 +22,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
+import java.util.HashSet;
 
 public class PreprocessConfigParserTest {
     String outputDir = "/d";
@@ -86,35 +87,39 @@ public class PreprocessConfigParserTest {
                 "--jarpaths", "/d1", "/d2", "/d3",
                 "--serializationpath", serialization,
                 "--agentPath", agent,
-                "--suffix", suffix
+                "--suffix", suffix,
+                "--javaversion", "11"
         };
 
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
 
         Assert.assertEquals(outputDir, config.getOutputDir());
         Assert.assertEquals(serialization, config.getSerializationJarPath());
-        Assert.assertEquals(Arrays.asList("/d1", "/d2", "/d3"), config.getJarPaths());
+        Assert.assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/d3")), config.getJarPaths());
         Assert.assertEquals(agent, config.getAgentPath());
         Assert.assertEquals(suffix, config.getSuffix());
+        Assert.assertEquals("11", config.getJavaVersion());
     }
 
     @Test
-    public void parseCommandLineWorksWithShortHandCommandNamesAndReturnsConfigFile() {
+    public void testParseCommandLineWorksWithShortHandCommandNamesAndReturnsConfigFile() {
         String[] args = new String[]{
                 "-out", outputDir,
                 "-jps", "/d1", "/d2", "/d3",
                 "-sp", serialization,
                 "-ap", agent,
-                "-suf", suffix
+                "-suf", suffix,
+                "-jv", "11"
         };
 
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
 
         Assert.assertEquals(outputDir, config.getOutputDir());
         Assert.assertEquals(serialization, config.getSerializationJarPath());
-        Assert.assertEquals(Arrays.asList("/d1", "/d2", "/d3"), config.getJarPaths());
+        Assert.assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/d3")), config.getJarPaths());
         Assert.assertEquals(agent, config.getAgentPath());
         Assert.assertEquals(suffix, config.getSuffix());
+        Assert.assertEquals("11", config.getJavaVersion());
     }
 
     @Test
@@ -127,5 +132,14 @@ public class PreprocessConfigParserTest {
 
         spyParser.parseCommandLine(new String[]{"--verbose", "--help"});
         Mockito.verify(spyParser, Mockito.never()).printHelpText();
+    }
+
+    @Test
+    public void testParseCommandLineWithDuplicatePaths(){
+        String[] args = new String[]{
+                "-jps", "/d1", "/d1", "/d2",
+        };
+        PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
+        Assert.assertEquals(2, config.getJarPaths().size());
     }
 }
