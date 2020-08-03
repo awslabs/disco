@@ -42,8 +42,9 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
  * interface defines three methods to execute queries, which are explained more below.
  */
 public class JdbcExecuteInterceptor implements Installable {
-    private static final Logger log = LogManager.getLogger(JdbcExecuteInterceptor.class);
-    static final String SQL_ORIGIN = "SQL";
+    // Must be public for use in Advices
+    public static final Logger log = LogManager.getLogger(JdbcExecuteInterceptor.class);
+    public static final String SQL_ORIGIN = "SQL";
 
     /**
      * This method is inlined at the beginning of all execute methods matched by {@link #buildMethodMatcher}. It
@@ -62,7 +63,6 @@ public class JdbcExecuteInterceptor implements Installable {
      * @param stmt concrete statement class being used to make the query
      * @return a ServiceDownstreamRequestEvent with fields populated on a best effort basis
      */
-    @SuppressWarnings("unused")
     @Advice.OnMethodEnter
     public static ServiceRequestEvent enter(@Advice.AllArguments final Object[] args,
                                             @Advice.Origin final String origin,
@@ -105,7 +105,6 @@ public class JdbcExecuteInterceptor implements Installable {
      * @param thrown the Throwable thrown by the query, or null if query was successful. Passed in using the Thrown
      *               annotation. Typically a {@link SQLException}.
      */
-    @SuppressWarnings("unused")
     @Advice.OnMethodExit(onThrowable = Throwable.class)
     public static void exit(@Advice.Enter final ServiceRequestEvent requestEvent,
                             @Advice.Return final Object response,
