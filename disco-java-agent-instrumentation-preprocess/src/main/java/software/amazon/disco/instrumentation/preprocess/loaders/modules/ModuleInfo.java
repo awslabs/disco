@@ -21,6 +21,7 @@ import software.amazon.disco.instrumentation.preprocess.export.ModuleExportStrat
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 import java.util.jar.JarFile;
 
 /**
@@ -31,7 +32,6 @@ import java.util.jar.JarFile;
 @Getter
 public class ModuleInfo {
     private final File file;
-    private final JarFile jarFile;
-    private final List<String> classNames;
     private final ModuleExportStrategy exportStrategy;
+    private final Map<String, byte[]> classByteCodeMap;
 }

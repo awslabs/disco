@@ -1,6 +1,7 @@
 package software.amazon.disco.agent.web.apache.event;
 
 import org.apache.http.ProtocolVersion;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import software.amazon.disco.agent.concurrent.TransactionContext;
@@ -34,6 +35,13 @@ public class ApacheEventFactoryTests {
         TransactionContext.create();
         EventBus.addListener(mockEventBusListener);
     }
+
+    @After
+    public void after() {
+        EventBus.removeListener(mockEventBusListener);
+        TransactionContext.destroy();
+    }
+
     @Test
     public void testForRequestEventCreationForRequest() {
         HttpServiceDownstreamRequestEvent event = ApacheEventFactory.createDownstreamRequestEvent(ApacheTestConstants.APACHE_HTTP_CLIENT_ORIGIN,

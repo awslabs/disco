@@ -80,7 +80,7 @@ public class ApacheHttpClientInterceptorTests {
 
     @After
     public void after() {
-        TransactionContext.clear();
+        TransactionContext.destroy();
         EventBus.removeListener(mockEventBusListener);
     }
 
