@@ -2,7 +2,6 @@ package software.amazon.disco.instrumentation.preprocess.instrumentation;
 
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,11 +26,6 @@ public class TransformationListenerTest {
         mockDynamicTypeWithAuxiliary = MockEntities.makeMockDynamicTypeWithAuxiliaryClasses();
 
         Mockito.when(mockTypeDescription.getInternalName()).thenReturn(MockEntities.makeClassPaths().get(0));
-    }
-
-    @After
-    public void after() {
-        TransformationListener.getInstrumentedTypes().clear();
     }
 
     @Test

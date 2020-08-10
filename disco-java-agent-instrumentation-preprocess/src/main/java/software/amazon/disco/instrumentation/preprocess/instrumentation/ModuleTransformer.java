@@ -21,20 +21,17 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
+import software.amazon.disco.agent.inject.Injector;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.AgentLoaderNotProvidedException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.ModuleLoaderNotProvidedException;
-import software.amazon.disco.instrumentation.preprocess.exceptions.UnableToInstrumentException;
 import software.amazon.disco.instrumentation.preprocess.export.ModuleExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.AgentLoader;
-import software.amazon.disco.instrumentation.preprocess.loaders.agents.TransformerExtractor;
 import software.amazon.disco.instrumentation.preprocess.loaders.modules.ModuleInfo;
 import software.amazon.disco.instrumentation.preprocess.loaders.modules.ModuleLoader;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
-import java.lang.instrument.ClassFileTransformer;
-import java.lang.instrument.IllegalClassFormatException;
 import java.util.Map;
 
 /**
@@ -59,30 +56,29 @@ public class ModuleTransformer {
      * and trigger the program to exit with status 1
      */
     public void transform() {
-        if (config == null || config.getLogLevel() == null) {
-            Configurator.setRootLevel(Level.INFO);
-        } else {
-            Configurator.setRootLevel(config.getLogLevel());
-        }
-
         try {
-            if (config == null) {
-                throw new InvalidConfigEntryException("No configuration provided", null);
+            if (config == null) {throw new InvalidConfigEntryException("No configuration provided", null);}
+
+            if (config.getLogLevel() == null) {
+                Configurator.setRootLevel(Level.INFO);
+            } else {
+                Configurator.setRootLevel(config.getLogLevel());
             }
-            if (agentLoader == null) {
-                throw new AgentLoaderNotProvidedException();
-            }
+
+            if (agentLoader == null) {throw new AgentLoaderNotProvidedException();}
+            if (jarLoader == null) {throw new ModuleLoaderNotProvidedException();}
+
+            agentLoader.loadAgent(config, Injector.createInstrumentation());
+
             if (jarLoader == null) {
                 throw new ModuleLoaderNotProvidedException();
             }
 
-            agentLoader.loadAgent(config, new TransformerExtractor());
-
-            // Apply instrumentation on all loaded jars
+            // Apply instrumentation on all jars
             for (final ModuleInfo info : jarLoader.loadPackages(config)) {
                 applyInstrumentation(info);
+                //todo: store serialized instrumentation state to target jar
             }
-
         } catch (RuntimeException e) {
             log.error(e);
             System.exit(1);
@@ -90,25 +86,22 @@ public class ModuleTransformer {
     }
 
     /**
-     * Triggers instrumentation of classes using Reflection and applies and saves the changes according to the provided
-     * {@link ModuleExportStrategy export strategy} on a local file
+     * Triggers instrumentation of classes using Reflection and applies the changes according to the
+     * {@link ModuleExportStrategy export strategy}
+     * of this package
      *
-     * @param moduleInfo meta-data of a loaded jar file
+     * @param moduleInfo a package containing classes to be instrumented
      */
-    protected void applyInstrumentation(ModuleInfo moduleInfo) {
-        log.info("applying transformation on: " + moduleInfo.getFile().getAbsolutePath());
-        for (Map.Entry<String, byte[]> entry : moduleInfo.getClassByteCodeMap().entrySet()) {
+    protected void applyInstrumentation(final ModuleInfo moduleInfo) {
+        for (String name : moduleInfo.getClassNames()) {
             try {
-                for (ClassFileTransformer transformer : TransformerExtractor.getTransformers()) {
-                    transformer.transform(getClass().getClassLoader(), entry.getKey(), null, null, entry.getValue());
-                }
-            } catch (IllegalClassFormatException e) {
-                throw new UnableToInstrumentException("Failed to instrument : " + entry.getKey(), e);
+                Class.forName(name);
+            } catch (ClassNotFoundException | NoClassDefFoundError e) {
+                log.warn(PreprocessConstants.MESSAGE_PREFIX + "Failed to initialize class:" + name, e);
             }
         }
 
-        log.debug(PreprocessConstants.MESSAGE_PREFIX + getInstrumentedClasses().size() + " classes transformed");
-        moduleInfo.getExportStrategy().export(moduleInfo, getInstrumentedClasses(), config);
+        moduleInfo.getExportStrategy().export(moduleInfo, getInstrumentedClasses(), config.getSuffix());
 
         // empty the map in preparation for transforming another package
         getInstrumentedClasses().clear();

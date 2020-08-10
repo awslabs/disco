@@ -51,6 +51,8 @@ public class DiscoAgentLoader implements AgentLoader {
             throw new NoAgentToLoadException();
         }
 
+        instrumentation = instrumentation == null ? Injector.createInstrumentation() : instrumentation;
+
         final ClassFileVersion version = parseClassFileVersionFromConfig(config);
 
         DiscoAgentTemplate.setAgentConfigFactory(() -> {

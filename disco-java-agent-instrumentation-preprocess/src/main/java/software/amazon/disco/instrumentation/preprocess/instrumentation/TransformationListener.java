@@ -1,18 +1,3 @@
-/*
- * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *   or in the "license" file accompanying this file. This file is distributed
- *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *   express or implied. See the License for the specific language governing
- *   permissions and limitations under the License.
- */
-
 package software.amazon.disco.instrumentation.preprocess.instrumentation;
 
 import lombok.Getter;
@@ -22,7 +7,7 @@ import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.utility.JavaModule;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.disco.instrumentation.preprocess.exceptions.UnableToInstrumentException;
+import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -73,7 +58,7 @@ public class TransformationListener implements AgentBuilder.Listener {
      * {@inheritDoc}
      */
     public void onError(String typeName, ClassLoader classLoader, JavaModule module, boolean loaded, Throwable throwable) {
-        throw new UnableToInstrumentException("Failed to instrument : " + typeName, throwable);
+        log.error(PreprocessConstants.MESSAGE_PREFIX + "Failed to instrument: " + typeName, throwable);
     }
 
     /**
@@ -97,7 +82,7 @@ public class TransformationListener implements AgentBuilder.Listener {
         }
 
         if (!dynamicType.getAuxiliaryTypes().isEmpty()) {
-            for (Map.Entry<TypeDescription, byte[]> auxiliaryEntry : dynamicType.getAuxiliaryTypes().entrySet()) {
+            for(Map.Entry<TypeDescription, byte[]> auxiliaryEntry : dynamicType.getAuxiliaryTypes().entrySet()){
                 instrumentedTypes.put(auxiliaryEntry.getKey().getInternalName(), new InstrumentedClassState(null, auxiliaryEntry.getValue()));
             }
         }

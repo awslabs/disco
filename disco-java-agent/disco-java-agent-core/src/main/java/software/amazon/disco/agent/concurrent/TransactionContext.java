@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -43,13 +44,30 @@ public class TransactionContext {
     public static final String UNINITIALIZED_TRANSACTION_CONTEXT_VALUE = "disco_null_id";
 
     private static final String REFERENCE_COUNTER_KEY = "$amazon.discoRefCounterKey";
+    private static final ThreadLocal<ConcurrentMap<String, MetadataItem>> transactionContext = ThreadLocal.withInitial(new TransactionContextFactory());
 
-    private static final ThreadLocal<ConcurrentMap<String, MetadataItem>> transactionContext = ThreadLocal.withInitial(
-            ()-> {
-                ConcurrentMap<String, MetadataItem> map = new ConcurrentHashMap<>();
-                map.put(TRANSACTION_ID_KEY, new MetadataItem(UNINITIALIZED_TRANSACTION_CONTEXT_VALUE));
-                return map;
-            });
+    /**
+     * This class was created to solve a null pointer exception when deploying a service using a statically instrumented JDK. The TransactionContext
+     * along with other dependency classes to enable concurrency support has to be injected to the java.base module for Java 9+ and loaded while the
+     * JVM is still bootstrapping itself by initializing primordial classes such as Thread.
+     *
+     * At this stage of the program execution, the JVM is unable to handle lambda expressions such as the one passed to {@link ThreadLocal#withInitial(Supplier)}.
+     * To remedy this shortcoming, a class that explicitly extends {@link Supplier} has been implemented and initialized and used to populate {@link #transactionContext}
+     * instead of using an inline lambda expression.
+     */
+    static class TransactionContextFactory implements Supplier<ConcurrentMap<String, MetadataItem>> {
+        /**
+         * returns a ConcurrentMap with a default {@link #UNINITIALIZED_TRANSACTION_CONTEXT_VALUE value} for the key {@link #TRANSACTION_ID_KEY}
+         *
+         * @return ThreadLocal variable which is a {@link ConcurrentMap}
+         */
+        @Override
+        public ConcurrentMap<String, MetadataItem> get() {
+            ConcurrentMap<String, MetadataItem> map = new ConcurrentHashMap<>();
+            map.put(TransactionContext.TRANSACTION_ID_KEY, new MetadataItem(TransactionContext.UNINITIALIZED_TRANSACTION_CONTEXT_VALUE));
+            return map;
+        }
+    }
 
     /**
      * For internal use, retrieves the internal reference counter.

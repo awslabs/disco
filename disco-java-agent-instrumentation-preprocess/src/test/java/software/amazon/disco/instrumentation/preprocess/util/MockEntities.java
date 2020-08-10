@@ -62,15 +62,6 @@ public class MockEntities {
         return list;
     }
 
-    public static JarFile makeMockJarFile(){
-        JarFile file = Mockito.mock(JarFile.class);
-
-        Enumeration<JarEntry> e = Collections.enumeration(makeMockJarEntriesWithPath());
-        Mockito.when(file.entries()).thenReturn(e);
-
-        return file;
-    }
-
     public static Map<String, InstrumentedClassState> makeInstrumentedClassesMap() {
         final Map<String, InstrumentedClassState> classes = new HashMap<>();
         final InstrumentedClassState stateOne = new InstrumentedClassState("installable_a", new byte[]{12});
@@ -82,6 +73,13 @@ public class MockEntities {
 
         return classes;
     }
+
+    public static List<File> makeMockFiles() {
+        return Arrays.asList(new File("file_a"),
+                new File("file_b"),
+                new File("file_c"));
+    }
+
 
     public static List<String> makeMockPathsWithDuplicates() {
         return Arrays.asList("path_a", "path_a", "path_b", "path_c");
@@ -115,15 +113,21 @@ public class MockEntities {
         return type;
     }
 
-    public static ModuleInfo makeMockModuleInfo(){
+    public static ModuleInfo makeMockPackageInfo(){
         final ModuleInfo info = Mockito.mock(ModuleInfo.class);
 
         final File mockFile = Mockito.mock(File.class);
+        final JarFile mockJarFile = Mockito.mock(JarFile.class);
         final ModuleExportStrategy mockStrategy = Mockito.mock(ModuleExportStrategy.class);
 
         Mockito.lenient().when(info.getFile()).thenReturn(mockFile);
+        Mockito.lenient().when(info.getJarFile()).thenReturn(mockJarFile);
+        Mockito.lenient().when(mockJarFile.getName()).thenReturn("mock.jar");
         Mockito.lenient().when(info.getExportStrategy()).thenReturn(mockStrategy);
         Mockito.lenient().when(mockFile.getName()).thenReturn("mock.jar");
+
+        final Enumeration<JarEntry> entries = Collections.enumeration(makeMockJarEntriesWithPath());
+        Mockito.lenient().when(mockJarFile.entries()).thenReturn(entries);
 
         return info;
     }

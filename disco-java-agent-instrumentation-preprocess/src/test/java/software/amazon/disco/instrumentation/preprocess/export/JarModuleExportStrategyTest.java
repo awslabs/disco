@@ -22,7 +22,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
+import software.amazon.disco.instrumentation.preprocess.exceptions.ModuleExportException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.UnableToReadJarEntryException;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentedClassState;
 import software.amazon.disco.instrumentation.preprocess.loaders.modules.ModuleInfo;
@@ -54,7 +54,6 @@ public class JarModuleExportStrategyTest {
     JarOutputStream mockJarOS;
     JarModuleExportStrategy mockStrategy;
     JarModuleExportStrategy spyStrategy;
-    PreprocessConfig config;
 
     @Before
     public void before() throws IOException {
@@ -64,9 +63,7 @@ public class JarModuleExportStrategyTest {
         mockJarOS = Mockito.mock(JarOutputStream.class);
 
         spyStrategy = Mockito.spy(new JarModuleExportStrategy());
-        mockModuleInfo = MockEntities.makeMockModuleInfo();
-        config = PreprocessConfig.builder().build();
-
+        mockModuleInfo = MockEntities.makeMockPackageInfo();
         Mockito.doCallRealMethod().when(mockStrategy).export(Mockito.any(), Mockito.any(), Mockito.any());
         Mockito.when(mockStrategy.createTempFile(Mockito.any())).thenReturn(tempFolder.newFile(TEMP_FILE_NAME));
     }
@@ -106,10 +103,9 @@ public class JarModuleExportStrategyTest {
 
     @Test
     public void testCopyExistingJarEntriesWorksWithFilesAndPath() throws IOException {
-        JarFile jarFile = MockEntities.makeMockJarFile();
         Mockito.doCallRealMethod().when(mockStrategy).copyExistingJarEntries(Mockito.eq(mockJarOS), Mockito.any(), Mockito.any());
 
-        mockStrategy.copyExistingJarEntries(mockJarOS, jarFile, MockEntities.makeInstrumentedClassesMap());
+        mockStrategy.copyExistingJarEntries(mockJarOS, mockModuleInfo, MockEntities.makeInstrumentedClassesMap());
 
         // 3 out of 6 classes have not been instrumented
         Mockito.verify(mockStrategy, Mockito.times(3)).copyJarEntry(Mockito.eq(mockJarOS), Mockito.any(), Mockito.any());
@@ -154,7 +150,7 @@ public class JarModuleExportStrategyTest {
         File file = spyStrategy.createTempFile(mockModuleInfo);
 
         // replace original file
-        Path path = spyStrategy.moveTempFileToDestination(mockModuleInfo, config, file);
+        Path path = spyStrategy.moveTempFileToDestination(mockModuleInfo, null, file);
 
         Assert.assertNotEquals(originalLength, path.toFile().length());
         Assert.assertEquals(originalFile.getAbsolutePath(), path.toFile().getAbsolutePath());
@@ -165,8 +161,7 @@ public class JarModuleExportStrategyTest {
     @Test
     public void testMoveTempFileToDestinationWorks() throws IOException {
         File outDir = tempFolder.newFolder(OUT_DIR);
-        config = PreprocessConfig.builder().outputDir(outDir.getAbsolutePath()).build();
-        JarModuleExportStrategy spyStrategy = new JarModuleExportStrategy();
+        spyStrategy = new JarModuleExportStrategy(outDir.getAbsolutePath());
 
         // create original file and assume temp/disco/tests is where the original package is
         File originalFile = createOriginalFile();
@@ -177,7 +172,7 @@ public class JarModuleExportStrategyTest {
         File file = spyStrategy.createTempFile(mockModuleInfo);
 
         // move to destination
-        Path path = spyStrategy.moveTempFileToDestination(mockModuleInfo, config, file);
+        Path path = spyStrategy.moveTempFileToDestination(mockModuleInfo, null, file);
 
         Assert.assertEquals(outDir.getAbsolutePath(), path.toFile().getParentFile().getAbsolutePath());
         Assert.assertEquals(mockModuleInfo.getFile().getName(), path.toFile().getName());
@@ -188,9 +183,8 @@ public class JarModuleExportStrategyTest {
 
     @Test
     public void testMoveTempFileToDestinationWorksWithSuffix() throws IOException {
-        File outDir = tempFolder.newFolder(OUT_DIR);
-        config = PreprocessConfig.builder().suffix(PACKAGE_SUFFIX).outputDir(outDir.getAbsolutePath()).build();
-        spyStrategy = new JarModuleExportStrategy();
+        File outputDir = tempFolder.newFolder(OUT_DIR);
+        spyStrategy = new JarModuleExportStrategy(outputDir.getAbsolutePath());
 
         // create original file and assume temp/disco/tests is where the original package is
         File originalFile = createOriginalFile();
@@ -199,7 +193,7 @@ public class JarModuleExportStrategyTest {
 
         // move to destination
         Mockito.when(mockModuleInfo.getFile()).thenReturn(originalFile);
-        Path path = spyStrategy.moveTempFileToDestination(mockModuleInfo, config, tempFile);
+        Path path = spyStrategy.moveTempFileToDestination(mockModuleInfo, PACKAGE_SUFFIX, tempFile);
 
         String nameToCheck = mockModuleInfo.getFile()
                 .getName()
@@ -207,7 +201,7 @@ public class JarModuleExportStrategyTest {
                 + PACKAGE_SUFFIX
                 + PreprocessConstants.JAR_EXTENSION;
 
-        Assert.assertEquals(outDir.getAbsolutePath(), path.toFile().getParentFile().getAbsolutePath());
+        Assert.assertEquals(outputDir.getAbsolutePath(), path.toFile().getParentFile().getAbsolutePath());
         Assert.assertEquals(nameToCheck, path.toFile().getName());
         Assert.assertTrue(originalFile.exists());
     }
