@@ -13,22 +13,16 @@
  *   permissions and limitations under the License.
  */
 
-plugins {
-    id("com.github.johnrengelman.shadow")
-}
-
-tasks.shadowJar  {
-    manifest {
-        attributes(mapOf(
-            "Disco-Installable-Classes" to "software.amazon.disco.agent.sql.SqlSupport"
-        ))
-    }
+dependencies {
+    implementation(project(":disco-java-agent-aws:disco-java-agent-aws-api"))
+    implementation(project(":disco-java-agent:disco-java-agent-core"))
+    testImplementation("org.mockito", "mockito-core", "1.+")
 }
 
 configure<PublishingExtension> {
     publications {
         named<MavenPublication>("maven") {
-            artifact(tasks.jar.get())
+            from(components["java"])
         }
     }
 }

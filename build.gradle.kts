@@ -71,6 +71,46 @@ subprojects {
         }
     }
 
+    // This block only applies to plugin modules, as determined by the existence of a "-plugin" suffix
+    if (project.name.endsWith("-plugin")) {
+        // Remove "-plugin" suffix to get corresponding library name
+        val libraryName = ":" + project.name.subSequence(0, project.name.length - 7)
+        val ver = project.version
+
+        // Configure dependencies common to plugins
+        dependencies {
+            runtimeOnly(project(libraryName)) {
+                // By setting the isTransitive flag false, we take only what is described by the above project, and not
+                // its entire closure of transitive dependencies (i.e. all of Core, all of Bytebuddy, etc)
+                // this makes our generated Jar minimal, containing only our source files, and our manifest. All those
+                // other dependencies are expected to be in the base agent, which loads this plugin.
+                isTransitive = false
+            }
+
+            // Test target is integ tests for Disco plugins. Some classes in the integ tests also self-test via
+            // little unit tests during testrun.
+            testImplementation(project(":disco-java-agent:disco-java-agent-api"))
+            testImplementation("org.mockito", "mockito-core", "1.+")
+        }
+
+        // Configure integ tests, which need a loaded agent, and the loaded plugin
+        tasks.test {
+            // explicitly remove the runtime classpath from the tests since they are integ tests, and may not access the
+            // dependency we acquired in order to build the plugin, namely the library jar for this plugin which makes reference
+            // to byte buddy classes which have NOT been relocated by a shadowJar rule. Discovering those unrelocated classes
+            // would not be possible in a real client installation, and would cause plugin loading to fail.
+            classpath = classpath.minus(configurations.runtimeClasspath.get())
+
+            //load the agent for the tests, and have it discover the plugin
+            jvmArgs("-javaagent:../../disco-java-agent/disco-java-agent/build/libs/disco-java-agent-$ver.jar=pluginPath=./build/libs:extraverbose")
+
+            //we do not take any normal compile/runtime dependency on this, but it must be built first since the above jvmArg
+            //refers to its built artifact.
+            dependsOn(":disco-java-agent:disco-java-agent:build")
+            dependsOn("$libraryName:${project.name}:assemble")
+        }
+    }
+
     //we publish everything except example subprojects to maven. Projects which desire to be published to maven express the intent
     //via a property called simply 'maven' in their gradle.properties file (if it exists at all).
     //Each package to be published still needs a small amount of boilerplate to express whether is is a 'normal'

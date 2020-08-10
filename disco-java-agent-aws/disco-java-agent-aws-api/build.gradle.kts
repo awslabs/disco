@@ -13,16 +13,8 @@
  *   permissions and limitations under the License.
  */
 
-plugins {
-    id("com.github.johnrengelman.shadow")
-}
-
-tasks.shadowJar  {
-    manifest {
-        attributes(mapOf(
-            "Disco-Installable-Classes" to "software.amazon.disco.agent.sql.SqlSupport"
-        ))
-    }
+dependencies {
+    implementation(project(":disco-java-agent:disco-java-agent-api"))
 }
 
 configure<PublishingExtension> {
