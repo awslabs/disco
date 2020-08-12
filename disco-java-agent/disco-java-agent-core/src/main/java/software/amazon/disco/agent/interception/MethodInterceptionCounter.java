@@ -13,7 +13,7 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.agent.web.apache.utils;
+package software.amazon.disco.agent.interception;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

@@ -13,10 +13,11 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.agent.web.apache.utils;
+package software.amazon.disco.agent.interception;
 
 import org.junit.Before;
 import org.junit.Test;
+import software.amazon.disco.agent.interception.MethodInterceptionCounter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

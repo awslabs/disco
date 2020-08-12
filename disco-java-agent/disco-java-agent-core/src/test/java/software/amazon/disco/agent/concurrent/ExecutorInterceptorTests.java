@@ -85,6 +85,7 @@ public class ExecutorInterceptorTests {
     @Test
     public void testExecuteAdvice() {
         ExecutorInterceptor.ExecuteAdvice.onMethodEnter(Mockito.mock(Runnable.class));
+        ExecutorInterceptor.ExecuteAdvice.onMethodExit(); //ensure interception counter is decremented
     }
 
     @Test
@@ -97,6 +98,7 @@ public class ExecutorInterceptorTests {
         Runnable r = Mockito.mock(Runnable.class);
         Runnable d = ExecutorInterceptor.ExecuteAdvice.methodEnter(r);
         Assert.assertTrue(d instanceof DecoratedRunnable);
+        ExecutorInterceptor.ExecuteAdvice.onMethodExit(); //ensure interception counter is decremented
     }
 }
 

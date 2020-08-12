@@ -19,7 +19,7 @@ import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.web.apache.event.ApacheEventFactory;
 import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
 import software.amazon.disco.agent.web.apache.utils.HttpResponseAccessor;
-import software.amazon.disco.agent.web.apache.utils.MethodInterceptionCounter;
+import software.amazon.disco.agent.interception.MethodInterceptionCounter;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;

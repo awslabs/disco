@@ -24,6 +24,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -35,7 +36,8 @@ public class ExecutorServiceTests {
 
     private static final List<ExecutorServiceFactory> executorServiceFactories = Arrays.asList(
         new FixedThreadPoolExecutorServiceFactory(),
-        new ScheduledThreadPoolExecutorFactory()
+        new ScheduledThreadPoolExecutorFactory(),
+        new UserDecoratedExecutorFactory()
     );
 
     static abstract class Base {
@@ -43,13 +45,15 @@ public class ExecutorServiceTests {
         protected static final String result = "Result";
 
         @Before
-        public void before() {
+        public void before() throws Exception {
             TestableConcurrencyObjectImpl.before();
+            testMethodInterceptionCounter();
         }
 
         @After
-        public void after() {
+        public void after() throws Exception {
             TestableConcurrencyObjectImpl.after();
+            testMethodInterceptionCounter();
         }
 
         protected void testBeforeInvocation(TestableConcurrencyObject testable) {
@@ -230,7 +234,7 @@ public class ExecutorServiceTests {
         }
     }
 
-    class SubmitRunnableWhenThrows extends Base {
+    public static class SubmitRunnableWhenThrows extends Base {
         @Rule
         public ForceConcurrency.RetryRule retry = new ForceConcurrency.RetryRule();
 
@@ -260,5 +264,48 @@ public class ExecutorServiceTests {
                 perform();
             }
         }
+    }
+
+    @Test
+    public void testSubmitRunnableToUserDecoratedExecutorFactoryWhenExecuteExitsNormally() throws Exception {
+        testMethodInterceptionCounter();
+
+        Runnable r = ()->{};
+        ExecutorService executorService = new UserDecoratedExecutorFactory.UserDecoratedExecutor();
+
+        Future f = executorService.submit(r);
+        executorService.shutdown();
+        executorService.awaitTermination(1, TimeUnit.DAYS);
+        f.get();
+
+        testMethodInterceptionCounter();
+    }
+
+    @Test
+    public void testSubmitRunnableToUserDecoratedExecutorFactoryWhenExecuteThrows() throws Exception {
+        testMethodInterceptionCounter();
+
+        Runnable r = ()->{};
+        ExecutorService executorService = new UserDecoratedExecutorFactory.UserDecoratedExecutor(new RuntimeException());
+
+        try {
+            Future f = executorService.submit(r);
+            executorService.shutdown();
+            executorService.awaitTermination(1, TimeUnit.DAYS);
+            f.get();
+        } catch (RuntimeException e) {
+
+        }
+
+        testMethodInterceptionCounter();
+    }
+
+    private static void testMethodInterceptionCounter() throws Exception {
+        //invasive reflection not ideal here, but we need to check that the exit advice was called, ensuring that
+        //reentrancy counter was left at zero
+        Object interceptionCounter = Class.forName("software.amazon.disco.agent.concurrent.ExecutorInterceptor$ExecuteAdvice").getDeclaredField("interceptionCounter").get(null);
+        Method hasIntercepted = Class.forName("software.amazon.disco.agent.interception.MethodInterceptionCounter").getDeclaredMethod("hasIntercepted");
+        boolean result = (boolean)hasIntercepted.invoke(interceptionCounter);
+        Assert.assertFalse(result);
     }
 }
