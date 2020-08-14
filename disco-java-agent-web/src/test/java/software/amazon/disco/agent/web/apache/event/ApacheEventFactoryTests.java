@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Test;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.EventBus;
+import software.amazon.disco.agent.event.HeaderReplaceable;
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.web.apache.source.MockEventBusListener;
@@ -48,7 +49,8 @@ public class ApacheEventFactoryTests {
                 accessor);
         ApacheClientTestUtil.verifyServiceRequestEvent(event);
         assertFalse(accessor.getHeaders().containsKey("TEST"));
-        event.replaceHeader("TEST","TEST");
+        HeaderReplaceable replaceable = (HeaderReplaceable) event;
+        replaceable.replaceHeader("TEST","TEST");
         assertTrue(accessor.getHeaders().containsKey("TEST"));
     }
 

@@ -21,6 +21,7 @@ import org.mockito.Mockito;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
+import software.amazon.disco.agent.event.HeaderReplaceable;
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
@@ -157,7 +158,7 @@ public class ApacheHttpClientInterceptorTests {
         ApacheHttpClientInterceptor.intercept(new Object[] {get}, "origin", () -> someHttpClient.execute(get));
 
         List<Event> events = mockEventBusListener.getReceivedEvents();
-        HttpServiceDownstreamRequestEvent event = (HttpServiceDownstreamRequestEvent)events.get(0);
+        HeaderReplaceable event = (HeaderReplaceable)events.get(0);
         event.replaceHeader("foo", "bar3");
 
         assertEquals(1, get.getHeaders("foo").length);

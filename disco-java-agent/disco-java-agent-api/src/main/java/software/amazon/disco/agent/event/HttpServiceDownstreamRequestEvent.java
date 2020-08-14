@@ -81,7 +81,10 @@ public class HttpServiceDownstreamRequestEvent extends ServiceDownstreamRequestE
     }
 
     /**
-     * Override this method if you are a publisher of HttpServiceDownstreamRequestEvents which allows header replacement
+     * This method is deprecated. If you are authoring a Disco Event and would like to override this method,
+     * implement {@link HeaderReplaceable} instead. If you are invoking replaceHeader, you should invoke it from its
+     * implementing event class or by casting to {@link HeaderReplaceable} instead of invoking it from this class.
+     *
      * @param name the header name
      * @param value the header value
      * @return true if successful

@@ -15,13 +15,14 @@
 
 package software.amazon.disco.agent.web.apache.event;
 
+import software.amazon.disco.agent.event.HeaderReplaceable;
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
 
 /**
  * Specialization allowing header replacement.
  */
-class ApacheHttpServiceDownstreamRequestEvent extends HttpServiceDownstreamRequestEvent {
+class ApacheHttpServiceDownstreamRequestEvent extends HttpServiceDownstreamRequestEvent implements HeaderReplaceable {
     private final HttpRequestAccessor accessor;
     /**
      * Construct a new ApacheHttpServiceDownstreamRequestEvent
