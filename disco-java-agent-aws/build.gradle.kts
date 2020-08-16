@@ -14,9 +14,16 @@
  */
 
 dependencies {
+    // Compile against AWS SDK V2, but we do not take a runtime dependency on it
+    compileOnly("software.amazon.awssdk", "sdk-core", "2.13.76")
+
     implementation(project(":disco-java-agent-aws:disco-java-agent-aws-api"))
     implementation(project(":disco-java-agent:disco-java-agent-core"))
     testImplementation("org.mockito", "mockito-core", "1.+")
+    testImplementation("com.amazonaws", "aws-java-sdk-dynamodb", "1.11.840")
+    testImplementation("com.amazonaws", "aws-java-sdk-sns", "1.11.840")
+    testImplementation("com.amazonaws", "aws-java-sdk-sqs", "1.11.840")
+    testImplementation("software.amazon.awssdk", "dynamodb", "2.13.76")
 }
 
 configure<PublishingExtension> {

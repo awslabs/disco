@@ -20,9 +20,48 @@ plugins {
 tasks.shadowJar  {
     manifest {
         attributes(mapOf(
-            "Disco-Installable-Classes" to "software.amazon.disco.agent.web.AWSSupport"
+            "Disco-Installable-Classes" to "software.amazon.disco.agent.AWSSupport"
         ))
     }
+}
+
+// Defines a new source set for our safety integration test, which verifies that adding the Disco AWS Plugin
+// will not break customer's code, even if they don't depend on the AWS SDK
+sourceSets {
+    create("safetyTest") {
+    }
+}
+
+// Initializes the safetyTestImplementation configuration needed to declare dependencies
+val safetyTestImplementation by configurations.getting {
+    extendsFrom(configurations.implementation.get())
+}
+
+// Only dependency the test needs is JUnit
+dependencies {
+    safetyTestImplementation("junit:junit:4.12")
+}
+
+// This task adds the Disco Java Agent and AWS SDK plugin like a normal integ test,
+// then runs the test(s) in the safetyTest/ source directory
+// Adapted from: https://docs.gradle.org/current/userguide/java_testing.html#sec:configuring_java_integration_tests
+val safetyTestTask = task<Test>("safetyTest") {
+    description = "Runs class safety tests"
+    group = "verification"
+
+    testClassesDirs = sourceSets["safetyTest"].output.classesDirs
+    classpath = sourceSets["safetyTest"].runtimeClasspath
+
+    jvmArgs("-javaagent:../../disco-java-agent/disco-java-agent/build/libs/disco-java-agent-${project.version}.jar=pluginPath=./build/libs")
+
+    dependsOn(":disco-java-agent:disco-java-agent:build")
+    dependsOn(":disco-java-agent-aws:disco-java-agent-aws-plugin:assemble")
+
+    mustRunAfter("test")
+}
+
+tasks.check {
+    dependsOn(safetyTestTask)
 }
 
 configure<PublishingExtension> {
