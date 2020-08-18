@@ -60,7 +60,7 @@ public class DecoratedTests {
     @Test
     public void testBeforeDifferentThread() {
         Decorated d = new MyDecorated();
-        d.parentThreadId = -1L;
+        d.ancestralThreadId = -1L;
         d.before();
         Assert.assertTrue(listener.enter instanceof ThreadEnterEvent);
         Assert.assertNull(listener.exit);
@@ -69,7 +69,7 @@ public class DecoratedTests {
     @Test
     public void testAfterDifferentThread() {
         Decorated d = new MyDecorated();
-        d.parentThreadId = -1L;
+        d.ancestralThreadId = -1L;
         d.after();
         Assert.assertNull(listener.enter);
         Assert.assertTrue(listener.exit instanceof ThreadExitEvent);

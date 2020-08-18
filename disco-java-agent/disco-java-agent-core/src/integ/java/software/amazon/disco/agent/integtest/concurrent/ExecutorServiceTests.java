@@ -23,6 +23,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import software.amazon.disco.agent.reflect.concurrent.TransactionContext;
 
 import java.lang.reflect.Method;
 import java.util.*;
@@ -244,7 +245,7 @@ public class ExecutorServiceTests {
             r.testBeforeInvocation();
             executorService = Executors.newFixedThreadPool(2);
 
-            Future f = executorService.submit(r);
+            Future<?> f = executorService.submit(r);
             executorService.shutdown();
             executorService.awaitTermination(1, TimeUnit.DAYS);
             Throwable thrown = null;
@@ -258,10 +259,43 @@ public class ExecutorServiceTests {
             r.testAfterConcurrentInvocation();
         }
 
-        class ThrowingRunnable extends TestableConcurrencyObjectImpl.WhichThrows implements Runnable {
+        static class ThrowingRunnable extends TestableConcurrencyObjectImpl.WhichThrows implements Runnable {
             @Override
             public void run() {
                 perform();
+            }
+        }
+    }
+
+    public static class SubmitRunnableNestedWhenExecutorReusesThread extends RunnableBase {
+        @Rule
+        public ForceConcurrency.RetryRule retry = new ForceConcurrency.RetryRule();
+
+        @Test
+        public void testSubmitRunnableNestedWhenExecutorReusesThread() throws Exception {
+            ExecutorService e = Executors.newFixedThreadPool(1);
+            AbstractQueue<Future<?>> futures = new ConcurrentLinkedQueue<>();
+            long[] threadIdStack = new long[3];
+            threadIdStack[0] = Thread.currentThread().getId();
+            TransactionContext.putMetadata("foo", "bar");
+            futures.add(e.submit(() -> {
+                TransactionContext.putMetadata("foo2", "bar2");
+                threadIdStack[1] = Thread.currentThread().getId();
+                futures.add(e.submit(() -> {
+                    threadIdStack[2] = Thread.currentThread().getId();
+                    Assert.assertEquals("bar", TransactionContext.getMetadata("foo"));
+                    Assert.assertEquals("bar2", TransactionContext.getMetadata("foo2"));
+                }));
+            }));
+
+            Future<?> f;
+            while ((f = futures.poll()) != null) {
+                f.get(1, TimeUnit.DAYS);
+            }
+
+            //need to retry test in the race condition case where a thread was not in fact reused. i.e. out of the 3 thread ids, 2 (or all 3) must be the same.
+            if(!(threadIdStack[0]==threadIdStack[1] || threadIdStack[1]==threadIdStack[2] || threadIdStack[0]==threadIdStack[2])) {
+                throw new ConcurrencyCanBeRetriedException();
             }
         }
     }
@@ -273,7 +307,7 @@ public class ExecutorServiceTests {
         Runnable r = ()->{};
         ExecutorService executorService = new UserDecoratedExecutorFactory.UserDecoratedExecutor();
 
-        Future f = executorService.submit(r);
+        Future<?> f = executorService.submit(r);
         executorService.shutdown();
         executorService.awaitTermination(1, TimeUnit.DAYS);
         f.get();
@@ -289,12 +323,12 @@ public class ExecutorServiceTests {
         ExecutorService executorService = new UserDecoratedExecutorFactory.UserDecoratedExecutor(new RuntimeException());
 
         try {
-            Future f = executorService.submit(r);
+            Future<?> f = executorService.submit(r);
             executorService.shutdown();
             executorService.awaitTermination(1, TimeUnit.DAYS);
             f.get();
         } catch (RuntimeException e) {
-
+            //do nothing
         }
 
         testMethodInterceptionCounter();

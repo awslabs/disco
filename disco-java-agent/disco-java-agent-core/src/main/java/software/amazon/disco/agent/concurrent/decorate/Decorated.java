@@ -16,6 +16,7 @@
 package software.amazon.disco.agent.concurrent.decorate;
 
 import software.amazon.disco.agent.concurrent.ConcurrentUtils;
+import software.amazon.disco.agent.concurrent.MetadataItem;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 
 import java.util.concurrent.ConcurrentMap;
@@ -25,28 +26,31 @@ import java.util.concurrent.ConcurrentMap;
  * with extra metadata regarding thread provenance. This metadata is encapsulated in this abstraction.
  */
 public abstract class Decorated {
-    protected Long parentThreadId;
-    ConcurrentMap parentTransactionContext;
+    protected Long ancestralThreadId;
+    protected long parentThreadId;
+    ConcurrentMap<String, MetadataItem> parentTransactionContext;
 
     /**
      * Construct a new object to hold thread provenance information.
      */
     protected Decorated() {
-        this.parentThreadId = Thread.currentThread().getId();
         this.parentTransactionContext = TransactionContext.getPrivateMetadata();
+        MetadataItem data = parentTransactionContext.get(TransactionContext.TRANSACTION_OWNING_THREAD_KEY);
+        this.ancestralThreadId = (Long)data.get();
+        this.parentThreadId = Thread.currentThread().getId();
     }
 
     /**
      * Convenience method to call before the execution of the dispatched object method eg. run() or call()
      */
     public void before() {
-        ConcurrentUtils.set(parentThreadId, parentTransactionContext);
+        ConcurrentUtils.set(ancestralThreadId, parentThreadId, parentTransactionContext);
     }
 
     /**
      * Convenience method to call after the execution of the dispatched object method eg. run() or call()
      */
     public void after() {
-        ConcurrentUtils.clear(parentThreadId, parentTransactionContext);
+        ConcurrentUtils.clear(ancestralThreadId, parentThreadId, parentTransactionContext);
     }
 }

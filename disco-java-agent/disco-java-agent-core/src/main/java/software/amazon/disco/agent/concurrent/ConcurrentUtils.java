@@ -30,33 +30,37 @@ public class ConcurrentUtils {
     private static Logger log = LogManager.getLogger(ConcurrentUtils.class);
 
     /**
-     * Propagate the transaction context, if running in a different thread than at construction time
+     * Propagate the transaction context, if running in a child of the ancestral thread
+     * @param ancestralThreadId the threadId of the thread which created the TransactionContext for this family of threads
      * @param parentThreadId the threadId of the thread which created the object being passed across thread boundary
      * @param discoTransactionContext the parent's TransactionContext map.
      */
-    public static void set(long parentThreadId, ConcurrentMap<String, MetadataItem> discoTransactionContext) {
+    public static void set(long ancestralThreadId, long parentThreadId, ConcurrentMap<String, MetadataItem> discoTransactionContext) {
         if (discoTransactionContext == null) {
-            log.error("DiSCo(Core) could not propagate null context from thread id " + parentThreadId + " to thread id " + Thread.currentThread().getId());
+            log.error("DiSCo(Core) could not propagate null context from thread id " + ancestralThreadId + " to thread id " + Thread.currentThread().getId());
             return;
         }
 
-        if (Thread.currentThread().getId() != parentThreadId && !isDiscoNullId(discoTransactionContext)) {
+        long thisThreadId = Thread.currentThread().getId();
+        if (ancestralThreadId != thisThreadId && !isDiscoNullId(discoTransactionContext)) {
             TransactionContext.setPrivateMetadata(discoTransactionContext);
             EventBus.publish(new ThreadEnterEvent("Concurrency", parentThreadId, Thread.currentThread().getId()));
         }
     }
 
     /**
-     * Clear the transaction context, if running in a different thread than at construction time
+     * Clear the transaction context, if running in a child of the ancestral thread
+     * @param ancestralThreadId the threadId of the thread which created the TransactionContext for this family of threads
      * @param parentThreadId the threadId of the thread which created the object being passed across thread boundary
      * @param discoTransactionContext the parent's TransactionContext map.
      */
-    public static void clear(long parentThreadId, ConcurrentMap<String, MetadataItem> discoTransactionContext) {
+    public static void clear(long ancestralThreadId, long parentThreadId, ConcurrentMap<String, MetadataItem> discoTransactionContext) {
         if (discoTransactionContext == null) {
             return;
         }
 
-        if (Thread.currentThread().getId() != parentThreadId && !isDiscoNullId(discoTransactionContext)) {
+        long thisThreadId = Thread.currentThread().getId();
+        if (ancestralThreadId != thisThreadId && !isDiscoNullId(discoTransactionContext)) {
             EventBus.publish(new ThreadExitEvent("Concurrency", parentThreadId, Thread.currentThread().getId()));
             TransactionContext.clear();
         }

@@ -41,6 +41,7 @@ public class TransactionContext {
     private static Logger log = LogManager.getLogger(TransactionContext.class);
 
     static final String TRANSACTION_ID_KEY = "$amazon.discoTransactionId";
+    public static final String TRANSACTION_OWNING_THREAD_KEY = "$amazon.discoTransactionOwningThreadId";
     public static final String UNINITIALIZED_TRANSACTION_CONTEXT_VALUE = "disco_null_id";
 
     private static final String REFERENCE_COUNTER_KEY = "$amazon.discoRefCounterKey";
@@ -64,7 +65,8 @@ public class TransactionContext {
         @Override
         public ConcurrentMap<String, MetadataItem> get() {
             ConcurrentMap<String, MetadataItem> map = new ConcurrentHashMap<>();
-            map.put(TransactionContext.TRANSACTION_ID_KEY, new MetadataItem(TransactionContext.UNINITIALIZED_TRANSACTION_CONTEXT_VALUE));
+            map.put(TRANSACTION_ID_KEY, new MetadataItem(TransactionContext.UNINITIALIZED_TRANSACTION_CONTEXT_VALUE));
+            map.put(TRANSACTION_OWNING_THREAD_KEY, new MetadataItem(Long.valueOf(-1)));
             return map;
         }
     }
@@ -93,6 +95,7 @@ public class TransactionContext {
         if (getReferenceCounter() == null || getReferenceCounter().get() <= 0) {
             clear();
             set(UUID.randomUUID().toString());
+            putMetadata(TRANSACTION_OWNING_THREAD_KEY, Long.valueOf(Thread.currentThread().getId()));
             transactionContext.get().put(REFERENCE_COUNTER_KEY, new MetadataItem(new AtomicInteger(0)));
             EventBus.publish(new TransactionBeginEvent("Core"));
         }
@@ -214,6 +217,14 @@ public class TransactionContext {
         }
     }
 
+    /**
+     * Queries if a given metadata key has the specified tag. The metadata must exist, which can be checked via a prior
+     * call to getMetadata(), checking that null is not returned.
+     * @param key a String to identify the data.
+     * @param tag a String representing the label/tag
+     * @return true if this metadata has the given tag.
+     * @throws IllegalArgumentException if no such metadata exists
+     */
     public static boolean hasMetadataTag(String key, String tag) {
         if (transactionContext.get().get(key) == null) {
             throw new IllegalArgumentException(key + " no metadata object exists for this key");
