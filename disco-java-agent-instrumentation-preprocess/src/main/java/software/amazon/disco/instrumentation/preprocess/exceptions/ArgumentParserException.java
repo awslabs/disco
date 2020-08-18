@@ -13,12 +13,20 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.instrumentation.preprocess.util;
+package software.amazon.disco.instrumentation.preprocess.exceptions;
+
+import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 /**
- * Holds constant variables used throughout the library
+ * Exception thrown while parsing arguments received via the CLI
  */
-public class PreprocessConstants {
-    public static final String MESSAGE_PREFIX = "Disco(Instrumentation preprocess) - ";
-    public static final String JAR_EXTENSION = ".jar";
+public class ArgumentParserException extends RuntimeException{
+    /**
+     * Constructor accepting a String argument that describes the exception cause
+     *
+     * @param message message that describes the cause
+     */
+    public ArgumentParserException(String message) {
+        super(PreprocessConstants.MESSAGE_PREFIX+ message);
+    }
 }

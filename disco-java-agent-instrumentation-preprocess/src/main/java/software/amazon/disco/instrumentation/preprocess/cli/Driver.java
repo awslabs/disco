@@ -15,37 +15,67 @@
 
 package software.amazon.disco.instrumentation.preprocess.cli;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.disco.agent.inject.Injector;
-import software.amazon.disco.instrumentation.preprocess.instrumentation.ModuleTransformer;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.StaticInstrumentationTransformer;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.DiscoAgentLoader;
-import software.amazon.disco.instrumentation.preprocess.loaders.modules.JarModuleLoader;
+import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JarLoader;
+import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.io.File;
-import java.lang.instrument.Instrumentation;
 
 /**
- * Entry point of the library. A {@link ModuleTransformer} instance is being created to orchestrate the instrumentation
- * process of all packages supplied.
+ * Entry point of the library. A {@link StaticInstrumentationTransformer} instance is being created to orchestrate the instrumentation
+ * process of all class files supplied.
  */
 public class Driver {
-    public static void main(String[] args) {
-        final PreprocessConfig config = new PreprocessConfigParser().parseCommandLine(args);
+    private static final Logger log = LogManager.getLogger(Driver.class);
 
-        if (config == null) {
-            System.exit(1);
+    public static void main(String[] args) {
+        // only print help text if it's the first argument passed in and ignores all other args
+        if (args[0].toLowerCase().equals("--help")) {
+            printHelpText();
+            System.exit(0);
         }
 
-        final Instrumentation instrumentation = Injector.createInstrumentation();
+        try {
+            final PreprocessConfig config = new PreprocessConfigParser().parseCommandLine(args);
 
-        // inject the agent jar into the classpath as earlier as possible to avoid ClassNotFound exception when resolving
-        // types imported from libraries such as ByteBuddy shaded in the agent JAR
-        Injector.addToBootstrapClasspath(instrumentation, new File(config.getAgentPath()));
+            // inject the agent jar into the classpath as earlier as possible to avoid ClassNotFound exception when resolving
+            // types imported from libraries such as ByteBuddy shaded in the agent JAR
+            Injector.addToBootstrapClasspath(Injector.createInstrumentation(), new File(config.getAgentPath()));
 
-        ModuleTransformer.builder()
-                .agentLoader(new DiscoAgentLoader())
-                .jarLoader(new JarModuleLoader())
-                .config(config)
-                .build()
-                .transform();
+            StaticInstrumentationTransformer.builder()
+                    .agentLoader(new DiscoAgentLoader())
+                    .jarLoader(new JarLoader())
+                    .config(config)
+                    .build()
+                    .transform();
+        } catch (RuntimeException e) {
+            log.error(PreprocessConstants.MESSAGE_PREFIX + "Failed to perform static instrumentation", e);
+            System.exit(1);
+        }
+    }
+
+    /**
+     * Prints out the help text when the [--help] option is passed.
+     */
+    protected static void printHelpText() {
+        System.out.println("Disco Instrumentation Preprocess Library Command Line Interface\n"
+                + "\t Usage: [options] \n"
+                + "\t\t --help                          List all supported options supported by the CLI.\n"
+                + "\t\t --outputDir | -out              <Output directory where the transformed packages will be stored. Same folder as the original file if not provided>\n"
+                + "\t\t --jarPaths | -jps               <List of paths to the jar files to be instrumented>\n"
+                + "\t\t --serializationPath | -sp       <Path to the jar where the serialized instrumentation state will be stored>\n"
+                + "\t\t --agentPath | -ap               <Path to the Disco Agent that will be applied to the packages supplied>\n"
+                + "\t\t --agentArg | -arg               <Arguments that will be passed to the agent>\n"
+                + "\t\t --suffix | -suf                 <Suffix to be appended to the transformed packages>\n"
+                + "\t\t --javaversion | -jv             <Version of java to compile the transformed classes>\n"
+                + "\t\t --verbose                       Set the log level to log everything.\n"
+                + "\t\t --silent                        Disable logging to the console.\n\n"
+                + "The default behavior of the library will replace the original Jar scheduled for instrumentation if NO outputDir AND suffix are supplied.\n"
+                + "One agentPath and at least one jarPaths must be provided in order to perform static instrumentation"
+        );
     }
 }

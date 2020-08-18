@@ -15,20 +15,19 @@
 
 package software.amazon.disco.instrumentation.preprocess.exceptions;
 
+import software.amazon.disco.instrumentation.preprocess.instrumentation.StaticInstrumentationTransformer;
+import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.ClassFileLoader;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 /**
- * Exception thrown when an error has occurred during the export process
+ * Exception thrown when a valid {@link ClassFileLoader} is not provided to
+ * {@link StaticInstrumentationTransformer}
  */
-public class ModuleExportException extends RuntimeException {
+public class ClassFileLoaderNotProvidedException extends RuntimeException {
     /**
-     * Constructor that accepts a message explaining why the module export process failed as well as
-     * a {@link Throwable} instance for tracing.
-     *
-     * @param message cause of the failure
-     * @param cause   {@link Throwable cause} of the failure for tracing the root cause.
+     * Constructor invoking the parent constructor with a fixed error message
      */
-    public ModuleExportException(String message, Throwable cause) {
-        super(PreprocessConstants.MESSAGE_PREFIX + message, cause);
+    public ClassFileLoaderNotProvidedException() {
+        super(PreprocessConstants.MESSAGE_PREFIX + "package loader not provided");
     }
 }

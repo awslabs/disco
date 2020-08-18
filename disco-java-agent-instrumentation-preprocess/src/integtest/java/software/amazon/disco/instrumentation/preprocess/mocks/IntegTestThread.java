@@ -13,12 +13,14 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.instrumentation.preprocess.util;
+package software.amazon.disco.instrumentation.preprocess.mocks;
 
 /**
- * Holds constant variables used throughout the library
+ * This class will be used to test static instrumentation using a disco agent with concurrency support.
+ *
+ * When constructing a jar file to be transformed, this class must be renamed using new ByteBuddy().redefine(<type>).rename() in
+ * order to be able to instantiate the instrumented version otherwise the JVM will always resolve to this original class even if the
+ * instrumented version is appended to the class path.
  */
-public class PreprocessConstants {
-    public static final String MESSAGE_PREFIX = "Disco(Instrumentation preprocess) - ";
-    public static final String JAR_EXTENSION = ".jar";
+public class IntegTestThread extends Thread {
 }

@@ -26,3 +26,54 @@ dependencies {
     testImplementation(project(":disco-java-agent:disco-java-agent-core"))
     testImplementation(project(":disco-java-agent:disco-java-agent-api"))
 }
+
+/**
+ * Define a secondary set of tests, for testing the actual interceptions provided by the Installables.
+ */
+sourceSets {
+    create("integtest") {
+        java {
+            srcDir("src/integtest/java")
+        }
+    }
+}
+
+//create a new empty integ test config - not extending from existing compile or testCompile, since we don't want to
+//be able to compile against Core etc.
+val integtestImplementation: Configuration by configurations.getting {}
+
+dependencies {
+    integtestImplementation("junit", "junit", "4.12")
+    integtestImplementation("net.bytebuddy", "byte-buddy-dep", "1.9.12")
+    integtestImplementation("org.ow2.asm", "asm", "7.1")
+    integtestImplementation("org.apache.logging.log4j", "log4j-core", "2.13.3")
+    integtestImplementation(project(":disco-java-agent:disco-java-agent-api"))
+    integtestImplementation(project(":disco-java-agent:disco-java-agent-inject-api", "shadow"))
+    integtestImplementation(project(":disco-java-agent-instrumentation-preprocess", "shadow"))
+}
+
+val ver = project.version
+
+val integtest = task<Test>("integtest") {
+    testClassesDirs = sourceSets["integtest"].output.classesDirs
+
+    classpath = sourceSets["integtest"].runtimeClasspath
+            .minus(configurations.compileClasspath.get())
+            .filter {
+                // need to remove disco agent api from classpath because the agent to be loaded already has it as dependency
+                file -> !file.endsWith("disco-java-agent-api-"+ver+".jar")
+            }
+            .plus(sourceSets["integtest"].runtimeClasspath.filter {
+                // add back bytebuddy and asm dependencies to the classpath
+                file -> file.absolutePath.contains("net.bytebuddy") || file.absolutePath.contains("org.ow2.asm")
+            }
+    )
+
+    //we need the agent to be built first
+    dependsOn(":disco-java-agent:disco-java-agent:build")
+    mustRunAfter(tasks["test"])
+}
+
+tasks.build {
+    dependsOn(integtest)
+}

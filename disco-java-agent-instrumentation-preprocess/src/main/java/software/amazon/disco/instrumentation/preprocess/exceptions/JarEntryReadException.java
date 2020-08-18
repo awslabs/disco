@@ -15,19 +15,21 @@
 
 package software.amazon.disco.instrumentation.preprocess.exceptions;
 
-import software.amazon.disco.instrumentation.preprocess.instrumentation.ModuleTransformer;
-import software.amazon.disco.instrumentation.preprocess.loaders.modules.ModuleLoader;
+import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 /**
- * Exception thrown when a valid {@link ModuleLoader} is not provided to
- * {@link ModuleTransformer}
+ * Exception thrown when the {@link ExportStrategy exporter}
+ * fails to read an exiting entry from the original Jar file.
  */
-public class ModuleLoaderNotProvidedException extends RuntimeException {
+public class JarEntryReadException extends RuntimeException {
     /**
-     * Constructor invoking the parent constructor with a fixed error message
+     * Constructor
+     *
+     * @param entryName {@link java.util.jar.JarEntry} that failed to be copied
+     * @param cause     {@link Throwable cause} of the failure for tracing the root cause.
      */
-    public ModuleLoaderNotProvidedException() {
-        super(PreprocessConstants.MESSAGE_PREFIX + "package loader not provided");
+    public JarEntryReadException(String entryName, Throwable cause) {
+        super(PreprocessConstants.MESSAGE_PREFIX + "Failed to read Jar entry: " + entryName, cause);
     }
 }

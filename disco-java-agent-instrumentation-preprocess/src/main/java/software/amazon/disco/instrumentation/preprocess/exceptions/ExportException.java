@@ -15,19 +15,20 @@
 
 package software.amazon.disco.instrumentation.preprocess.exceptions;
 
-import software.amazon.disco.instrumentation.preprocess.instrumentation.StaticInstrumentationTransformer;
-import software.amazon.disco.instrumentation.preprocess.loaders.agents.AgentLoader;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 /**
- * Exception thrown when a valid {@link AgentLoader} is not provided to
- * {@link StaticInstrumentationTransformer}
+ * Exception thrown when an error has occurred during the export process
  */
-public class AgentLoaderNotProvidedException extends RuntimeException {
+public class ExportException extends RuntimeException {
     /**
-     * Constructor invoking the parent constructor with a fixed error message
+     * Constructor that accepts a message explaining why the module export process failed and
+     * a {@link Throwable} instance for tracing.
+     *
+     * @param message cause of the failure
+     * @param cause   {@link Throwable cause} of the failure for tracing the root cause.
      */
-    public AgentLoaderNotProvidedException() {
-        super(PreprocessConstants.MESSAGE_PREFIX + "Agent loader not provided");
+    public ExportException(String message, Throwable cause) {
+        super(PreprocessConstants.MESSAGE_PREFIX + message, cause);
     }
 }

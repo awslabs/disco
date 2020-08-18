@@ -22,6 +22,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.disco.agent.DiscoAgentTemplate;
 import software.amazon.disco.agent.config.AgentConfig;
+import software.amazon.disco.agent.config.AgentConfigParser;
 import software.amazon.disco.agent.inject.Injector;
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
@@ -42,7 +43,7 @@ public class DiscoAgentLoader implements AgentLoader {
 
     /**
      * {@inheritDoc}
-     *
+     * <p>
      * Install an agent by directly invoking the {@link Injector} api.
      */
     @Override
@@ -51,19 +52,21 @@ public class DiscoAgentLoader implements AgentLoader {
             throw new NoAgentToLoadException();
         }
 
-        instrumentation = instrumentation == null ? Injector.createInstrumentation() : instrumentation;
-
         final ClassFileVersion version = parseClassFileVersionFromConfig(config);
 
         DiscoAgentTemplate.setAgentConfigFactory(() -> {
-            //todo if we want to pass on any args from the tool to Core, pass them here.
-            final AgentConfig coreConfig = new AgentConfig(null);
-
+            final AgentConfig coreConfig = new AgentConfigParser().parseCommandLine(config.getAgentArg());
             coreConfig.setAgentBuilderTransformer(getAgentBuilderTransformer(version));
+
             return coreConfig;
         });
 
-        Injector.loadAgent(instrumentation, config.getAgentPath(), null);
+        // AgentConfig passed here as String will be ignored by Disco core if AgentConfigFactory is set
+        Injector.loadAgent(
+                instrumentation,
+                config.getAgentPath(),
+                null
+        );
     }
 
     /**

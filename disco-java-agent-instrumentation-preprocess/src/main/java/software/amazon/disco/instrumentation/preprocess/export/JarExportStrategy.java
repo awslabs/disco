@@ -17,10 +17,11 @@ package software.amazon.disco.instrumentation.preprocess.export;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.disco.instrumentation.preprocess.exceptions.ModuleExportException;
-import software.amazon.disco.instrumentation.preprocess.exceptions.UnableToReadJarEntryException;
+import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
+import software.amazon.disco.instrumentation.preprocess.exceptions.ExportException;
+import software.amazon.disco.instrumentation.preprocess.exceptions.JarEntryReadException;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentedClassState;
-import software.amazon.disco.instrumentation.preprocess.loaders.modules.ModuleInfo;
+import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JarInfo;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.io.File;
@@ -40,45 +41,26 @@ import java.util.jar.JarOutputStream;
 /**
  * Strategy to export transformed classes to a local Jar
  */
-public class JarModuleExportStrategy implements ModuleExportStrategy {
-    private static final Logger log = LogManager.getLogger(JarModuleExportStrategy.class);
+public class JarExportStrategy implements ExportStrategy {
+    private static final Logger log = LogManager.getLogger(JarExportStrategy.class);
     private static Path tempDir = null;
-
-    private final String outputDir;
-
-    /**
-     * Constructor with the destination path provided.
-     *
-     * @param outputDir Absolute output path of the transformed jar. Default is the current folder where
-     *                  the original jar is located.
-     */
-    public JarModuleExportStrategy(final String outputDir) {
-        this.outputDir = outputDir;
-    }
-
-    /**
-     * Constructor with no destination path provided. Transformed jar will replace the original file.
-     */
-    public JarModuleExportStrategy() {
-        this.outputDir = null;
-    }
 
     /**
      * Exports all transformed classes to a Jar file. A temporary Jar File will be created to store all
      * the transformed classes and then be renamed to replace the original Jar.
      *
-     * @param moduleInfo   Information of the original Jar
+     * @param jarInfo   Information of the original Jar
      * @param instrumented a map of instrumented classes with their bytecode
-     * @param suffix       suffix of the transformed package
+     * @param config       configuration file containing instructions to instrument a module
      */
     @Override
-    public void export(final ModuleInfo moduleInfo, final Map<String, InstrumentedClassState> instrumented, final String suffix) {
+    public void export(final JarInfo jarInfo, final Map<String, InstrumentedClassState> instrumented, final PreprocessConfig config) {
         log.debug(PreprocessConstants.MESSAGE_PREFIX + "Saving changes to Jar");
 
-        final File file = createTempFile(moduleInfo);
+        final File file = createTempFile(jarInfo);
 
-        buildOutputJar(moduleInfo, instrumented, file);
-        moveTempFileToDestination(moduleInfo, suffix, file);
+        buildOutputJar(jarInfo, instrumented, file);
+        moveTempFileToDestination(jarInfo, config, file);
     }
 
     /**
@@ -86,18 +68,18 @@ public class JarModuleExportStrategy implements ModuleExportStrategy {
      * the original {@link JarFile}. A temp folder with a 'disco' suffix will be created where these temp files will be stored if {@link #tempDir} is null.
      * A default suffix of '.temp' is used as implemented by the {@link Files} api.
      *
-     * @param moduleInfo Information of the original Jar
+     * @param jarInfo Information of the original Jar
      * @return created temp file
      */
-    protected File createTempFile(final ModuleInfo moduleInfo) {
+    protected File createTempFile(final JarInfo jarInfo) {
         try {
             if (tempDir == null) {
                 tempDir = Files.createTempDirectory("disco");
             }
 
-            return Files.createTempFile(tempDir, moduleInfo.getFile().getName(), null).toFile();
+            return Files.createTempFile(tempDir, jarInfo.getFile().getName(), null).toFile();
         } catch (IOException e) {
-            throw new ModuleExportException("Failed to create temp Jar file", e);
+            throw new ExportException("Failed to create temp Jar file", e);
         }
     }
 
@@ -108,6 +90,7 @@ public class JarModuleExportStrategy implements ModuleExportStrategy {
      * @param instrumented a map of instrumented classes with their bytecode
      */
     protected void saveTransformedClasses(final JarOutputStream jarOS, final Map<String, InstrumentedClassState> instrumented) {
+        log.info(PreprocessConstants.MESSAGE_PREFIX + "Transformed " + instrumented.size() + " classes.");
         for (Map.Entry<String, InstrumentedClassState> mapEntry : instrumented.entrySet()) {
             final String classPath = mapEntry.getKey();
             final InstrumentedClassState info = mapEntry.getValue();
@@ -120,7 +103,7 @@ public class JarModuleExportStrategy implements ModuleExportStrategy {
 
                 //todo: implemented serialization of InstrumentationState
             } catch (IOException e) {
-                throw new ModuleExportException(classPath, e);
+                throw new ExportException(classPath, e);
             }
         }
     }
@@ -130,11 +113,13 @@ public class JarModuleExportStrategy implements ModuleExportStrategy {
      * transformed classes.
      *
      * @param jarOS        {@link JarOutputStream} used to write entries to the output jar
-     * @param moduleInfo   Information of the original Jar
+     * @param jarFile      the original JarFile
      * @param instrumented a map of instrumented classes with their bytecode
      */
-    protected void copyExistingJarEntries(final JarOutputStream jarOS, final ModuleInfo moduleInfo, final Map<String, InstrumentedClassState> instrumented) {
-        for (Enumeration entries = moduleInfo.getJarFile().entries(); entries.hasMoreElements(); ) {
+    protected void copyExistingJarEntries(final JarOutputStream jarOS, final JarFile jarFile, final Map<String, InstrumentedClassState> instrumented) {
+        log.info(PreprocessConstants.MESSAGE_PREFIX + "Copying existing entries from file: " + jarFile.getName());
+        final Enumeration entries = jarFile.entries();
+        while (entries.hasMoreElements()) {
             final JarEntry entry = (JarEntry) entries.nextElement();
             final String keyToCheck = entry.getName().endsWith(".class") ? entry.getName().substring(0, entry.getName().lastIndexOf(".class")) : entry.getName();
 
@@ -143,11 +128,11 @@ public class JarModuleExportStrategy implements ModuleExportStrategy {
                     if (entry.isDirectory()) {
                         jarOS.putNextEntry(entry);
                     } else {
-                        copyJarEntry(jarOS, moduleInfo.getJarFile(), entry);
+                        copyJarEntry(jarOS, jarFile, entry);
                     }
                 }
             } catch (IOException e) {
-                throw new ModuleExportException("Failed to copy class: " + entry.getName(), e);
+                throw new ExportException("Failed to copy class: " + entry.getName(), e);
             }
         }
     }
@@ -155,16 +140,16 @@ public class JarModuleExportStrategy implements ModuleExportStrategy {
     /**
      * Builds the output jar by copying existing entries from the original and inserting transformed classes
      *
-     * @param moduleInfo   Information of the original Jar
+     * @param jarInfo   Information of the original Jar
      * @param instrumented a map of instrumented classes with their bytecode
      * @param tempFile     file that the JarOutputStream will write to
      */
-    protected void buildOutputJar(final ModuleInfo moduleInfo, final Map<String, InstrumentedClassState> instrumented, final File tempFile) {
-        try (JarOutputStream jarOS = new JarOutputStream(new FileOutputStream(tempFile))) {
-            copyExistingJarEntries(jarOS, moduleInfo, instrumented);
+    protected void buildOutputJar(final JarInfo jarInfo, final Map<String, InstrumentedClassState> instrumented, final File tempFile) {
+        try (JarOutputStream jarOS = new JarOutputStream(new FileOutputStream(tempFile)); JarFile jarFile = new JarFile(jarInfo.getFile())) {
+            copyExistingJarEntries(jarOS, jarFile, instrumented);
             saveTransformedClasses(jarOS, instrumented);
         } catch (IOException e) {
-            throw new ModuleExportException("Failed to create output Jar file", e);
+            throw new ExportException("Failed to create output Jar file", e);
         }
     }
 
@@ -178,10 +163,11 @@ public class JarModuleExportStrategy implements ModuleExportStrategy {
      */
     protected void copyJarEntry(final JarOutputStream jarOS, final JarFile file, final JarEntry entry) {
         try {
+            log.debug(PreprocessConstants.MESSAGE_PREFIX + "Copying entry: " + entry.getName());
             final InputStream entryStream = file.getInputStream(entry);
 
             if (entryStream == null) {
-                throw new UnableToReadJarEntryException(entry.getName(), null);
+                throw new JarEntryReadException(entry.getName(), null);
             }
 
             jarOS.putNextEntry(entry);
@@ -195,34 +181,34 @@ public class JarModuleExportStrategy implements ModuleExportStrategy {
             jarOS.closeEntry();
 
         } catch (IOException e) {
-            throw new UnableToReadJarEntryException(entry.getName(), e);
+            throw new JarEntryReadException(entry.getName(), e);
         }
     }
 
     /**
      * Move the temp file containing all existing entries and transformed classes to the
-     * destination. If {@link #outputDir} is NOT specified, the original file will be replaced.
+     * destination. If {@link PreprocessConfig#getOutputDir()} is null, the original file will be replaced.
      *
-     * @param moduleInfo Information of the original Jar
-     * @param suffix     suffix to be appended to the transformed package
+     * @param jarInfo Information of the original Jar
+     * @param config     configuration file containing instructions to instrument a module
      * @param tempFile   output file to be moved to the destination path
      * @return {@link Path} of the overwritten file
      */
-    protected Path moveTempFileToDestination(final ModuleInfo moduleInfo, final String suffix, final File tempFile) {
+    protected Path moveTempFileToDestination(final JarInfo jarInfo, final PreprocessConfig config, final File tempFile) {
         try {
-            final String destinationStr = outputDir == null ?
-                    moduleInfo.getFile().getAbsolutePath()
-                    : outputDir + "/" + moduleInfo.getFile().getName();
+            final String destinationStr = config.getOutputDir() == null ?
+                    jarInfo.getFile().getAbsolutePath()
+                    : config.getOutputDir() + "/" + jarInfo.getFile().getName();
 
-            final String destinationStrWithSuffix = suffix == null ?
+            final String destinationStrWithSuffix = config.getSuffix() == null ?
                     destinationStr
-                    : destinationStr.substring(0, destinationStr.lastIndexOf(PreprocessConstants.JAR_EXTENSION)) + suffix + PreprocessConstants.JAR_EXTENSION;
+                    : destinationStr.substring(0, destinationStr.lastIndexOf(PreprocessConstants.JAR_EXTENSION)) + config.getSuffix() + PreprocessConstants.JAR_EXTENSION;
 
             final Path destination = Paths.get(destinationStrWithSuffix);
             destination.toFile().getParentFile().mkdirs();
 
-            if (moduleInfo.getFile().getAbsolutePath().equals(destination.toFile().getAbsolutePath())) {
-                log.info(PreprocessConstants.MESSAGE_PREFIX + "Overriding original file: " + moduleInfo.getFile().getName());
+            if (jarInfo.getFile().getAbsolutePath().equals(destination.toFile().getAbsolutePath())) {
+                log.info(PreprocessConstants.MESSAGE_PREFIX + "Overriding original file: " + jarInfo.getFile().getName());
             }
 
             final Path filePath = Files.move(
@@ -231,14 +217,14 @@ public class JarModuleExportStrategy implements ModuleExportStrategy {
                     StandardCopyOption.REPLACE_EXISTING);
 
             if (filePath == null) {
-                throw new ModuleExportException("Failed to replace existing jar file", null);
+                throw new ExportException("Failed to replace existing jar file", null);
             }
 
             log.debug(PreprocessConstants.MESSAGE_PREFIX + "All transformed classes saved");
 
             return filePath;
         } catch (IOException e) {
-            throw new ModuleExportException("Failed to replace existing jar file", e);
+            throw new ExportException("Failed to replace existing jar file", e);
         }
     }
 }

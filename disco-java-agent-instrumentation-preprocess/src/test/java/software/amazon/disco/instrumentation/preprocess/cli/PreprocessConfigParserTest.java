@@ -19,7 +19,7 @@ import org.apache.logging.log4j.Level;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
+import software.amazon.disco.instrumentation.preprocess.exceptions.ArgumentParserException;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -37,38 +37,32 @@ public class PreprocessConfigParserTest {
         preprocessConfigParser = new PreprocessConfigParser();
     }
 
-    @Test
+    @Test(expected = ArgumentParserException.class)
     public void parseCommandLineReturnsNullWithNullArgs() {
-        Assert.assertNull(preprocessConfigParser.parseCommandLine(null));
+        preprocessConfigParser.parseCommandLine(null);
     }
 
-    @Test
-    public void parseCommandLineReturnsNullWithEmptyArgs() {
-        Assert.assertNull(preprocessConfigParser.parseCommandLine(new String[]{}));
+    @Test(expected = ArgumentParserException.class)
+    public void parseCommandLineFailsWithEmptyArgs() {
+        preprocessConfigParser.parseCommandLine(new String[]{});
     }
 
-    @Test
-    public void parseCommandLineReturnsNullWithInvalidFlag() {
-        String[] args = new String[]{"--help", "--suff", suffix};
-        Assert.assertNull(preprocessConfigParser.parseCommandLine(args));
+    @Test(expected = ArgumentParserException.class)
+    public void parseCommandLineFailsWithInvalidFlag() {
+        String[] args = new String[]{"--suff", suffix};
+        preprocessConfigParser.parseCommandLine(args);
     }
 
-    @Test
-    public void parseCommandLineReturnsNullWithUnmatchedFlagAsLastArg() {
-        String[] args = new String[]{"--help", "--suffix"};
-        Assert.assertNull(preprocessConfigParser.parseCommandLine(args));
+    @Test(expected = ArgumentParserException.class)
+    public void parseCommandLineFailsWithUnmatchedFlagAsLastArg() {
+        String[] args = new String[]{"--suffix"};
+        preprocessConfigParser.parseCommandLine(args);
     }
 
-    @Test
-    public void parseCommandLineReturnsNullWithHelpFlag() {
-        String[] args = new String[]{"--help", "--suffix", suffix};
-        Assert.assertNull(preprocessConfigParser.parseCommandLine(args));
-    }
-
-    @Test
-    public void parseCommandLineReturnsNullWithInvalidFormat() {
+    @Test(expected = ArgumentParserException.class)
+    public void parseCommandLineFailsWithInvalidFormat() {
         String[] args = new String[]{"--suffix", "--verbose"};
-        Assert.assertNull(preprocessConfigParser.parseCommandLine(args));
+        preprocessConfigParser.parseCommandLine(args);
     }
 
     @Test
@@ -88,7 +82,8 @@ public class PreprocessConfigParserTest {
                 "--serializationpath", serialization,
                 "--agentPath", agent,
                 "--suffix", suffix,
-                "--javaversion", "11"
+                "--javaversion", "11",
+                "--agentarg","arg"
         };
 
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
@@ -99,6 +94,7 @@ public class PreprocessConfigParserTest {
         Assert.assertEquals(agent, config.getAgentPath());
         Assert.assertEquals(suffix, config.getSuffix());
         Assert.assertEquals("11", config.getJavaVersion());
+        Assert.assertEquals("arg", config.getAgentArg());
     }
 
     @Test
@@ -109,7 +105,8 @@ public class PreprocessConfigParserTest {
                 "-sp", serialization,
                 "-ap", agent,
                 "-suf", suffix,
-                "-jv", "11"
+                "-jv", "11",
+                "-arg","arg"
         };
 
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
@@ -120,18 +117,7 @@ public class PreprocessConfigParserTest {
         Assert.assertEquals(agent, config.getAgentPath());
         Assert.assertEquals(suffix, config.getSuffix());
         Assert.assertEquals("11", config.getJavaVersion());
-    }
-
-    @Test
-    public void parseCommandLineWorkWithHelpFlag() {
-        PreprocessConfigParser spyParser = Mockito.spy(preprocessConfigParser);
-
-        spyParser.parseCommandLine(new String[]{"--help"});
-        Mockito.verify(spyParser).printHelpText();
-        Mockito.clearInvocations(spyParser);
-
-        spyParser.parseCommandLine(new String[]{"--verbose", "--help"});
-        Mockito.verify(spyParser, Mockito.never()).printHelpText();
+        Assert.assertEquals("arg", config.getAgentArg());
     }
 
     @Test

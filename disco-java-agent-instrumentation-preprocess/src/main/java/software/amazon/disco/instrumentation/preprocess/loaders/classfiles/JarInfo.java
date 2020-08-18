@@ -13,25 +13,23 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.instrumentation.preprocess.loaders.modules;
+package software.amazon.disco.instrumentation.preprocess.loaders.classfiles;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import software.amazon.disco.instrumentation.preprocess.export.ModuleExportStrategy;
+import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
 
 import java.io.File;
-import java.util.List;
-import java.util.jar.JarFile;
+import java.util.Map;
 
 /**
- * Class that holds data of a Jar package that has been loaded by a {@link JarModuleLoader} including the export strategy
+ * Class that holds data of a Jar package that has been loaded by a {@link JarLoader} including the export strategy
  * that will be used to store the transformed classes.
  */
 @AllArgsConstructor
 @Getter
-public class ModuleInfo {
+public class JarInfo {
     private final File file;
-    private final JarFile jarFile;
-    private final List<String> classNames;
-    private final ModuleExportStrategy exportStrategy;
+    private final ExportStrategy exportStrategy;
+    private final Map<String, byte[]> classByteCodeMap;
 }

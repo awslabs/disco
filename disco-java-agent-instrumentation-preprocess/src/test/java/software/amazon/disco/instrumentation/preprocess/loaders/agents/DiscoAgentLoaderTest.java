@@ -30,14 +30,14 @@ import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.NoAgentToLoadException;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.TransformationListener;
+import software.amazon.disco.instrumentation.preprocess.JarUtils;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.lang.instrument.Instrumentation;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 import java.util.jar.JarFile;
-import java.util.jar.JarOutputStream;
-import java.util.zip.ZipEntry;
 
 public class DiscoAgentLoaderTest {
     @Rule
@@ -49,7 +49,7 @@ public class DiscoAgentLoaderTest {
     }
 
     @Test
-    public void testParsingJavaVersionWorks(){
+    public void testParsingJavaVersionWorks() {
         PreprocessConfig config = PreprocessConfig.builder()
                 .agentPath("path")
                 .javaVersion("11")
@@ -66,7 +66,7 @@ public class DiscoAgentLoaderTest {
     }
 
     @Test(expected = InvalidConfigEntryException.class)
-    public void testParsingJavaVersionFailsWithInvalidJavaVersion(){
+    public void testParsingJavaVersionFailsWithInvalidJavaVersion() {
         PreprocessConfig config = PreprocessConfig.builder()
                 .agentPath("path")
                 .javaVersion("a version")
@@ -76,11 +76,15 @@ public class DiscoAgentLoaderTest {
 
     @Test
     public void testLoadAgentRegistersAgentBuilderTransformerAndInstallsAgent() throws Exception {
-        Instrumentation instrumentation = Mockito.mock(Instrumentation.class);
+        Instrumentation delegate = Mockito.mock(Instrumentation.class);
+        Instrumentation instrumentation = Mockito.spy(new TransformerExtractor(delegate));
         AgentBuilder agentBuilder = Mockito.mock(AgentBuilder.class);
         Mockito.when(agentBuilder.with(Mockito.any(ByteBuddy.class))).thenReturn(agentBuilder);
 
-        File file = createJar("TestJarFile");
+        Map<String, byte[]> entries = new HashMap<>();
+        entries.put("Foo.class", "Foo.class".getBytes());
+
+        File file = JarUtils.createJar(temporaryFolder, "TestJarFile", entries);
         PreprocessConfig config = PreprocessConfig.builder().agentPath(file.getAbsolutePath()).build();
 
         Assert.assertNull(DiscoAgentTemplate.getAgentConfigFactory());
@@ -95,8 +99,7 @@ public class DiscoAgentLoaderTest {
         agentConfigSupplier.get().getAgentBuilderTransformer().apply(agentBuilder, null);
         Mockito.verify(agentBuilder).with(Mockito.any(TransformationListener.class));
 
-        // check if a ByteBuddy instance with the correct java version is being installed using its own
-        // equals method
+        // check if a ByteBuddy instance with the correct java version is being installed using its own equals method
         Assert.assertEquals(ClassFileVersion.JAVA_V8, DiscoAgentLoader.parseClassFileVersionFromConfig(config));
         ArgumentCaptor<ByteBuddy> byteBuddyArgumentCaptor = ArgumentCaptor.forClass(ByteBuddy.class);
         Mockito.verify(agentBuilder).with(byteBuddyArgumentCaptor.capture());
@@ -107,32 +110,4 @@ public class DiscoAgentLoaderTest {
         Mockito.verify(instrumentation).appendToBootstrapClassLoaderSearch(jarFileArgumentCaptor.capture());
         Assert.assertEquals(file.getAbsolutePath(), jarFileArgumentCaptor.getValue().getName());
     }
-
-    private File createJar(String name) throws Exception {
-        File file = temporaryFolder.newFile(name+".jar");
-        try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
-            try (JarOutputStream jarOutputStream = new JarOutputStream(fileOutputStream)) {
-                //write a sentinal file with the same name as the jar, to test if it becomes readable by getResource.
-                jarOutputStream.putNextEntry(new ZipEntry(name));
-                jarOutputStream.write("foobar".getBytes());
-                jarOutputStream.closeEntry();
-            }
-        }
-        return file;
-    }
-
-//    class MockAgentBuilderTransformer implements BiFunction<AgentBuilder, Installable, AgentBuilder> {
-//        @Override
-//        public AgentBuilder apply(AgentBuilder agentBuilder, Installable installable) {
-//            return agentBuilder
-//                    .with(new ByteBuddy(version))
-//                    .with(new TransformationListener(uuidGenerate(installable)));
-//        }
-//
-//        class ByteBuddyTest extends ByteBuddy{
-//            public ClassFileVersion getClassFileVersion(){
-//                return classFileVersion;
-//            }
-//        }
-//    }
 }

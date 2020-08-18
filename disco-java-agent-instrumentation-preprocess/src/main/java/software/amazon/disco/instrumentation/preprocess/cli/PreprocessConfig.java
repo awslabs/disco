@@ -38,6 +38,12 @@ public class PreprocessConfig {
     private final Level logLevel;
     private final String serializationJarPath;
     private final String javaVersion;
+    private final String agentArg;
 
-    private final AgentConfig coreAgentConfig;
+    public Level getLogLevel() {
+        if(logLevel == null){
+            return Level.INFO;
+        }
+        return logLevel;
+    }
 }

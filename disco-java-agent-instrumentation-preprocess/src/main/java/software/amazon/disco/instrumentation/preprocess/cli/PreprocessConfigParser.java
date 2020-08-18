@@ -19,7 +19,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.Level;
-import software.amazon.disco.agent.config.AgentConfig;
+import software.amazon.disco.instrumentation.preprocess.exceptions.ArgumentParserException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,14 +39,7 @@ public class PreprocessConfigParser {
      */
     public PreprocessConfig parseCommandLine(String[] args) {
         if (args == null || args.length == 0) {
-            System.err.println("Mandatory options not supplied, please use [--help] to get a list of all options supported by this CLI.");
-            return null;
-        }
-
-        // only print help text if it's the first argument passed in and ignores all other args
-        if (args[0].toLowerCase().equals("--help")) {
-            printHelpText();
-            return null;
+            throw new ArgumentParserException("Mandatory options not supplied, please use [--help] to get a list of all options supported by this CLI.");
         }
 
         setupAcceptedFlags();
@@ -61,8 +54,7 @@ public class PreprocessConfigParser {
                 // no previous flag found, expecting a flag
 
                 if (!ACCEPTED_FLAGS.containsKey(argLowered)) {
-                    System.err.println("Flag: [" + arg + "] is invalid");
-                    return null;
+                    throw new ArgumentParserException("Flag: [" + arg + "] is invalid");
                 }
 
                 final OptionToMatch option = ACCEPTED_FLAGS.get(argLowered);
@@ -74,8 +66,7 @@ public class PreprocessConfigParser {
             } else {
                 // previous flag still expecting an argument but another flag is discovered
                 if (ACCEPTED_FLAGS.containsKey(argLowered) && !flagBeingMatched.isMatched()) {
-                    System.err.println("Flag: [" + flagBeingMatched.getFlag() + "] requires an argument");
-                    return null;
+                    throw new ArgumentParserException("Flag: [" + flagBeingMatched.getFlag() + "] requires an argument");
                 }
 
                 // a previously detected option that accepts multi values is now finished matching its arguments.
@@ -99,8 +90,7 @@ public class PreprocessConfigParser {
 
         // the last flag discovered is missing its arg
         if (flagBeingMatched != null && !flagBeingMatched.isMatched) {
-            System.err.println("Flag: [" + flagBeingMatched.getFlag() + "] requires an argument");
-            return null;
+            throw new ArgumentParserException("Flag: [" + flagBeingMatched.getFlag() + "] requires an argument");
         }
 
         return builder.build();
@@ -120,6 +110,7 @@ public class PreprocessConfigParser {
         ACCEPTED_FLAGS.put("--serializationpath", new OptionToMatch("--serializationpath", true, false));
         ACCEPTED_FLAGS.put("--suffix", new OptionToMatch("--suffix", true, false));
         ACCEPTED_FLAGS.put("--javaversion", new OptionToMatch("--javaversion", true, false));
+        ACCEPTED_FLAGS.put("--agentarg", new OptionToMatch("--agentarg", true, false));
 
         ACCEPTED_FLAGS.put("-out", new OptionToMatch("-out", true, false));
         ACCEPTED_FLAGS.put("-jps", new OptionToMatch("-jps", true, true));
@@ -127,26 +118,7 @@ public class PreprocessConfigParser {
         ACCEPTED_FLAGS.put("-sp", new OptionToMatch("-sp", true, false));
         ACCEPTED_FLAGS.put("-suf", new OptionToMatch("-suf", true, false));
         ACCEPTED_FLAGS.put("-jv", new OptionToMatch("-jv", true, false));
-    }
-
-    /**
-     * Prints out the help text when the [--help] option is passed.
-     */
-    protected void printHelpText() {
-        System.out.println("Disco Instrumentation Preprocess Library Command Line Interface\n"
-                + "\t Usage: [options] \n"
-                + "\t\t --help                          List all supported options supported by the CLI.\n"
-                + "\t\t --outputDir | -out              <Output directory where the transformed packages will be stored. Same folder as the original file if not provided>\n"
-                + "\t\t --jarPaths | -jps               <List of paths to the jar files to be instrumented>\n"
-                + "\t\t --serializationPath | -sp       <Path to the jar where the serialized instrumentation state will be stored>\n"
-                + "\t\t --agentPath | -ap               <Path to the Disco Agent that will be applied to the packages supplied>\n"
-                + "\t\t --suffix | -suf                 <Suffix to be appended to the transformed packages>\n"
-                + "\t\t --javaversion | -jv             <Version of java to compile the transformed classes>\n"
-                + "\t\t --verbose                       Set the log level to log everything.\n"
-                + "\t\t --silent                        Disable logging to the console.\n\n"
-                + "The default behavior of the library will replace the original package scheduled for instrumentation if NO destination AND suffix are supplied.\n"
-                + "An agent AND either a servicePackage or at least one dependenciesPath MUST be supplied."
-        );
+        ACCEPTED_FLAGS.put("-arg", new OptionToMatch("-arg", true, false));
     }
 
     /**
@@ -178,6 +150,10 @@ public class PreprocessConfigParser {
             case "-ap":
             case "--agentpath":
                 builder.agentPath(argument);
+                break;
+            case "-arg":
+            case "--agentarg":
+                builder.agentArg(argument);
                 break;
             case "-suf":
             case "--suffix":
