@@ -40,6 +40,13 @@ public class AwsServiceDownstreamRequestEventImpl extends AwsServiceDownstreamRe
     }
 
     /**
+     * @return the underlying SdkHttpRequest
+     */
+    public SdkHttpRequest getSdkHttpRequest() {
+        return sdkHttpRequest;
+    }
+
+    /**
      * Set the region for this event
      * @param region the region
      * @return 'this' for method chaining
@@ -92,8 +99,7 @@ public class AwsServiceDownstreamRequestEventImpl extends AwsServiceDownstreamRe
                 .appendHeader(name, value)
                 .build();
 
-        Map<String, List<String>> headerMap = this.sdkHttpRequest.headers();
-        this.withHeaderMap(headerMap);
-        return headerMap != null;
+        this.withHeaderMap(this.sdkHttpRequest.headers());
+        return this.getHeaderMap() != null;
     }
 }

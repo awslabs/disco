@@ -39,6 +39,11 @@ val safetyTestImplementation by configurations.getting {
 
 // Only dependency the test needs is JUnit
 dependencies {
+    testImplementation("com.amazonaws", "aws-java-sdk-dynamodb", "1.11.840")
+    testImplementation("software.amazon.awssdk", "dynamodb", "2.13.76")
+    testImplementation("software.amazon.awssdk", "s3", "2.13.76")
+    testImplementation("com.github.tomakehurst", "wiremock-jre8", "2.27.0")
+    testImplementation(project(":disco-java-agent-aws:disco-java-agent-aws-api"))
     safetyTestImplementation("junit:junit:4.12")
 }
 

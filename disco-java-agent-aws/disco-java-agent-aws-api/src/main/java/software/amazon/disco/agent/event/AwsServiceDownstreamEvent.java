@@ -22,7 +22,7 @@ import java.util.Map;
  * Generic interface of the Aws Service Downstream Events. Unifies common APIs that exist in both the request
  * and response events.
  */
-public interface AwsServiceDownstreamEvent {
+public interface AwsServiceDownstreamEvent extends ServiceEvent {
 
     /**
      * Keys to use in the data map

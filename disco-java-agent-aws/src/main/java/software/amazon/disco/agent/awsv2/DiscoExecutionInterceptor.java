@@ -113,14 +113,16 @@ public class DiscoExecutionInterceptor implements ExecutionInterceptor {
     @Override
     public SdkHttpRequest modifyHttpRequest(Context.ModifyHttpRequest context, ExecutionAttributes executionAttributes) {
         AwsServiceDownstreamRequestEventImpl requestEvent = (AwsServiceDownstreamRequestEventImpl) TransactionContext.getMetadata(TX_REQUEST_EVENT_KEY);
+        SdkHttpRequest sdkHttpRequest = context.httpRequest();
 
-        requestEvent.withSdkHttpRequest(context.httpRequest())
+        requestEvent.withSdkHttpRequest(sdkHttpRequest)
                 .withHeaderMap(context.httpRequest().headers());
 
-        // Modification may happen by consumers of the request event
+        // Modification may happen by consumers of the request event, namely adding headers
         EventBus.publish(requestEvent);
 
-        return context.httpRequest();
+        // Return the (potentially) modified sdkHttpRequest, or the original sdkHttpRequest if modification failed
+        return requestEvent.getSdkHttpRequest() != null ? requestEvent.getSdkHttpRequest() : context.httpRequest();
     }
 
     /**
@@ -153,6 +155,7 @@ public class DiscoExecutionInterceptor implements ExecutionInterceptor {
         AwsServiceDownstreamRequestEvent requestEvent = (AwsServiceDownstreamRequestEvent) TransactionContext.getMetadata(TX_REQUEST_EVENT_KEY);
 
         Object txRetryCount = TransactionContext.getMetadata(TX_RETRY_COUNT_KEY);
+        TransactionContext.removeMetadata(TX_RETRY_COUNT_KEY);  // Prevent retry count from leaking across requests
         int retryCount = txRetryCount == null ? 0 : (int) txRetryCount;
 
         SdkHttpResponse httpResponse = context.httpResponse();
@@ -179,6 +182,7 @@ public class DiscoExecutionInterceptor implements ExecutionInterceptor {
         AwsServiceDownstreamRequestEvent requestEvent = (AwsServiceDownstreamRequestEvent) TransactionContext.getMetadata(TX_REQUEST_EVENT_KEY);
 
         Object txRetryCount = TransactionContext.getMetadata(TX_RETRY_COUNT_KEY);
+        TransactionContext.removeMetadata(TX_RETRY_COUNT_KEY);  // Prevent retry count from leaking across requests
         int retryCount = txRetryCount == null ? 0 : (int) txRetryCount;
 
         AwsServiceDownstreamResponseEvent awsEvent = new AwsServiceDownstreamResponseEventImpl(requestEvent)

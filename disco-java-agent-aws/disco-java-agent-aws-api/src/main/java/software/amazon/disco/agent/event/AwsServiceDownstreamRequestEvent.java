@@ -30,24 +30,9 @@ public abstract class AwsServiceDownstreamRequestEvent extends ServiceDownstream
      */
     enum DataKey {
         /**
-         * The Request Id of the current sdk request.
-         */
-        REQUEST_ID,
-
-        /**
          * The region of the request
          */
         REGION,
-
-        /**
-         * The operation name of the current request
-         */
-        OPERATION_NAME,
-
-        /**
-         * The service that the request is going to
-         */
-        SERVICE_NAME,
     }
 
     /**
