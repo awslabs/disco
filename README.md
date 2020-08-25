@@ -170,36 +170,43 @@ Unfortunately this can mean that they *sometimes* fail and require restarting. W
 
 ### Including Disco as a dependency in your product
 
-Until we publish to Maven, you can run ``./gradlew publishToMavenLocal``, and consume from your local Maven cache
-in your Maven or Gradle builds with e.g:
-
-<br/>
+Disco is available in Maven Central. A Bill of Materials (BOM) package is vended to make depending on multiple
+Disco packages easier.
 
 #### Using Maven coordinates
 ```xml
-<dependency>
-  <groupId>software.amazon.disco</groupId>
-  <artifactId>disco-java-agent-api</artifactId>
-  <version>0.9.2</version>
-</dependency>
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>software.amazon.disco</groupId>
+            <artifactId>disco-toolkit-bom</artifactId>
+            <version>0.10.0</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+<dependencies>
+    <dependency>
+      <groupId>software.amazon.disco</groupId>
+      <artifactId>disco-java-agent-api</artifactId>
+    </dependency>
+    <!-- Other Disco dependencies -->
+</dependencies>
 ```
 
 #### Using Gradle's default DSL
 ```groovy
-repositories {
-  mavenLocal()
-}
-
-compile 'software.amazon.disco:disco-java-agent-api:0.9.2'
+implementation platform('software.amazon.disco:disco-toolkit-bom:0.10.0')
+implementation 'software.amazon.disco:disco-java-agent-api'
+// Other disco dependencies
 ```
 
 #### Using Gradle's Kotlin DSL
 ```kotlin
-repositories {
-  mavenLocal()
-}
-
-compile("software.amazon.disco", "disco-java-agent-api", "0.9.2")
+implementation(platform("software.amazon.disco:disco-toolkit-bom:0.10.0"))
+implementation("software.amazon.disco:disco-java-agent-api")
+// Other disco dependencies
 ```
 
 ### Troubleshooting

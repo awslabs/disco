@@ -13,10 +13,7 @@
  *   permissions and limitations under the License.
  */
 
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            from(components["java"])
-        }
-    }
+plugins {
+    `java-library`
+    `maven-publish`
 }

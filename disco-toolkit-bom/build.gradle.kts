@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License").
  *   You may not use this file except in compliance with the License.
@@ -13,10 +13,19 @@
  *   permissions and limitations under the License.
  */
 
-//This is not a subproject that contains code, nor produces any artifacts. Disable the jar task
-//to prevent a useless empty jar file being produced as a build side effect.
-tasks {
-    named<Jar>("jar") {
-        setEnabled(false)
+plugins {
+    `java-platform`
+    `maven-publish`
+}
+
+dependencies {
+    constraints {
+        rootProject.subprojects {
+            plugins.withId("maven-publish") {
+                if (name.startsWith("disco-java-agent") && !name.endsWith("-bom")) {
+                    api("${rootProject.name}:${name}:${version}")
+                }
+            }
+        }
     }
 }

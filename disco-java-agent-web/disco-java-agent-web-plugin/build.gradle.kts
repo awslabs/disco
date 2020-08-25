@@ -14,6 +14,8 @@
  */
 
 plugins {
+    `java-library`
+    `maven-publish`
     id("com.github.johnrengelman.shadow")
 }
 
@@ -27,13 +29,5 @@ tasks.shadowJar  {
         attributes(mapOf(
             "Disco-Installable-Classes" to "software.amazon.disco.agent.web.WebSupport"
         ))
-    }
-}
-
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            artifact(tasks.jar.get())
-        }
     }
 }

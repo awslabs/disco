@@ -12,6 +12,10 @@ The build.gradle.kts file contains a build rule to generate an appropriate MANIF
 Inherited from a top level build.gradle.kts file in the top level project, the ByteBuddy and ASM
 dependencies are repackaged in agreement with the expectations of the disco-java-agent.
 
+This plugin includes the `disco-java-agent-aws-api` package in its artifact so that it can be fully standalone.
+If you would like to use the AWS API package and this one, ensure you declare a `compileOnly` dependency on it to
+avoid the API classes appearing twice on the runtime classpath.
+
 ### Integ Tests
 
 The test target in build.gradle.kts is configured to apply the disco-java-agent via an argument given to the 

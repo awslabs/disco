@@ -12,15 +12,11 @@
  *   express or implied. See the License for the specific language governing
  *   permissions and limitations under the License.
  */
+plugins {
+    `java-library`
+    `maven-publish`
+}
 
 dependencies {
     implementation(project(":disco-java-agent:disco-java-agent-api"))
-}
-
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            artifact(tasks.jar.get())
-        }
-    }
 }

@@ -14,6 +14,8 @@
  */
 
 plugins {
+    `java-library`
+    `maven-publish`
     id("com.github.johnrengelman.shadow")
 }
 
@@ -33,13 +35,5 @@ tasks.shadowJar  {
                 "Can-Retransform-Classes" to "true",
                 "Boot-Class-Path" to archiveFileName.get()
         ))
-    }
-}
-
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            artifact(tasks.jar.get())
-        }
     }
 }

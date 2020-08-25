@@ -13,17 +13,14 @@
  *   permissions and limitations under the License.
  */
 
+plugins {
+    `java-library`
+    `maven-publish`
+}
+
 dependencies {
     implementation(project(":disco-java-agent:disco-java-agent-core"))
     testImplementation("org.mockito", "mockito-core", "1.+")
     testImplementation("javax.servlet", "javax.servlet-api", "3.0.1")
     testImplementation("org.apache.httpcomponents", "httpclient", "4.5.10")
-}
-
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            from(components["java"])
-        }
-    }
 }

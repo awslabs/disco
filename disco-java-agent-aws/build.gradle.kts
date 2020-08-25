@@ -13,6 +13,11 @@
  *   permissions and limitations under the License.
  */
 
+plugins {
+    `java-library`
+    `maven-publish`
+}
+
 dependencies {
     // Compile against AWS SDK V2, but we do not take a runtime dependency on it
     compileOnly("software.amazon.awssdk", "sdk-core", "2.13.76")
@@ -24,12 +29,4 @@ dependencies {
     testImplementation("com.amazonaws", "aws-java-sdk-sns", "1.11.840")
     testImplementation("com.amazonaws", "aws-java-sdk-sqs", "1.11.840")
     testImplementation("software.amazon.awssdk", "dynamodb", "2.13.76")
-}
-
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            from(components["java"])
-        }
-    }
 }

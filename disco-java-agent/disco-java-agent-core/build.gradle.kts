@@ -13,18 +13,15 @@
  *   permissions and limitations under the License.
  */
 
+plugins {
+    `java-library`
+    `maven-publish`
+}
+
 dependencies {
     api(project(":disco-java-agent:disco-java-agent-plugin-api"))
     api(project(":disco-java-agent:disco-java-agent-inject-api"))
     api(project(":disco-java-agent:disco-java-agent-api"))
-}
-
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            from(components["java"])
-        }
-    }
 }
 
 /**

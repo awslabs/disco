@@ -13,6 +13,10 @@
  *   permissions and limitations under the License.
  */
 
+plugins {
+    `java-library`
+}
+
 dependencies {
     testImplementation(project(":disco-java-agent:disco-java-agent-api"))
     testImplementation("javax.servlet", "javax.servlet-api", "3.0.1")

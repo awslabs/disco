@@ -13,6 +13,10 @@
  *   permissions and limitations under the License.
  */
 
+plugins {
+    `java-library`
+}
+
 dependencies {
     testImplementation(project(":disco-java-agent:disco-java-agent-api"))
     testImplementation(project(":disco-java-agent:disco-java-agent-inject-api", "shadow"))

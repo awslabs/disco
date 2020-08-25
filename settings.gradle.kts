@@ -35,3 +35,5 @@ include("disco-java-agent-example")
 include("disco-java-agent-example-test")
 include("disco-java-agent-example-injector-test")
 include("disco-java-agent-instrumentation-preprocess")
+
+include("disco-toolkit-bom")

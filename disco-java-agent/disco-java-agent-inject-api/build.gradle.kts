@@ -14,6 +14,8 @@
  */
 
 plugins {
+    `java-library`
+    `maven-publish`
     id("com.github.johnrengelman.shadow")
 }
 
@@ -22,12 +24,4 @@ dependencies {
     //pull all of BB into the client's code.
     implementation("net.bytebuddy", "byte-buddy-agent", "1.10.14")
     testImplementation("net.bytebuddy", "byte-buddy-dep", "1.10.14")
-}
-
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            artifact(tasks.jar.get())
-        }
-    }
 }

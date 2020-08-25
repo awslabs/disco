@@ -14,6 +14,8 @@
  */
 
 plugins {
+    `java-library`
+    `maven-publish`
     id("com.github.johnrengelman.shadow")
 }
 
@@ -37,13 +39,19 @@ val safetyTestImplementation by configurations.getting {
     extendsFrom(configurations.implementation.get())
 }
 
-// Only dependency the test needs is JUnit
 dependencies {
+    // Include the API sources in the plugin JAR, since they are referenced directly
+    runtimeOnly(project(":disco-java-agent-aws:disco-java-agent-aws-api")) {
+        isTransitive = false
+    }
+
     testImplementation("com.amazonaws", "aws-java-sdk-dynamodb", "1.11.840")
     testImplementation("software.amazon.awssdk", "dynamodb", "2.13.76")
     testImplementation("software.amazon.awssdk", "s3", "2.13.76")
     testImplementation("com.github.tomakehurst", "wiremock-jre8", "2.27.0")
     testImplementation(project(":disco-java-agent-aws:disco-java-agent-aws-api"))
+
+    // Only dependency the safety test needs is JUnit
     safetyTestImplementation("junit:junit:4.12")
 }
 
@@ -67,12 +75,4 @@ val safetyTestTask = task<Test>("safetyTest") {
 
 tasks.check {
     dependsOn(safetyTestTask)
-}
-
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            artifact(tasks.jar.get())
-        }
-    }
 }
