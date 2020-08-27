@@ -15,7 +15,6 @@
 
 package software.amazon.disco.agent.interception;
 
-import software.amazon.disco.agent.utils.FileUtils;
 import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
@@ -23,10 +22,9 @@ import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
-import java.io.File;
 import java.lang.instrument.Instrumentation;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
 
@@ -34,16 +32,15 @@ import static net.bytebuddy.matcher.ElementMatchers.*;
  * Class to control installation of interceptions/advice on target methods.
  */
 public class InterceptionInstaller {
-    private static final InterceptionInstaller INSTANCE = new InterceptionInstaller();
+    private static final InterceptionInstaller INSTANCE = new InterceptionInstaller(new DefaultAgentBuilderFactory());
     private static final Logger log = LogManager.getLogger(InterceptionInstaller.class);
-
-    private Set<Class> alreadyInstalled = new HashSet();
+    private final Supplier<AgentBuilder> agentBuilderFactory;
 
     /**
-     * Private constructor for singleton semantics
+     * Non-public constructor for singleton semantics. Package-private for tests
      */
-    private InterceptionInstaller() {
-
+    InterceptionInstaller(Supplier<AgentBuilder> agentBuilderFactory) {
+        this.agentBuilderFactory = agentBuilderFactory;
     }
 
     /**
@@ -63,34 +60,22 @@ public class InterceptionInstaller {
      */
     public void install(Instrumentation instrumentation, Set<Installable> installables, AgentConfig config,
                         ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
-        ElementMatcher<? super TypeDescription> ignoreMatcher = createIgnoreMatcher(customIgnoreMatcher);
-
-        File bootstrapTemp = FileUtils.getInstance().getTempFolder();
-        //if the folder has remnants from a previous run, remove them
-        for (File file : bootstrapTemp.listFiles()) {
-            file.delete();
-        }
+        final ElementMatcher<? super TypeDescription> ignoreMatcher = createIgnoreMatcher(customIgnoreMatcher);
 
         for (Installable installable: installables) {
             //We create a new Agent for each Installable, otherwise their matching rules can
             //compete with each other.
-            AgentBuilder agentBuilder = new AgentBuilder.Default()
-                    .ignore(ignoreMatcher)
-                    .enableBootstrapInjection(instrumentation, bootstrapTemp)
-                    ;
+            AgentBuilder agentBuilder = agentBuilderFactory.get()
+                    .ignore(ignoreMatcher);
 
             //The Interception listener is expensive during class loading, and limited value most of the time
             if (config.isExtraverbose()) {
                 agentBuilder = agentBuilder.with(InterceptionListener.create(installable));
             }
 
-            log.info("DiSCo(Core) attempting to install "+installable.getClass().getName());
-            if (alreadyInstalled.contains(installable.getClass())) {
-                log.info("DiSCo(Core)" + installable.getClass().getName() + " already installed; skipping.");
-                continue;
-            }
+            agentBuilder = config.getAgentBuilderTransformer().apply(agentBuilder, installable);
 
-            alreadyInstalled.add(installable.getClass());
+            log.info("DiSCo(Core) attempting to install "+installable.getClass().getName());
             agentBuilder = installable.install(agentBuilder);
 
             if (agentBuilder != null) {
@@ -115,7 +100,6 @@ public class InterceptionInstaller {
             //3rd party libraries
             .or(nameStartsWith("org.jacoco."))
             .or(nameStartsWith("org.junit."))
-            .or(nameStartsWith("org.springframework."))
             .or(nameStartsWith("org.aspectj."))
 
             //disco itself and its internals
@@ -124,5 +108,19 @@ public class InterceptionInstaller {
 
         return excludedNamespaces.or(customIgnoreMatcher);
 
+    }
+
+    /**
+     * A default Factory for creation of AgentBuilder instances
+     */
+    private static class DefaultAgentBuilderFactory implements Supplier<AgentBuilder> {
+        /**
+         * Factory method to produce a real AgentBuilder
+         * @return an AgentBuilder in the default case
+         */
+        @Override
+        public AgentBuilder get() {
+            return new AgentBuilder.Default();
+        }
     }
 }

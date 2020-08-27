@@ -14,11 +14,13 @@
  */
 
 plugins {
+    `java-library`
+    `maven-publish`
     id("com.github.johnrengelman.shadow")
 }
 
 dependencies {
-    compile(project(":disco-java-agent:disco-java-agent-core"))
+    implementation(project(":disco-java-agent:disco-java-agent-core"))
 }
 
 tasks.shadowJar  {
@@ -33,13 +35,5 @@ tasks.shadowJar  {
                 "Can-Retransform-Classes" to "true",
                 "Boot-Class-Path" to archiveFileName.get()
         ))
-    }
-}
-
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            artifact(tasks.jar.get())
-        }
     }
 }

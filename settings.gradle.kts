@@ -21,9 +21,19 @@ include("disco-java-agent:disco-java-agent-api")
 include("disco-java-agent:disco-java-agent-core")
 include("disco-java-agent:disco-java-agent-inject-api")
 
+include("disco-java-agent-aws")
+include("disco-java-agent-aws:disco-java-agent-aws-api")
+include("disco-java-agent-aws:disco-java-agent-aws-plugin")
+
 include("disco-java-agent-web")
 include("disco-java-agent-web:disco-java-agent-web-plugin")
+
+include("disco-java-agent-sql")
+include("disco-java-agent-sql:disco-java-agent-sql-plugin")
 
 include("disco-java-agent-example")
 include("disco-java-agent-example-test")
 include("disco-java-agent-example-injector-test")
+include("disco-java-agent-instrumentation-preprocess")
+
+include("disco-toolkit-bom")

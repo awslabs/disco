@@ -22,6 +22,7 @@ import net.bytebuddy.matcher.ElementMatcher;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+import software.amazon.disco.agent.concurrent.decorate.DecoratedForkJoinTask;
 
 import java.util.concurrent.CountedCompleter;
 import java.util.concurrent.ForkJoinTask;
@@ -77,12 +78,12 @@ public class ForkJoinTaskInterceptorTests {
 
     @Test
     public void testExecAdviceEnterSafe() {
-        ForkJoinTaskInterceptor.ExecAdvice.onMethodEnter(Mockito.mock(ForkJoinTask.class));
+        ForkJoinTaskInterceptor.ExecAdvice.onMethodEnter(Mockito.mock(DecoratedForkJoinTask.class));
     }
 
     @Test
     public void testExecAdviceExitSafe() {
-        ForkJoinTaskInterceptor.ExecAdvice.onMethodExit(Mockito.mock(ForkJoinTask.class));
+        ForkJoinTaskInterceptor.ExecAdvice.onMethodExit(Mockito.mock(DecoratedForkJoinTask.class));
     }
 
     @Test

@@ -27,7 +27,6 @@ public class EventBus {
      * @param e the event to publish
      */
     static public void publish(Event e)  {
-        Logger.info("Publishing event " + e + " from " + e.getOrigin());
         ReflectiveCall.returningVoid()
             .ofClass(EVENTBUS_CLASS)
             .ofMethod("publish")
@@ -40,7 +39,6 @@ public class EventBus {
      * @param l the listener to add
      */
     static public void addListener(Listener l) {
-        Logger.info("Adding listener to event bus " + l + " with priority " + l.getPriority());
         ReflectiveCall
             .returningVoid()
             .ofClass(EVENTBUS_CLASS)
@@ -54,7 +52,6 @@ public class EventBus {
      * @param l the listener to remove. It is safe to remove a listener not currently added.
      */
     static public void removeListener(Listener l) {
-        Logger.info("Removing listener from event bus " + l + " with priority " + l.getPriority());
         ReflectiveCall
             .returningVoid()
             .ofClass(EVENTBUS_CLASS)
@@ -67,7 +64,6 @@ public class EventBus {
      * Remove all listeners from the EventBus, returning it to its initial state
      */
     static public void removeAllListeners() {
-        Logger.info("Removing all listeners from event bus");
         ReflectiveCall
             .returningVoid()
             .ofClass(EVENTBUS_CLASS)
@@ -81,7 +77,6 @@ public class EventBus {
      * @return true if the listener is presently registered to receive events
      */
     static public boolean isListenerPresent(Listener l) {
-        Logger.info("Checking if Listener " + l + " is present ");
         Boolean returnValue =  ReflectiveCall
                 .returning(Boolean.class)
                 .ofClass(EVENTBUS_CLASS)

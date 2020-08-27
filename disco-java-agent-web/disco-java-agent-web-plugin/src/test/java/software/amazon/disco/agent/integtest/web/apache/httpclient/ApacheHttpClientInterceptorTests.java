@@ -15,12 +15,19 @@
 
 package software.amazon.disco.agent.integtest.web.apache.httpclient;
 
+import org.apache.http.HttpHost;
+import org.apache.http.ProtocolVersion;
 import org.apache.http.RequestLine;
+import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicHttpRequest;
+import org.apache.http.message.BasicRequestLine;
+import org.mockito.Mockito;
+import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
@@ -32,21 +39,19 @@ import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.Listener;
 import software.amazon.disco.agent.event.ServiceRequestEvent;
 import software.amazon.disco.agent.event.ServiceResponseEvent;
-import org.apache.http.HttpRequest;
 import org.junit.Assert;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class ApacheHttpClientInterceptorTests {
     private TestListener testListener;
@@ -82,6 +87,27 @@ public class ApacheHttpClientInterceptorTests {
     }
 
     @Test
+    public void testMinimalClientWithResponseHandler() throws Exception {
+        ResponseHandler<Object> responseHandler = Mockito.mock(ResponseHandler.class);
+        try (CloseableHttpClient httpClient = HttpClients.createMinimal()) {
+            HttpGet request = new HttpGet("https://amazon.com");
+
+            try {
+                Mockito.when(responseHandler.handleResponse(Mockito.any())).thenReturn(new Object());
+                httpClient.execute(request, responseHandler);
+            } catch (IOException e) {
+                //swallow
+            } catch (Exception e) {
+                Assert.fail();
+            }
+        }
+
+        Mockito.verify(responseHandler).handleResponse(Mockito.any());
+        assertEquals(1, testListener.requestEvents.size());
+        assertEquals(1, testListener.responseEvents.size());
+    }
+
+    @Test
     public void testDefaultClient() throws Exception {
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpGet request = new HttpGet("https://amazon.com");
@@ -97,9 +123,66 @@ public class ApacheHttpClientInterceptorTests {
     }
 
     @Test
+    public void testDefaultClientWithResponseHandler() throws Exception {
+        ResponseHandler<Object> responseHandler = Mockito.mock(ResponseHandler.class);
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+            HttpGet request = new HttpGet("https://amazon.com");
+            try {
+                Mockito.when(responseHandler.handleResponse(Mockito.any())).thenReturn(new Object());
+                httpClient.execute(request, responseHandler);
+            } catch (IOException e) {
+                //swallow
+            } catch (Exception e) {
+                Assert.fail();
+            }
+        }
+
+        Mockito.verify(responseHandler).handleResponse(Mockito.any());
+        assertEquals(1, testListener.requestEvents.size());
+        assertEquals(1, testListener.responseEvents.size());
+    }
+
+    @Test
+    public void testDefaultClientWithBasicHttpRequest() throws Exception {
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+            BasicHttpRequest request = new BasicHttpRequest(new BasicRequestLine("GET", "https://amazon.com", new ProtocolVersion("protocol", 1, 1)));
+            try {
+                httpClient.execute(new HttpHost("host", 80), request);
+            } catch (IOException e) {
+                //swallow
+            }
+        }
+
+        assertEquals(1, testListener.requestEvents.size());
+        assertEquals(1, testListener.responseEvents.size());
+    }
+
+    @Test
+    public void testGetRequestLineNotCalledForGet() throws Exception {
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+            HttpGet request = new HttpGet("https://amazon.com") {
+                @Override
+                public RequestLine getRequestLine() {
+                    //return the incorrect details to prove that this request line was not the source of the event data
+                    return new BasicRequestLine("WRONG", "http://wrong.com", new ProtocolVersion("protocol", 1, 1));
+                }
+            };
+            try {
+                httpClient.execute(request);
+            } catch (IOException e) {
+                //swallow
+            }
+        }
+
+        HttpServiceDownstreamRequestEvent event = (HttpServiceDownstreamRequestEvent)testListener.requestEvents.get(0);
+        Assert.assertEquals("GET", event.getMethod());
+        Assert.assertEquals("https://amazon.com", event.getUri());
+
+    }
+
+    @Test
     public void testExecuteInterceptionChained() throws Exception {
-        HttpUriRequest request = mock(HttpUriRequest.class);
-        setUpRequest(request);
+        HttpUriRequest request = new HttpGet(new URI(SOME_URI));
 
         // Set up victim http client
         FakeChainedExecuteCallHttpClientReturnResponse httpClient = new FakeChainedExecuteCallHttpClientReturnResponse();
@@ -127,8 +210,7 @@ public class ApacheHttpClientInterceptorTests {
 
     @Test(expected = IOException.class)
     public void testExecuteInterceptionException() throws Exception {
-        HttpUriRequest request = mock(HttpUriRequest.class);
-        setUpRequest(request);
+        HttpUriRequest request = new HttpGet(new URI(SOME_URI));
 
         // Set up victim http client
         FakeChainedExecuteCallHttpClientThrowException httpClient = new FakeChainedExecuteCallHttpClientThrowException();
@@ -173,14 +255,6 @@ public class ApacheHttpClientInterceptorTests {
                 Assert.fail("Unexpected event");
             }
         }
-    }
-
-    private static void setUpRequest(final HttpRequest request) {
-        RequestLine requestLine = mock(RequestLine.class);
-
-        when(request.getRequestLine()).thenReturn(requestLine);
-        when(requestLine.getUri()).thenReturn(SOME_URI);
-        when(requestLine.getMethod()).thenReturn(METHOD);
     }
 
     private static void verifyServiceRequestEvent(final ServiceRequestEvent serviceDownstreamRequestEvent) {

@@ -44,7 +44,10 @@ public class TransactionContextTests {
         TransactionContext.putMetadata("metadata", "value");
         Assert.assertNull(TransactionContext.getMetadata("metadata"));
     }
-
+    @Test
+    public void testRemoveMetadataDoesNotThrowIfReservedIdentifierWhenAgentNotLoaded() {
+        TransactionContext.removeMetadata("$amazon.discoIdentifier");
+    }
     @Test
     public void testTransactionContextGetMetadataNoAgentLoaded() {
         Assert.assertNull(TransactionContext.getMetadata("metadata"));
@@ -136,6 +139,6 @@ public class TransactionContextTests {
 
     @Test
     public void testIsWithinCreatedContextWhenAgentNotLoaded() {
-        TransactionContext.isWithinCreatedContext();
+        Assert.assertFalse(TransactionContext.isWithinCreatedContext());
     }
 }

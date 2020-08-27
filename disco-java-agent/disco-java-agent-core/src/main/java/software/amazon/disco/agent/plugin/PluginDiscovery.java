@@ -20,6 +20,7 @@ import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.Listener;
 import software.amazon.disco.agent.inject.Injector;
 import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.agent.interception.Package;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 
@@ -47,7 +48,7 @@ import java.util.jar.Manifest;
  *
  * Each plugin is delivered as a JAR file, containing a Manifest with the following properties:
  *
- * Disco-Installable-Classes: a space-separated list of fully qualified class names which are expected to inherit from Installable
+ * Disco-Installable-Classes: a space-separated list of fully qualified class names which are expected to inherit from either Installable or Package
  *                            and have a no-args constructor. Installables will be processed first, across all scanned plugins
  * Disco-Init-Class: if any further one-off-initialization is required, a fully qualified class may be provided. If this class provides a method
  *                  matching the signature "public static void init(void)", that method will be executed. All plugins will have this init()
@@ -113,7 +114,7 @@ public class PluginDiscovery {
             if (files != null) {
                 for (File jarFile : files) {
                     if (jarFile.getName().substring(jarFile.getName().lastIndexOf(".")).equalsIgnoreCase(".jar")) {
-                        processJarFile(instrumentation, jarFile);
+                        processJarFile(instrumentation, jarFile, config.isRuntimeOnly());
                     } else {
                         //ignore non JAR file
                         log.info("DiSCo(Core) non JAR file found on plugin path, skipping this file");
@@ -135,12 +136,23 @@ public class PluginDiscovery {
         Set<Installable> installables = new HashSet<>();
         if (installableClasses != null && !installableClasses.isEmpty()) {
             for (ClassInfo info : installableClasses) {
-                try {
-                    Installable installable = (Installable) info.clazz.newInstance();
-                    installables.add(installable);
-                    pluginOutcomes.get(info.pluginName).installables.add(installable);
-                } catch (Exception e) {
-                    log.warn("DiSCo(Core) could not instantiate Installable " + info.clazz.getName(), e);
+                if (Installable.class.isAssignableFrom(info.clazz)) {
+                    try {
+                        Installable installable = (Installable)info.clazz.getDeclaredConstructor().newInstance();
+                        installables.add(installable);
+                        pluginOutcomes.get(info.pluginName).installables.add(installable);
+                    } catch (Exception e) {
+                        log.warn("DiSCo(Core) could not instantiate Installable " + info.clazz.getName(), e);
+                    }
+                } else if (Package.class.isAssignableFrom(info.clazz)) {
+                    try {
+                        Package pkg = (Package)info.clazz.getDeclaredConstructor().newInstance();
+                        Collection<Installable> pkgInstallables = pkg.get();
+                        installables.addAll(pkgInstallables);
+                        pluginOutcomes.get(info.pluginName).installables.addAll(pkgInstallables);
+                    } catch (Exception e) {
+                        log.warn("DiSCo(Core) could not instantiate Package " + info.clazz.getName(), e);
+                    }
                 }
             }
         }
@@ -168,7 +180,7 @@ public class PluginDiscovery {
         if (listenerClasses != null && !listenerClasses.isEmpty()) {
             for (ClassInfo info : listenerClasses) {
                 try {
-                    Listener listener = (Listener) info.clazz.newInstance();
+                    Listener listener = (Listener) info.clazz.getDeclaredConstructor().newInstance();
                     EventBus.addListener(listener);
                     pluginOutcomes.get(info.pluginName).listeners.add(listener);
                 } catch (Exception e) {
@@ -184,9 +196,10 @@ public class PluginDiscovery {
      * Process a single JAR file which is assumed to be a plugin
      * @param instrumentation and instrumentation instance, used to add discovered plugins to classpaths
      * @param jarFile the jar file to be processed
+     * @param runtimeOnly if the Agent is configured as runtime only, Installables will not be considered from plugins. Init plugins and Listener plugins are unaffected.
      * @throws Exception class reflection or file i/o errors may occur
      */
-    static void processJarFile(Instrumentation instrumentation, File jarFile) throws Exception {
+    static void processJarFile(Instrumentation instrumentation, File jarFile, boolean runtimeOnly) throws Exception {
         JarFile jar = new JarFile(jarFile);
         Manifest manifest = jar.getManifest();
         jar.close();
@@ -196,7 +209,7 @@ public class PluginDiscovery {
         }
 
         Attributes attributes = manifest.getMainAttributes();
-        if (attributes == null) {
+        if (attributes == null || attributes.isEmpty()) {
             log.info("DiSCo(Core) JAR file found with manifest without any main attributes, skipping this file");
             return;
         }
@@ -207,13 +220,25 @@ public class PluginDiscovery {
         String listenerClassNames = attributes.getValue("Disco-Listener-Classes");
         String bootstrapClassloader = attributes.getValue("Disco-Bootstrap-Classloader");
 
+        //check that at least one of the attributes is present
+        boolean isPlugin =
+                (initClassName != null)
+              || installableClassNames != null
+              || listenerClassNames != null
+              || bootstrapClassloader != null;
+
+        if (!isPlugin) {
+            log.info("DiSCo(Core) JAR file manifest contains no Disco attributes, skipping this file");
+            return;
+        }
+
         //process the plugin based on the Manifest
         String pluginName = jarFile.getName();
         pluginOutcomes.put(pluginName, new PluginOutcome(pluginName));
         boolean bootstrap = loadJar(instrumentation, jarFile, bootstrapClassloader);
         pluginOutcomes.get(pluginName).bootstrap = bootstrap;
         processInitClass(pluginName, initClassName, bootstrap);
-        processInstallableClasses(pluginName, installableClassNames, bootstrap);
+        processInstallableClasses(pluginName, installableClassNames, bootstrap, runtimeOnly);
         processListenerClasses(pluginName, listenerClassNames, bootstrap);
     }
 
@@ -270,24 +295,30 @@ public class PluginDiscovery {
     /**
      * Helper method to discover the Classes specified for Installables in the plugin
      * @param pluginName the name of the plugin JAR file where the classes are defined
-     * @param installableClassNames the names of the Installable classes determined from the Manifest
+     * @param installableClassNames the names of the Installable or Package classes determined from the Manifest
      * @param bootstrap true if the plugin is requesting to be loaded by the bootstrap classloader
+     * @param runtimeOnly true if the agent is configured to be runtime only, thus no Installables will be used for instrumentation.
      * @throws Exception reflection errors may occur if the class cannot be found
      */
-    static void processInstallableClasses(String pluginName, String installableClassNames, boolean bootstrap) throws Exception {
+    static void processInstallableClasses(String pluginName, String installableClassNames, boolean bootstrap, boolean runtimeOnly) throws Exception {
         if (installableClassNames != null) {
-            String[] classNames = installableClassNames.trim().split("\\s");
+            String[] classNames = splitString(installableClassNames);
             for (String className: classNames) {
+                if (runtimeOnly) {
+                    log.info("DiSCo(Core) Installable/Package declared in plugin will be ignored because agent is configured as runtime only: " + className);
+                    continue;
+                }
+
                 try {
                     Class<?> clazz = classForName(className.trim(), bootstrap);
-                    if (Installable.class.isAssignableFrom(clazz)) {
+                    if (Installable.class.isAssignableFrom(clazz) || Package.class.isAssignableFrom(clazz)) {
                         ClassInfo installableInfo = new ClassInfo(pluginName, clazz, bootstrap);
                         installableClasses.add(installableInfo);
                     } else {
-                        log.warn("DiSCo(Core) specified Installable is not an instance of Installable: " + className);
+                        log.warn("DiSCo(Core) specified Installable is not an instance of Installable or Package: " + className);
                     }
                 } catch (ClassNotFoundException e) {
-                    log.warn("DiSCo(Core) cannot locate Installable: " + className);
+                    log.warn("DiSCo(Core) cannot locate Installable: " + className, e);
                 }
             }
         }
@@ -302,7 +333,7 @@ public class PluginDiscovery {
      */
     static void processListenerClasses(String pluginName, String listenerClassNames, boolean bootstrap) throws Exception {
         if (listenerClassNames != null) {
-            String[] classNames = listenerClassNames.trim().split("\\s");
+            String[] classNames = splitString(listenerClassNames);
             for (String className : classNames) {
                 if (LogManager.isDebugEnabled()) {
                     log.debug("DiSCo(Core) attempting to add Listener from plugin using class: " + className);
@@ -316,7 +347,7 @@ public class PluginDiscovery {
                         log.warn("DiSCo(Core) specified Listener is not an instance of Listener: " + className);
                     }
                 } catch (ClassNotFoundException e) {
-                    log.warn("DiSCo(Core) failed to instantiate Listener: " + className);
+                    log.warn("DiSCo(Core) failed to instantiate Listener: " + className, e);
                 }
             }
         }
@@ -334,6 +365,15 @@ public class PluginDiscovery {
             //to instantiate the class
             ? Class.forName(name, false, null)
             : Class.forName(name, false, ClassLoader.getSystemClassLoader());
+    }
+
+    /**
+     * Helper method to take a list of items e.g. Disco-Installable-Classes and produce a Collection of the individual entries
+     * @param input the String from the manifest e.g. "    com.foo.Foo        com.foo.Bar     "
+     * @return the split results e.g. ["com.foo.Foo", "com.foo.Bar"]
+     */
+    static String[] splitString(String input) {
+        return input.trim().split("\\s+");
     }
 
 }

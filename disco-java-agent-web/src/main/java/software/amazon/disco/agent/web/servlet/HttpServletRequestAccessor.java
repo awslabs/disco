@@ -15,7 +15,7 @@
 
 package software.amazon.disco.agent.web.servlet;
 
-import software.amazon.disco.agent.reflect.MethodHandleWrapper;
+import software.amazon.disco.agent.interception.annotations.DataAccessPath;
 import software.amazon.disco.agent.web.HeaderAccessor;
 
 import java.util.Collections;
@@ -24,48 +24,64 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Concrete accessor for the methods reflectively accessed within HttpServletRequest
+ * Data Accessor for HttpServletRequest subclasses
  */
-public class HttpServletRequestAccessor implements HeaderAccessor {
-    private static final String SERVLET_REQUEST_CLASS_NAME = "javax.servlet.http.HttpServletRequest";
-    private static final ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-
-    private static final MethodHandleWrapper getHeaderNames = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getHeaderNames", Enumeration.class);
-    private static final MethodHandleWrapper getHeader = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getHeader", String.class, String.class);
-    private static final MethodHandleWrapper getRemotePort = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getRemotePort", int.class);
-    private static final MethodHandleWrapper getLocalPort = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getLocalPort", int.class);
-    private static final MethodHandleWrapper getRemoteAddr = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getRemoteAddr", String.class);
-    private static final MethodHandleWrapper getLocalAddr = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getLocalAddr", String.class);
-    private static final MethodHandleWrapper getMethod = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getMethod", String.class);
-    private static final MethodHandleWrapper getRequestURL = new MethodHandleWrapper(SERVLET_REQUEST_CLASS_NAME, classLoader, "getRequestURL", StringBuffer.class);
-
-    private final Object requestObject;
+public interface HttpServletRequestAccessor extends HeaderAccessor {
+    /**
+     * Get an enumeration of header names from the request
+     * @return the header names
+     */
+    Enumeration<String> getHeaderNames();
 
     /**
-     * Construct a new HttpServletRequestAccessor with a concrete request object
-     * @param request the HttpServletRequest to inspect
+     * Get the value of a named header
+     * @param name the name of the header
+     * @return the value of the named header
      */
-    HttpServletRequestAccessor(Object request) {
-        this.requestObject = request;
-    }
+    String getHeader(String name);
+
+    /**
+     * Get the remote port number from the request
+     * @return the remote port number
+     */
+    int getRemotePort();
+
+    /**
+     * Get the local port number from the request
+     * @return the local port number
+     */
+    int getLocalPort();
+
+    /**
+     * Get the remote address, IP address or DNS name, from the request
+     * @return the remote address
+     */
+    String getRemoteAddr();
+
+    /**
+     * Get the local address, IP address or DNS name, from the request
+     * @return the local address
+     */
+    String getLocalAddr();
+
+    /**
+     * Get the HTTP method name, e.g. "GET" from the request
+     * @return the method name
+     */
+    String getMethod();
+
+    /**
+     * Get the URL from the request
+     * @return the URL
+     */
+    @DataAccessPath("getRequestURL()/toString()")
+    String getRequestUrl();
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public String getHeader(String name) {
-        try {
-            return (String) getHeader.invoke(requestObject, name);
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Map<String, String> retrieveHeaderMap() {
+    default Map<String, String> retrieveHeaderMap() {
         Map<String, String> ret = new HashMap<>();
         try {
             Enumeration<String> headerNames = getHeaderNames();
@@ -80,65 +96,5 @@ public class HttpServletRequestAccessor implements HeaderAccessor {
             //do nothing
         }
         return ret;
-    }
-
-    /**
-     * Get the IP port from the client-side request
-     * @return the IP port used by the remote client
-     */
-    int getRemotePort() {
-        return (int)getRemotePort.invoke(requestObject);
-    }
-
-    /**
-     * Get the IP address from the client-side request
-     * @return the IP address used by the remote client
-     */
-    String getRemoteAddr() {
-        return (String)getRemoteAddr.invoke(requestObject);
-    }
-
-    /**
-     * Get the IP port on the server-side
-     * @return the IP port used by the service to receive the request
-     */
-    int getLocalPort() {
-        return (int)getLocalPort.invoke(requestObject);
-    }
-
-    /**
-     * Get the IP address on the server-side
-     * @return the IP address used by the service to receive the request
-     */
-    String getLocalAddr() {
-        return (String)getLocalAddr.invoke(requestObject);
-    }
-
-    /**
-     * Return the HTTP method verb which was used for the request e.g. GET, PUT, ...
-     * @return the HTTP verb used in the request
-     */
-    String getMethod() {
-        return (String)getMethod.invoke(requestObject);
-    }
-
-    /**
-     * Get the full URL used in the request
-     * @return the request URL
-     */
-    String getRequestURL() {
-        StringBuffer requestUrl = (StringBuffer)getRequestURL.invoke(requestObject);
-        if (requestUrl == null) {
-            return null;
-        }
-        return requestUrl.toString();
-    }
-
-    /**
-     * Helper method to retrieve an enumeration of header names from the response
-     * @return an enumeration of all named headers
-     */
-    private Enumeration<String> getHeaderNames() {
-        return (Enumeration<String>)getHeaderNames.invoke(requestObject);
     }
 }

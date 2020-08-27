@@ -13,18 +13,14 @@
  *   permissions and limitations under the License.
  */
 
-dependencies {
-    compile(project(":disco-java-agent:disco-java-agent-core"))
-    testCompile("junit", "junit", "4.12")
-    testCompile("org.mockito", "mockito-core", "1.+")
-    testCompile("javax.servlet", "javax.servlet-api", "3.0.1")
-    testCompile("org.apache.httpcomponents", "httpclient", "4.5.10")
+plugins {
+    `java-library`
+    `maven-publish`
 }
 
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            from(components["java"])
-        }
-    }
+dependencies {
+    implementation(project(":disco-java-agent:disco-java-agent-core"))
+    testImplementation("org.mockito", "mockito-core", "1.+")
+    testImplementation("javax.servlet", "javax.servlet-api", "3.0.1")
+    testImplementation("org.apache.httpcomponents", "httpclient", "4.5.10")
 }

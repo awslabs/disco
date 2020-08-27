@@ -15,47 +15,27 @@
 
 package software.amazon.disco.agent.concurrent.decorate;
 
+import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.concurrent.ForkJoinTask;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 
-/**
- * All tests can do is throw reflection errors, since unit-tests are agent-not-present scenario
- */
 public class DecoratedForkJoinTaskTests {
 
-    @Test(expected = NoSuchFieldException.class)
-    public void testCreateThrows() throws Exception {
-        ForkJoinTask fjt = new TestForkJoinTask();
-        DecoratedForkJoinTask.create(fjt);
-
+    @Test
+    public void testCreate() {
+        DecoratedForkJoinTask decoratedForkJoinTask = DecoratedForkJoinTask.create();
+        Assert.assertNotNull(decoratedForkJoinTask);
     }
 
-    @Test(expected = NoSuchFieldException.class)
-    public void testGetThrows() throws Exception {
-        ForkJoinTask fjt = new TestForkJoinTask();
-        DecoratedForkJoinTask.get(fjt);
-
-    }
-
-    @Test(expected = NoSuchFieldException.class)
-    public void testLookupThrows() throws Exception {
-        DecoratedForkJoinTask.lookup();
-    }
-
-    static class TestForkJoinTask extends ForkJoinTask {
-        @Override
-        public Object getRawResult() {
-            return null;
-        }
-
-        @Override
-        protected void setRawResult(Object value) {
-        }
-
-        @Override
-        protected boolean exec() {
-            return false;
-        }
+    @Test
+    public void testMethodNames() {
+        Method[] methods = DecoratedForkJoinTask.Accessor.class.getDeclaredMethods();
+        Assert.assertEquals(2, methods.length);
+        String[] names = new String[] {methods[0].getName(), methods[1].getName()};
+        Arrays.sort(names);
+        Assert.assertEquals(DecoratedForkJoinTask.Accessor.GET_DISCO_DECORATION_METHOD_NAME, names[0]);
+        Assert.assertEquals(DecoratedForkJoinTask.Accessor.SET_DISCO_DECORATION_METHOD_NAME, names[1]);
     }
 }

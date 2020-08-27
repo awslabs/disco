@@ -15,52 +15,37 @@
 
 package software.amazon.disco.agent.web.servlet;
 
-import software.amazon.disco.agent.reflect.MethodHandleWrapper;
 import software.amazon.disco.agent.web.HeaderAccessor;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Concrete accessor for the methods reflectively accessed within HttpServletResponse
- */
-public class HttpServletResponseAccessor implements HeaderAccessor {
-    private static final String SERVLET_RESPONSE_CLASS_NAME = "javax.servlet.http.HttpServletResponse";
-
-    private static final ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-    static final MethodHandleWrapper getHeaderNames = new MethodHandleWrapper(SERVLET_RESPONSE_CLASS_NAME, classLoader, "getHeaderNames", Collection.class);
-    static final MethodHandleWrapper getHeader = new MethodHandleWrapper(SERVLET_RESPONSE_CLASS_NAME, classLoader, "getHeader", String.class, String.class);
-    static final MethodHandleWrapper getStatus = new MethodHandleWrapper(SERVLET_RESPONSE_CLASS_NAME, classLoader, "getStatus", int.class);
-
-
-    private final Object responseObject;
+public interface HttpServletResponseAccessor extends HeaderAccessor {
+    /**
+     * Get a collection of all header names from the servlet response
+     * @return collection of header names
+     */
+    Collection<String> getHeaderNames();
 
     /**
-     * Construct a new HttpServletResponseAccessor with a concrete request object
-     * @param response the HttpServletResponse to inspect
+     * Get the value of the named header
+     * @param name the name of the header
+     * @return the value of the named header
      */
-    HttpServletResponseAccessor(Object response) {
-        this.responseObject = response;
-    }
+    String getHeader(String name);
+
+    /**
+     * get the status code from the response
+     * @return the status code
+     */
+    int getStatus();
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public String getHeader(String name) {
-        try {
-            return (String) getHeader.invoke(responseObject, name);
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Map<String, String> retrieveHeaderMap() {
+    default Map<String, String> retrieveHeaderMap() {
         Map<String, String> ret = new HashMap<>();
         try {
             Collection<String> headerNames = getHeaderNames();
@@ -80,21 +65,5 @@ public class HttpServletResponseAccessor implements HeaderAccessor {
         }
 
         return ret;
-    }
-
-    /**
-     * Get the HTTP status code from the response
-     * @return the status code e.g. 200
-     */
-    int getStatus() {
-        return (int)getStatus.invoke(responseObject);
-    }
-
-    /**
-     * Helper method to retrieve a collection of header names from the response
-     * @return an iterable collection of all named headers
-     */
-    private Collection<String> getHeaderNames() {
-        return (Collection<String>)getHeaderNames.invoke(responseObject);
     }
 }

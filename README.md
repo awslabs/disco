@@ -170,36 +170,43 @@ Unfortunately this can mean that they *sometimes* fail and require restarting. W
 
 ### Including Disco as a dependency in your product
 
-Until we publish to Maven, you can run ``./gradlew publishToMavenLocal``, and consume from your local Maven cache
-in your Maven or Gradle builds with e.g:
-
-<br/>
+Disco is available in Maven Central. A Bill of Materials (BOM) package is vended to make depending on multiple
+Disco packages easier.
 
 #### Using Maven coordinates
 ```xml
-<dependency>
-  <groupId>software.amazon.disco</groupId>
-  <artifactId>disco-java-agent-api</artifactId>
-  <version>0.9.1</version>
-</dependency>
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>software.amazon.disco</groupId>
+            <artifactId>disco-toolkit-bom</artifactId>
+            <version>0.10.0</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+<dependencies>
+    <dependency>
+      <groupId>software.amazon.disco</groupId>
+      <artifactId>disco-java-agent-api</artifactId>
+    </dependency>
+    <!-- Other Disco dependencies -->
+</dependencies>
 ```
 
 #### Using Gradle's default DSL
 ```groovy
-repositories {
-  mavenLocal()
-}
-
-compile 'software.amazon.disco:disco-java-agent-api:0.9.1'
+implementation platform('software.amazon.disco:disco-toolkit-bom:0.10.0')
+implementation 'software.amazon.disco:disco-java-agent-api'
+// Other disco dependencies
 ```
 
 #### Using Gradle's Kotlin DSL
 ```kotlin
-repositories {
-  mavenLocal()
-}
-
-compile("software.amazon.disco", "disco-java-agent-api", "0.9.1")
+implementation(platform("software.amazon.disco:disco-toolkit-bom:0.10.0"))
+implementation("software.amazon.disco:disco-java-agent-api")
+// Other disco dependencies
 ```
 
 ### Troubleshooting
@@ -228,6 +235,8 @@ a few layers and families of projects in here:
 1. Canonical Pluggable agent, capable of plugin discovery, in disco-java-agent/disco-java-agent
 1. A facility to 'Inject' a Disco Agent into managed runtimes like AWS Lambda
 1. A Plugin to support Servlets and Apache HTTP clients, in disco-java-agent-web-plugin
+1. A Plugin to support SQL connections & queries using JDBC, in disco-java-agent-sql-plugin
+1. A Plugin to support requests made with the AWS SDK for Java, in disco-java-agent-aws-plugin
 1. Example code in anything with '-example' in the project name.
 1. Tests in anything with '-test' in the project name.
 

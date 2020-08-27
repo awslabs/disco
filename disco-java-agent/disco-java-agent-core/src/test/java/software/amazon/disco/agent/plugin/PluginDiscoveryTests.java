@@ -21,6 +21,7 @@ import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.plugin.source.PluginInit;
+import software.amazon.disco.agent.plugin.source.PluginInstallable;
 import software.amazon.disco.agent.plugin.source.PluginListener;
 import org.junit.After;
 import org.junit.Assert;
@@ -29,9 +30,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
+import software.amazon.disco.agent.plugin.source.PluginPackage;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -39,6 +42,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
@@ -54,12 +58,6 @@ public class PluginDiscoveryTests {
         agentConfig = new AgentConfigParser().parseCommandLine("pluginPath="+tempFolder.getRoot().getAbsolutePath());
         instrumentation = Mockito.mock(Instrumentation.class);
         installables = new HashSet<>();
-        EventBus.removeAllListeners();
-    }
-
-    @After
-    public void after() {
-        EventBus.removeAllListeners();
     }
 
     @Test
@@ -96,7 +94,7 @@ public class PluginDiscoveryTests {
 
     @Test
     public void testPluginInstallableNonBootstrap() throws Exception {
-        createJar("plugin_with_installable",
+        createJar("plugin_with_package",
                 "Disco-Installable-Classes: software.amazon.disco.agent.plugin.source.PluginInstallable",
                 "software.amazon.disco.agent.plugin.source.PluginInstallable");
         Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
@@ -108,13 +106,102 @@ public class PluginDiscoveryTests {
     }
 
     @Test
+    public void testPluginPackageInstallableNonBootstrap() throws Exception {
+        createJar("plugin_with_installable",
+                "Disco-Installable-Classes: software.amazon.disco.agent.plugin.source.PluginPackage",
+                "software.amazon.disco.agent.plugin.source.PluginPackage",
+                "software.amazon.disco.agent.plugin.source.PluginInstallable",
+                "software.amazon.disco.agent.plugin.source.PluginPackage$OtherInstallable");
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        PluginOutcome outcome = outcomes.iterator().next();
+        Installable installable1 = outcome.installables.get(0);
+        Installable installable2 = outcome.installables.get(1);
+        Mockito.verify(instrumentation).appendToSystemClassLoaderSearch(Mockito.any());
+        Assert.assertTrue(installables.contains(installable1));
+        Assert.assertTrue(installables.contains(installable2));
+        Assert.assertFalse(outcome.bootstrap);
+        Set<Class> classes = new HashSet<>();
+        classes.add(installable1.getClass());
+        classes.add(installable2.getClass());
+        Assert.assertTrue(classes.contains(PluginInstallable.class));
+        Assert.assertTrue(classes.contains(PluginPackage.OtherInstallable.class));
+    }
+
+    @Test
+    public void testPluginInstallableRuntimeOnly() throws Exception {
+        agentConfig = new AgentConfigParser().parseCommandLine("runtimeOnly");
+        createJar("plugin_runtime_only",
+                "Disco-Installable-Classes: software.amazon.disco.agent.plugin.source.PluginInstallable",
+                "software.amazon.disco.agent.plugin.source.PluginInstallable");
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        Assert.assertTrue(outcomes.isEmpty());
+        Assert.assertTrue(installables.isEmpty());
+        Mockito.verifyNoInteractions(instrumentation);
+    }
+
+    @Test
+    public void testPluginPackageInstallableRuntimeOnly() throws Exception {
+        agentConfig = new AgentConfigParser().parseCommandLine("runtimeOnly");
+        createJar("plugin_package_runtime_only",
+                "Disco-Installable-Classes: software.amazon.disco.agent.plugin.source.PluginPackage",
+                "software.amazon.disco.agent.plugin.source.PluginPackage",
+                "software.amazon.disco.agent.plugin.source.PluginInstallable",
+                "software.amazon.disco.agent.plugin.source.PluginPackage$OtherInstallable");
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        Assert.assertTrue(outcomes.isEmpty());
+        Assert.assertTrue(installables.isEmpty());
+        Mockito.verifyNoInteractions(instrumentation);
+    }
+
+    @Test
     public void testPluginBootstrapFlag() throws Exception {
         createJar("plugin_with_bootstrap_true",
-                "Disco-Bootstrap-Classloader: true",
-                null);
+                "Disco-Bootstrap-Classloader: true");
         Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
         Mockito.verify(instrumentation).appendToBootstrapClassLoaderSearch(Mockito.any());
         Assert.assertTrue(outcomes.iterator().next().bootstrap);
+    }
+
+    @Test
+    public void testJarWithoutManifestSafelySkipped() throws Exception {
+        createJar("jar_without_manifest", null);
+        JarFile jar = new JarFile(agentConfig.getPluginPath() + "/jar_without_manifest.jar");
+        Assert.assertNull(jar.getManifest());
+        jar.close();
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        Mockito.verifyNoInteractions(instrumentation);
+        Assert.assertTrue(outcomes.isEmpty());
+
+    }
+
+    @Test
+    public void testManifestWithoutMainAttributesSafelySkipped() throws Exception {
+        createJar("jar_without_main_attributes", "");
+        JarFile jar = new JarFile(agentConfig.getPluginPath() + "/jar_without_main_attributes.jar");
+        Assert.assertTrue(jar.getManifest().getMainAttributes().isEmpty());
+        jar.close();
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        Mockito.verifyNoInteractions(instrumentation);
+        Assert.assertTrue(outcomes.isEmpty());
+    }
+
+    @Test
+    public void testManifestWithoutDiscoAttributesSafelySkipped() throws Exception {
+        createJar("jar_without_disco_attributes", "Foobar: boofar");
+        JarFile jar = new JarFile(agentConfig.getPluginPath() + "/jar_without_disco_attributes.jar");
+        Assert.assertEquals("boofar", jar.getManifest().getMainAttributes().getValue("Foobar"));
+        jar.close();
+        Collection<PluginOutcome> outcomes = scanAndApply(instrumentation, agentConfig);
+        Mockito.verifyNoInteractions(instrumentation);
+        Assert.assertTrue(outcomes.isEmpty());
+    }
+
+    @Test
+    public void testSplitString() {
+        String[] result = PluginDiscovery.splitString("    com.foo.Foo        com.foo.Bar     ");
+        Assert.assertEquals(2, result.length);
+        Assert.assertEquals("com.foo.Foo", result[0]);
+        Assert.assertEquals("com.foo.Bar", result[1]);
     }
 
     private Collection<PluginOutcome> scanAndApply(Instrumentation instrumentation, AgentConfig agentConfig) {
@@ -123,25 +210,33 @@ public class PluginDiscoveryTests {
         return PluginDiscovery.apply();
     }
 
-    private void createJar(String name, String manifestContent, String className) throws Exception {
+    private void createJar(String name, String manifestContent, String... classNames) throws Exception {
         File file = tempFolder.newFile(name + ".jar");
         try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
             try (JarOutputStream jarOutputStream = new JarOutputStream(fileOutputStream)) {
 
                 //write manifest
-                jarOutputStream.putNextEntry(new ZipEntry("META-INF/"));
-                jarOutputStream.putNextEntry(new ZipEntry("META-INF/MANIFEST.MF"));
-                jarOutputStream.write((manifestContent+"\n\n").getBytes());
-                jarOutputStream.closeEntry();
+                if (manifestContent != null) {
+                    jarOutputStream.putNextEntry(new ZipEntry("META-INF/"));
+                    jarOutputStream.putNextEntry(new ZipEntry("META-INF/MANIFEST.MF"));
+                    jarOutputStream.write((manifestContent + "\n\n").getBytes());
+                    jarOutputStream.closeEntry();
+                }
 
                 //write class file
-                if (className != null) {
-                    String classFull = className.replace('.', '/');
-                    String classPackage = classFull.substring(0, classFull.indexOf('/')) + "/";
-                    jarOutputStream.putNextEntry(new ZipEntry(classPackage));
-                    jarOutputStream.putNextEntry(new ZipEntry(classFull));
-                    jarOutputStream.write(getBytes(classFull));
-                    jarOutputStream.closeEntry();
+                if (classNames != null) {
+                    for (String className: classNames) {
+                        String classFull = className.replace('.', '/');
+                        String classPackage = classFull.substring(0, classFull.indexOf('/')) + "/";
+                        try {
+                            jarOutputStream.putNextEntry(new ZipEntry(classPackage));
+                        } catch (IOException e) {
+                            //swallow, if this occurred due to creating an already-present folder
+                        }
+                        jarOutputStream.putNextEntry(new ZipEntry(classFull));
+                        jarOutputStream.write(getBytes(classFull));
+                        jarOutputStream.closeEntry();
+                    }
                 }
             }
         }

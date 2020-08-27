@@ -36,7 +36,9 @@ import org.mockito.Mockito;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -199,6 +201,9 @@ public class HttpServletServiceInterceptorTests {
         Mockito.when(response.getHeader("more-custom-header")).thenReturn("some-custom-data");
         Mockito.when(response.getStatus()).thenReturn(200);
 
+        //wrap objects, otherwise Mockito will mock out the methods in the Accessor interface, such as retrieveHeaderMap
+        request = new HttpServletRequestWrapper(request);
+        response = new HttpServletResponseWrapper(response);
         servlet.service(request, response);
 
         // Ensure that we get only two events, even when a subclass and a superclass are both instrumented.

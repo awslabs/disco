@@ -13,20 +13,15 @@
  *   permissions and limitations under the License.
  */
 
-dependencies {
-    compile(project(":disco-java-agent:disco-java-agent-plugin-api"))
-    compile(project(":disco-java-agent:disco-java-agent-inject-api"))
-    compile(project(":disco-java-agent:disco-java-agent-api"))
-
-    testCompile("junit", "junit", "4.12")
+plugins {
+    `java-library`
+    `maven-publish`
 }
 
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            from(components["java"])
-        }
-    }
+dependencies {
+    api(project(":disco-java-agent:disco-java-agent-plugin-api"))
+    api(project(":disco-java-agent:disco-java-agent-inject-api"))
+    api(project(":disco-java-agent:disco-java-agent-api"))
 }
 
 /**
@@ -42,11 +37,11 @@ sourceSets {
 
 //create a new empty integ test config - not extending from existing compile or testCompile, since we don't want to
 //be able to compile against Core etc.
-val integtestCompile by configurations.getting {}
+val integtestImplementation: Configuration by configurations.getting {}
 
 dependencies {
-    integtestCompile("junit", "junit", "4.12")
-    integtestCompile(project(":disco-java-agent:disco-java-agent-api"))
+    integtestImplementation("junit", "junit", "4.12")
+    integtestImplementation(project(":disco-java-agent:disco-java-agent-api"))
 }
 
 val ver = project.version

@@ -155,7 +155,7 @@ public class ThreadSubclassInterceptorTests {
 
     static class MyDecoratedThread extends DecoratedThread {
         public void setThreadId(long threadId) {
-            this.parentThreadId = threadId;
+            this.ancestralThreadId = threadId;
         }
     }
 }

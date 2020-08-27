@@ -51,8 +51,8 @@ public class AgentConfigParser {
                     : "";
 
             switch (pair[0].toLowerCase()) {
-                case "nodefaultinstallables":
-                    result.setInstallDefaultInstallables(false);
+                case "runtimeonly":
+                    result.setRuntimeOnly(true);
                     break;
                 case "pluginpath":
                     result.setPluginPath(value);

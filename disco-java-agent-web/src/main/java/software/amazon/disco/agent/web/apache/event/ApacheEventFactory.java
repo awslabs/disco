@@ -15,13 +15,59 @@
 
 package software.amazon.disco.agent.web.apache.event;
 
+import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
+import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
+import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
+import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
+import software.amazon.disco.agent.web.apache.utils.HttpRequestBaseAccessor;
+import software.amazon.disco.agent.web.apache.utils.HttpResponseAccessor;
 
 /**
  * Create our private events, so that listeners do not have public access to them
  */
 public class ApacheEventFactory {
-    public static ApacheHttpServiceDownstreamRequestEvent createDownstreamRequestEvent(String origin, String service, String operation, HttpRequestAccessor accessor) {
-        return new ApacheHttpServiceDownstreamRequestEvent(origin, service, operation, accessor);
+    /**
+     * Create our private events, so that listeners do not have public access to them
+     * @param origin the origin of the downstream call e.g. 'Web'
+     * @param accessor a HttpRequestAccessor to get uri and HTTP method
+     * @return a {@link ApacheHttpServiceDownstreamRequestEvent}
+     */
+    public static HttpServiceDownstreamRequestEvent createDownstreamRequestEvent(String origin, HttpRequestAccessor accessor) {
+        String uri;
+        String method;
+        if (accessor instanceof HttpRequestBaseAccessor) {
+            //we can retrieve the data in a streamlined way, avoiding internal production of the RequestLine
+            HttpRequestBaseAccessor baseAccessor = (HttpRequestBaseAccessor)accessor;
+            uri = baseAccessor.getUri();
+            method = baseAccessor.getMethod();
+        } else {
+            uri = accessor.getUriFromRequestLine();
+            method = accessor.getMethodFromRequestLine();
+        }
+        //TODO - using uri and method as service and operation name is unsatisfactory.
+        ApacheHttpServiceDownstreamRequestEvent requestEvent = new ApacheHttpServiceDownstreamRequestEvent(origin, uri, method, accessor);;
+        requestEvent.withMethod(method);
+        requestEvent.withUri(uri);
+        return requestEvent;
+    }
+
+    /**
+     * Create response event with HttpResponse for apache client downstream call
+     * @param responseAccessor a HttpResponseAccessor to get status code etc.
+     * @param requestEvent Previously published ServiceDownstreamRequestEvent
+     * @param throwable The throwable if the request fails
+     * @return  a {@link HttpServiceDownstreamResponseEvent}.
+     */
+    public static ServiceDownstreamResponseEvent createServiceResponseEvent(final HttpResponseAccessor responseAccessor, final ServiceDownstreamRequestEvent requestEvent, final Throwable throwable) {
+        HttpServiceDownstreamResponseEvent responseEvent = new HttpServiceDownstreamResponseEvent(requestEvent.getOrigin(), requestEvent.getService(), requestEvent.getOperation(), requestEvent);
+        if (throwable != null) {
+            responseEvent.withThrown(throwable);
+        }
+        if (responseAccessor != null) {
+            responseEvent.withStatusCode(responseAccessor.getStatusCode());
+            responseEvent.withContentLength(responseAccessor.getContentLength());
+        }
+        return responseEvent;
     }
 }

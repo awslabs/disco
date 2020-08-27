@@ -13,10 +13,13 @@
  *   permissions and limitations under the License.
  */
 
+plugins {
+    `java-library`
+}
+
 dependencies {
-    testCompile("junit", "junit", "4.12")
-    testCompile(project(":disco-java-agent:disco-java-agent-api"))
-    testCompile(project(":disco-java-agent:disco-java-agent-inject-api", "shadow"))
+    testImplementation(project(":disco-java-agent:disco-java-agent-api"))
+    testImplementation(project(":disco-java-agent:disco-java-agent-inject-api", "shadow"))
 }
 
 //make sure the agents and plugins we use have been built, without taking any real dependencies on them

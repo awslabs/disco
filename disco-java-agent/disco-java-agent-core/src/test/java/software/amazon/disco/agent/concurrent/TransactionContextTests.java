@@ -51,7 +51,7 @@ public class TransactionContextTests {
 
     @Test
     public void testInitialValue() {
-        Assert.assertEquals(1, TransactionContext.getPrivateMetadata().size()); //only TransactionId
+        Assert.assertEquals(2, TransactionContext.getPrivateMetadata().size()); //only TransactionId and ThreadId
         Assert.assertEquals(TransactionContext.UNINITIALIZED_TRANSACTION_CONTEXT_VALUE, TransactionContext.get());
     }
 
@@ -59,7 +59,7 @@ public class TransactionContextTests {
     public void testDestroyWithNoCreate() {
         TransactionContext.putMetadata("foo", "bar");
         TransactionContext.destroy();
-        Assert.assertEquals(1, TransactionContext.getPrivateMetadata().size()); //only TransactionId
+        Assert.assertEquals(2, TransactionContext.getPrivateMetadata().size()); //only TransactionId and ThreadId
         Assert.assertEquals(0, listener.events.size());
     }
 
@@ -67,9 +67,9 @@ public class TransactionContextTests {
     public void testSingleCreateSingleDestroy() {
         TransactionContext.create();
         Assert.assertEquals(1, TransactionContext.getReferenceCounter().get());
-        Assert.assertEquals(2, TransactionContext.getPrivateMetadata().size()); //only TransactionId and Ref Counter
+        Assert.assertEquals(3, TransactionContext.getPrivateMetadata().size()); //only TransactionId, ThreadId and Ref Counter
         TransactionContext.putMetadata("foo", "bar");
-        Assert.assertEquals(3, TransactionContext.getPrivateMetadata().size()); //only TransactionId and Ref Counter and Foobar
+        Assert.assertEquals(4, TransactionContext.getPrivateMetadata().size()); //only TransactionId, ThreadId, Ref Counter and Foobar
         TransactionContext.destroy();
         testInitialValue();
         Assert.assertEquals(2, listener.events.size());
@@ -81,9 +81,9 @@ public class TransactionContextTests {
     public void testSingleCreateMultipleDestroy() {
         TransactionContext.create();
         Assert.assertEquals(1, TransactionContext.getReferenceCounter().get());
-        Assert.assertEquals(2, TransactionContext.getPrivateMetadata().size()); //only TransactionId and Ref Counter
+        Assert.assertEquals(3, TransactionContext.getPrivateMetadata().size()); //only TransactionId, ThreadId and Ref Counter
         TransactionContext.putMetadata("foo", "bar");
-        Assert.assertEquals(3, TransactionContext.getPrivateMetadata().size()); //only TransactionId and Ref Counter and Foobar
+        Assert.assertEquals(4, TransactionContext.getPrivateMetadata().size()); //only TransactionId, ThreadId, Ref Counter and Foobar
 
         // Excessive destroy calls should still remain as destroyed.
         TransactionContext.destroy();
@@ -99,7 +99,7 @@ public class TransactionContextTests {
     public void testMultipleCreateMultipleDestroy() {
         // Create to represent 3 layers and then destroy 3 should represent clearing.
         TransactionContext.create();
-        Assert.assertEquals(2, TransactionContext.getPrivateMetadata().size());
+        Assert.assertEquals(3, TransactionContext.getPrivateMetadata().size()); //only TransactionId, ThreadId and Ref Counter
         Assert.assertEquals(1, TransactionContext.getReferenceCounter().get());
         TransactionContext.create();
         TransactionContext.create();
@@ -118,7 +118,7 @@ public class TransactionContextTests {
         TransactionContext.putMetadata("foo", "bar");
         TransactionContext.create();
         Assert.assertNotEquals(TransactionContext.UNINITIALIZED_TRANSACTION_CONTEXT_VALUE, TransactionContext.get());
-        Assert.assertEquals(2, TransactionContext.getPrivateMetadata().size()); //only TransactionId in map and ref counter
+        Assert.assertEquals(3, TransactionContext.getPrivateMetadata().size()); //only TransactionId, ThreadId and Ref Counter
     }
 
     @Test
@@ -150,6 +150,15 @@ public class TransactionContextTests {
         TransactionContext.putMetadata("foo", "bar");
         String bar = String.class.cast(TransactionContext.getMetadata("foo"));
         Assert.assertEquals("bar", bar);
+    }
+
+    @Test
+    public void testRemoveMetadata() {
+        TransactionContext.putMetadata("foo", "bar");
+        String bar = String.class.cast(TransactionContext.getMetadata("foo"));
+        Assert.assertEquals("bar", bar);
+        TransactionContext.removeMetadata("foo");
+        Assert.assertNull(TransactionContext.getMetadata("foo"));
     }
 
     @Test

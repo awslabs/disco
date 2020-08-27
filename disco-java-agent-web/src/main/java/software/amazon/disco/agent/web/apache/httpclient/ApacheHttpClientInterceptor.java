@@ -16,11 +16,10 @@
 package software.amazon.disco.agent.web.apache.httpclient;
 
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
-import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.web.apache.event.ApacheEventFactory;
 import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
 import software.amazon.disco.agent.web.apache.utils.HttpResponseAccessor;
-import software.amazon.disco.agent.web.apache.utils.MethodInterceptionCounter;
+import software.amazon.disco.agent.interception.MethodInterceptionCounter;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
@@ -52,7 +51,6 @@ public class ApacheHttpClientInterceptor implements Installable {
 
     private static final Logger log = LogManager.getLogger(ApacheHttpClientInterceptor.class);
     private static final MethodInterceptionCounter METHOD_INTERCEPTION_COUNTER = new MethodInterceptionCounter();
-
     static final String APACHE_HTTP_CLIENT_ORIGIN = "ApacheHttpClient";
 
     /**
@@ -79,7 +77,7 @@ public class ApacheHttpClientInterceptor implements Installable {
             return call(zuper);
         }
 
-        HttpRequestAccessor requestAccessor = new HttpRequestAccessor(args);
+        HttpRequestAccessor requestAccessor = findRequestObject(args);
 
         // publish request event
         ServiceDownstreamRequestEvent requestEvent = publishRequestEvent(requestAccessor);
@@ -92,13 +90,33 @@ public class ApacheHttpClientInterceptor implements Installable {
             throwable = t;
         } finally {
             // publish response event
-            HttpResponseAccessor responseAccessor = new HttpResponseAccessor(response);
+            HttpResponseAccessor responseAccessor = null;
+            //we currently do not support the flavors of execute() which take a ResponseHandler<T> and return the T.
+            if (response instanceof HttpResponseAccessor) {
+                responseAccessor = (HttpResponseAccessor)response;
+            }
             publishResponseEvent(responseAccessor, requestEvent, throwable);
             if (throwable != null) {
                 throw throwable;
             }
             return response;
         }
+    }
+
+    /**
+     * Find the first (presumably only) HttpRequest object in the args passed to the intercepted method. It is assumed that the DataAccessor interceptor is installed, and that therefore
+     * this object will be castable to the HttpRequestAccessor type.
+     * @param args all arguments passed to the intercepted method
+     * @return the found HttpRequest, converted to its HttpRequestAccessor form, or null if none found
+     */
+    private static HttpRequestAccessor findRequestObject(Object[] args) {
+        for (int i = 0; i < args.length; i++) {
+            if (HttpRequestAccessor.class.isAssignableFrom(args[i].getClass())) {
+                return (HttpRequestAccessor)args[i];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -125,9 +143,7 @@ public class ApacheHttpClientInterceptor implements Installable {
      * @return The published ServiceDownstreamRequestEvent, which is needed when publishing ServiceDownstreamResponseEvent later
      */
     private static HttpServiceDownstreamRequestEvent publishRequestEvent(final HttpRequestAccessor requestAccessor) {
-        HttpServiceDownstreamRequestEvent requestEvent = ApacheEventFactory.createDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, requestAccessor.getUri(), requestAccessor.getMethod(), requestAccessor);
-        requestEvent.withMethod(requestAccessor.getMethod());
-        requestEvent.withUri(requestAccessor.getUri());
+        HttpServiceDownstreamRequestEvent requestEvent = ApacheEventFactory.createDownstreamRequestEvent(APACHE_HTTP_CLIENT_ORIGIN, requestAccessor);
         EventBus.publish(requestEvent);
         return requestEvent;
     }
@@ -139,12 +155,7 @@ public class ApacheHttpClientInterceptor implements Installable {
      * @param throwable The throwable if the request fails
      */
     private static void publishResponseEvent(final HttpResponseAccessor responseAccessor, final ServiceDownstreamRequestEvent requestEvent, final Throwable throwable) {
-        HttpServiceDownstreamResponseEvent responseEvent = new HttpServiceDownstreamResponseEvent(APACHE_HTTP_CLIENT_ORIGIN, requestEvent.getService(), requestEvent.getOperation(), requestEvent);
-        if(throwable != null) {
-            responseEvent.withThrown(throwable);
-        }
-        responseEvent.withStatusCode(responseAccessor.getStatusCode());
-        responseEvent.withContentLength(responseAccessor.getContentLength());
+        ServiceDownstreamResponseEvent responseEvent = ApacheEventFactory.createServiceResponseEvent(responseAccessor, requestEvent, throwable);
         EventBus.publish(responseEvent);
     }
 

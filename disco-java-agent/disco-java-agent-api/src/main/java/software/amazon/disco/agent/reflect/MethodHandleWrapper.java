@@ -24,7 +24,11 @@ import java.lang.invoke.MethodType;
  * Generally we need to access methods reflectively, to account for times when the Agent is built such that it
  * is loaded into the Bootstrap classloader, which will not have direct access to classes loaded by the System classloader
  * such as Apache classes, Servlet classes, ...
+ *
+ * @deprecated deprecated in favour of {@code software.amazon.disco.agent.interception.templates.DataAccessor} which should be used
+ *             wherever possible instead.
  */
+@Deprecated
 public class MethodHandleWrapper {
     static final MethodHandles.Lookup LOOKUP = MethodHandles.publicLookup();
 
@@ -156,4 +160,13 @@ public class MethodHandleWrapper {
 
         return classes;
     }
+    /**
+     *  Method to provide information whether MethodHandle is loaded or not
+     * eg: returns false if any exceptions are thrown while building MethodHandle
+     * @return the {@link Boolean}
+     */
+    public boolean isHandleLoaded() {
+        return handle != null;
+    }
+
 }

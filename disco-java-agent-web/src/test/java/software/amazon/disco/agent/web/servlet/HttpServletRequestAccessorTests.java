@@ -27,19 +27,18 @@ import java.util.Map;
 import static org.mockito.Mockito.*;
 
 public class HttpServletRequestAccessorTests {
-    HttpServletRequest req;
     HttpServletRequestAccessor accessor;
 
     @Before
     public void before() {
-        req = mock(HttpServletRequest.class);
-        accessor = new HttpServletRequestAccessor(req);
+        accessor = mock(HttpServletRequestAccessor.class);
+        when(accessor.retrieveHeaderMap()).thenCallRealMethod();
     }
 
     @Test
     public void testGetHeaders() {
-        when(req.getHeaderNames()).thenReturn(Collections.enumeration(Arrays.asList("headername")));
-        when(req.getHeader("headername")).thenReturn("headervalue");
+        when(accessor.getHeaderNames()).thenReturn(Collections.enumeration(Arrays.asList("headername")));
+        when(accessor.getHeader("headername")).thenReturn("headervalue");
         Map<String, String> map = accessor.retrieveHeaderMap();
         Assert.assertEquals(1, map.size());
         Assert.assertEquals("headervalue", map.get("headername"));
@@ -47,44 +46,44 @@ public class HttpServletRequestAccessorTests {
 
     @Test
     public void testGetHeadersWhenNull() {
-        when(req.getHeaderNames()).thenReturn(null);
+        when(accessor.getHeaderNames()).thenReturn(null);
         Map<String, String> map = accessor.retrieveHeaderMap();
         Assert.assertEquals(0, map.size());
     }
 
     @Test
     public void testGetRemotePort() {
-        when(req.getRemotePort()).thenReturn(800);
+        when(accessor.getRemotePort()).thenReturn(800);
         Assert.assertEquals(800, accessor.getRemotePort());
     }
 
     @Test
     public void testGetRemoteAddr() {
-        when(req.getRemoteAddr()).thenReturn("1.2.3.4");
+        when(accessor.getRemoteAddr()).thenReturn("1.2.3.4");
         Assert.assertEquals("1.2.3.4", accessor.getRemoteAddr());
     }
 
     @Test
     public void testGetLocalPort() {
-        when(req.getLocalPort()).thenReturn(900);
+        when(accessor.getLocalPort()).thenReturn(900);
         Assert.assertEquals(900, accessor.getLocalPort());
     }
 
     @Test
     public void testGetLocalAddr() {
-        when(req.getLocalAddr()).thenReturn("4.3.2.1");
+        when(accessor.getLocalAddr()).thenReturn("4.3.2.1");
         Assert.assertEquals("4.3.2.1", accessor.getLocalAddr());
     }
 
     @Test
     public void testGetMethod() {
-        when(req.getMethod()).thenReturn("POST");
+        when(accessor.getMethod()).thenReturn("POST");
         Assert.assertEquals("POST", accessor.getMethod());
     }
 
     @Test
     public void testGetRequestURL() {
-        when(req.getRequestURL()).thenReturn(new StringBuffer("http://example.com/foo?bar=baz"));
-        Assert.assertEquals("http://example.com/foo?bar=baz", accessor.getRequestURL());
+        when(accessor.getRequestUrl()).thenReturn("http://example.com/foo?bar=baz");
+        Assert.assertEquals("http://example.com/foo?bar=baz", accessor.getRequestUrl());
     }
 }

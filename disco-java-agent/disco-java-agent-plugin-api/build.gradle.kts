@@ -13,18 +13,15 @@
  *   permissions and limitations under the License.
  */
 
-dependencies {
-    //TODO update BB and ASM to latest
-    compile("net.bytebuddy", "byte-buddy-dep", "1.9.12")
-    compile("org.ow2.asm", "asm", "7.1")
-    compile("org.ow2.asm", "asm-commons", "7.1")
-    compile("org.ow2.asm", "asm-tree", "7.1")
+plugins {
+    `java-library`
+    `maven-publish`
 }
 
-configure<PublishingExtension> {
-    publications {
-        named<MavenPublication>("maven") {
-            from(components["java"])
-        }
-    }
+dependencies {
+    //TODO update BB and ASM to latest
+    api("net.bytebuddy", "byte-buddy-dep", "1.10.14")
+    implementation("org.ow2.asm", "asm", "8.0.1")
+    implementation("org.ow2.asm", "asm-commons", "8.0.1")
+    implementation("org.ow2.asm", "asm-tree", "8.0.1")
 }

@@ -14,12 +14,13 @@
  */
 
 plugins {
+    `java-library`
     id("com.github.johnrengelman.shadow")
 }
 
 dependencies {
-    compile(project(":disco-java-agent:disco-java-agent-core"))
-    compile(project(":disco-java-agent-web"))
+    implementation(project(":disco-java-agent:disco-java-agent-core"))
+    implementation(project(":disco-java-agent-web"))
 }
 
 tasks.shadowJar  {

@@ -18,7 +18,7 @@ Each Plugin advertises itself via the MANIFEST file inside the JAR. As an exampl
 <br/>
 
 ```manifest
-Disco-Installable-Classes: com.my.org.SomeInterceptor com.my.org.SomeOtherInterceptor
+Disco-Installable-Classes: com.my.org.SomeInterceptor com.my.org.SomeOtherInterceptor com.my.org.SomePackageOfInterceptors
 Disco-Listener-Classes: com.my.org.SomeListener com.my.org.SomeOtherListener
 Disco-Init-Class: com.my.org.SomeClassWithAnInitMethod
 Disco-Bootstrap-Classloader: true
@@ -29,7 +29,7 @@ Disco-Bootstrap-Classloader: true
 
 | Entry | Meaning |
 | --- | --- |
-| `Disco-Installable-Classes` | A space-separated list of fully qualified class names which are expected to inherit from Installable and have a no-args constructor. Installables will be processed first, across all scanned plugins |
+| `Disco-Installable-Classes` | A space-separated list of fully qualified class names which are expected to inherit from either software.amazon.disco.agent.interception.Installable or software.amazon.disco.agent.interception.Package, and have a no-args constructor. Installables will be processed first, across all scanned plugins |
 | `Disco-Init-Class` | If any further one-off-initialization is required, a fully qualified class may be provided. If this class provides a method matching the signature "public static void init(void)", that method will be executed. All plugins will have this init() method processed *after* all plugins have had their Installables processed. |
 | `Disco-Listener-Classes` | A space-separated list of fully qualified class names which are expected to inherit from Listener and have a no-args constructor. Listener registration for all plugins will occure after one-off initialization for all plugins
 | `Disco-Bootstrap-Classloader` | If set to the literal case-insensitive string 'true', this JAR file will be added to the runtime's bootstrap classloader. Any other value, or the absence of this attribute, means the plugin will be loaded via the system classloader like a normal runtime dependency. It is not usually necessary to specify this attribute, unless Installables wish to intercept JDK classes. |
