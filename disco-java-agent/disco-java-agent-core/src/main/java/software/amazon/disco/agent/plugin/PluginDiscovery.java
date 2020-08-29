@@ -113,11 +113,12 @@ public class PluginDiscovery {
             File[] files = pluginDir.listFiles();
             if (files != null) {
                 for (File jarFile : files) {
-                    if (jarFile.getName().substring(jarFile.getName().lastIndexOf(".")).equalsIgnoreCase(".jar")) {
+                    int dotIndex = jarFile.getName().lastIndexOf(".");
+                    if (dotIndex != -1 && jarFile.getName().substring(dotIndex).equalsIgnoreCase(".jar")) {
                         processJarFile(instrumentation, jarFile, config.isRuntimeOnly());
                     } else {
                         //ignore non JAR file
-                        log.info("DiSCo(Core) non JAR file found on plugin path, skipping this file");
+                        log.info("DiSCo(Core) directory or non JAR file found on plugin path, skipping it");
                     }
                 }
             }

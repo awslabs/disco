@@ -24,16 +24,12 @@ dependencies {
 }
 
 tasks.shadowJar  {
-    //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (e.g. disco-java-agent-0.1.jar)
-    archiveClassifier.set(null as String?)
-
     manifest {
         attributes(mapOf(
                 "Premain-Class" to "software.amazon.disco.agent.DiscoAgent",
                 "Agent-Class" to "software.amazon.disco.agent.DiscoAgent",
                 "Can-Redefine-Classes" to "true",
-                "Can-Retransform-Classes" to "true",
-                "Boot-Class-Path" to archiveFileName.get()
+                "Can-Retransform-Classes" to "true"
         ))
     }
 }
