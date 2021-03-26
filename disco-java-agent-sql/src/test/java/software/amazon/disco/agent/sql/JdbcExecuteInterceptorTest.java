@@ -203,6 +203,9 @@ public class JdbcExecuteInterceptorTest {
 
         ServiceResponseEvent received = (ServiceResponseEvent) mockListener.getReceivedEvents().get(0);
 
+        assertEquals(requestEvent.getOrigin(), received.getOrigin());
+        assertEquals(requestEvent.getOperation(), received.getOperation());
+        assertEquals(requestEvent.getService(), received.getService());
         assertEquals(requestEvent, received.getRequest());
         assertEquals(1, received.getResponse());
         assertNull(received.getThrown());
