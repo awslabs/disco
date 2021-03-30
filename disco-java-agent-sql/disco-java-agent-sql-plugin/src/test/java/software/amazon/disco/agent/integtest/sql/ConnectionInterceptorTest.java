@@ -55,7 +55,7 @@ public class ConnectionInterceptorTest {
         verifyResponseEvent(mockCallableStatement);
     }
 
-    @Test(expected = SQLException.class)
+    @Test(expected = UnsupportedOperationException.class)
     public void testCaptureException() throws SQLException {
         try {
             connection.prepareStatement(QUERY, 1);  // This method has been stubbed to throw
@@ -63,7 +63,7 @@ public class ConnectionInterceptorTest {
             verifyRequestEvent();
             Assert.assertEquals(1, listener.responseEvents.size());
             ServiceResponseEvent event = listener.responseEvents.get(0);
-            Assert.assertTrue(event.getThrown() instanceof SQLException);
+            Assert.assertTrue(event.getThrown() instanceof UnsupportedOperationException);
             Assert.assertNull(event.getResponse());
         }
     }
