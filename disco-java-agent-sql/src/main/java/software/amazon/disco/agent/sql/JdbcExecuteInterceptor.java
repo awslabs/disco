@@ -112,8 +112,8 @@ public class JdbcExecuteInterceptor implements Installable {
 
         ServiceResponseEvent responseEvent = new ServiceDownstreamResponseEvent(
                 SQL_ORIGIN,
-                requestEvent.getOperation(),
                 requestEvent.getService(),
+                requestEvent.getOperation(),
                 requestEvent)
                 .withResponse(response)
                 .withThrown(thrown);

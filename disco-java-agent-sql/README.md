@@ -8,20 +8,33 @@ Event producer for popular frameworks used in service oriented software, this su
 
 ## Feature Status
 
-All methods in the table below are intercepted and published to the Event Bus as a pair of 
+All methods in the tables below are intercepted and published to the Event Bus as a pair of 
 `ServiceDownstreamRequestEvent`, published immediately before the DB Driver begins their implementation of the method,
 and `ServiceDownstreamResponseEvent`, published immediately after the method ends either successfully or due to an
-exception. 
+exception.
+
+### Statement Interception
 
 The Statement object will be captured as the request, the Database name as the service, and the query string as the
-operation on a best-effort basis. If you can't retrieve query strings from PreparedStatement objects, disco cannot
-include them in events.
+operation for a regular `Statement`. To get the stored query string of `PreparedStatement` and `CallableStatement`
+queries, see Connection Interception. The response object is the object returned by the driver for a query, which is
+either a `ResultSet`, integer, or boolean depending on the method used.
 
 |                   | execute            | executeQuery       | executeUpdate      | executeLargeUpdate | executeBatch             |
 |-------------------|--------------------|--------------------|--------------------|--------------------|--------------------------|
 | Statement         | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_multiplication_x: |
 | PreparedStatement | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_multiplication_x: |
 | CallableStatement | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_multiplication_x: |
+
+### Connection Interception
+
+The Connection object will be captured as the request, the Database name as the service, and the query string will be
+extracted from the method call's argument(s) as the operation. The response object is the `PreparedStatement` or
+`CallableStatement` returned by the server.
+
+|                   | prepareStatement   | prepareCall        |
+|-------------------|--------------------|--------------------|
+| Connection        | :heavy_check_mark: | :heavy_check_mark: |
 
 ## Package description
 

@@ -16,6 +16,6 @@ public class SqlSupport implements Package {
      */
     @Override
     public Collection<Installable> get() {
-        return Arrays.asList(new JdbcExecuteInterceptor());
+        return Arrays.asList(new JdbcExecuteInterceptor(), new ConnectionInterceptor());
     }
 }

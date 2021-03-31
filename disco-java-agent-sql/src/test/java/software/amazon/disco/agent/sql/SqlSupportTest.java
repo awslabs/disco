@@ -14,6 +14,6 @@ public class SqlSupportTest {
         Collection<Installable> pkg = new SqlSupport().get();
         Set<Installable> installables = new HashSet<>();
         installables.addAll(pkg);
-        Assert.assertEquals(1, installables.size());
+        Assert.assertEquals(2, installables.size());
     }
 }
