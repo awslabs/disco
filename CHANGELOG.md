@@ -1,5 +1,9 @@
 # Change Log
 
+## Version 0.11.0 - 04/07/2021
+
+* Added additional SQL interception support for prepared statements and calls [PR #16](https://github.com/awslabs/disco/pull/16)
+
 ## Version 0.10.0 - 08/25/2020
 
 * Added SQL interception package [PR #10](https://github.com/awslabs/disco/pull/10)
