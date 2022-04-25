@@ -22,10 +22,31 @@ plugins {
 }
 
 subprojects {
-    version = "0.11.0"
+    version = "0.12.0"
 
     repositories {
         mavenCentral()
+    }
+
+    // Common build logic for plugins that need to relocate certain classes under /resources of the build artifact jar.
+    afterEvaluate {
+        if (ext.has("classesToMove")) {
+            tasks.named<Jar>("jar") {
+                includeEmptyDirs = false
+
+                (ext.get("classesToMove") as Array<String>).forEach {
+                    val name = it.replace('.', '/')
+
+                    // copy these compiled classes to destination dir while maintaining their namespaces.
+                    from("build/classes/java/main/$name.class") {
+                        into("resources/${name.substringBeforeLast('/')}")
+                    }
+
+                    // exclude the original ones from this jar
+                    exclude("$name.class")
+                }
+            }
+        }
     }
 
     // Set up creation of shaded Jars
@@ -52,6 +73,8 @@ subprojects {
     }
 
     plugins.withId("java-library") {
+        plugins.apply("jacoco")
+
         dependencies {
             add("testImplementation", "junit:junit:4.12")
             add("testImplementation", "org.mockito:mockito-core:3.+")
@@ -83,6 +106,9 @@ subprojects {
                 add("testImplementation", "org.mockito:mockito-core:1.+")
             }
 
+            val agentJarPath = project(":disco-java-agent:disco-java-agent").buildDir.absolutePath + "/libs/disco-java-agent-$ver.jar"
+            val pluginsDir = project.buildDir.absolutePath + "/libs"
+
             // Configure integ tests, which need a loaded agent, and the loaded plugin
             tasks.named<Test>("test") {
                 // explicitly remove the runtime classpath from the tests since they are integ tests, and may not access the
@@ -92,13 +118,87 @@ subprojects {
                 classpath = classpath.minus(configurations.named<Configuration>("runtimeClasspath").get())
 
                 //load the agent for the tests, and have it discover the plugin
-                jvmArgs("-javaagent:../../disco-java-agent/disco-java-agent/build/libs/disco-java-agent-$ver.jar=pluginPath=./build/libs:extraverbose")
+                jvmArgs("-agentlib:jdwp=transport=dt_socket,address=localhost:1337,server=y,suspend=n", "-javaagent:${agentJarPath}=pluginPath=${pluginsDir}:extraverbose")
 
                 //we do not take any normal compile/runtime dependency on this, but it must be built first since the above jvmArg
                 //refers to its built artifact.
                 dependsOn(":disco-java-agent:disco-java-agent:build")
                 dependsOn("$libraryName:${project.name}:assemble")
             }
+
+            val originalTestDir = file(project.buildDir.absolutePath + "/classes/java/test")
+
+            // task to statically instrument all required sources to run plugin integ tests with BTI enabled.
+            val preprocess = tasks.register<JavaExec>("preprocess") {
+                onlyIf {
+                    originalTestDir.exists() && originalTestDir.isDirectory && originalTestDir.listFiles().isNotEmpty()
+                }
+
+                val preprocessProjName = ":disco-java-agent-instrumentation-preprocess";
+                val preprocessorJarPath = project(preprocessProjName).buildDir.absolutePath + "/libs/disco-java-agent-instrumentation-preprocess-$ver.jar"
+
+                val testJarDependencies = (tasks["test"] as Test).classpath.minus(configurations.named<Configuration>("runtimeClasspath").get()).files.filter { it.isFile };
+                val outputDir = project.buildDir.absolutePath + "/static-instrumentation"
+
+                main = "software.amazon.disco.instrumentation.preprocess.cli.Driver";
+                classpath = files(preprocessorJarPath, testJarDependencies, originalTestDir)
+                args = listOf(
+                    "-ap", agentJarPath,
+                    "-jdks", System.getProperty("java.home"),
+                    "-sps", testJarDependencies.joinToString(":") + "@testJars",
+                    "-sps", "${originalTestDir}@test",
+                    "-out", outputDir,
+                    "-arg", "verbose:loggerfactory=software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory:pluginPath=${pluginsDir}",
+                )
+
+                dependsOn("$preprocessProjName:build")
+                dependsOn(tasks["test"])
+            }
+
+            // Configure integ tests to run with BTI enabled
+            val btiTest = tasks.register<Test>("bti_test") {
+                onlyIf {
+                    originalTestDir.exists() && originalTestDir.isDirectory && originalTestDir.listFiles().isNotEmpty()
+                }
+
+                val outputDir = project.buildDir.absolutePath + "/static-instrumentation"
+
+                // update test CP
+                doFirst {
+                    val instrumentedTestDir = file("$outputDir/test")
+                    val instrumentedJars = file("$outputDir/testJars")
+
+                    // copy the content of the original test dir to a temp folder without overriding any content to keep the original test dir clean.
+                    // the content of the temp folder will then be added to the runtime classpath.
+                    originalTestDir.copyRecursively(instrumentedTestDir, false, onError = { file, exception -> OnErrorAction.SKIP })
+
+                    val map = instrumentedJars.listFiles().associateBy { it.name }
+                    classpath = layout.files(classpath.files.filter { !map.containsKey(it.name) })
+                        .plus(layout.files(instrumentedJars.listFiles()))
+                        .plus(layout.files(instrumentedTestDir))
+                        .minus(layout.files(originalTestDir))
+                }
+
+                jvmArgs("-agentlib:jdwp=transport=dt_socket,address=localhost:1337,server=y,suspend=n")
+
+                // attach the Disco agent in 'runtimeonly' mode
+                jvmArgs("-javaagent:${agentJarPath}=pluginPath=${pluginsDir}:runtimeonly")
+
+                if (JavaVersion.current().isJava9Compatible) {
+                    // configure module patching and create read link from java.base to all unnamed modules
+                    jvmArgs("--patch-module=java.base=${outputDir}/jdk/InstrumentedJDK.jar")
+                    jvmArgs("--add-reads=java.base=ALL-UNNAMED")
+                    jvmArgs("--add-exports=java.base/software.amazon.disco.agent.concurrent.preprocess=ALL-UNNAMED")
+                } else {
+                    // prepend the instrumented JDK artifact to the bootstrap class path
+                    jvmArgs("-Xbootclasspath/p:${outputDir}/jdk/InstrumentedJDK.jar")
+                }
+
+                dependsOn(tasks["test"])
+                dependsOn(preprocess)
+            }
+
+            tasks["build"].dependsOn(btiTest)
         }
     }
 
@@ -197,6 +297,11 @@ subprojects {
                                 name.set("Ben Smithers")
                                 email.set("besmithe@amazon.co.uk")
                             }
+                            developer {
+                                id.set("oelmohan")
+                                name.set("Omar Elmohandes")
+                                email.set("oelmohan@amazon.com")
+                            }
                         }
                         scm {
                             connection.set("scm:git:git://github.com/awslabs/disco.git")
@@ -221,6 +326,39 @@ subprojects {
         configure<SigningExtension> {
             useGpgCmd()
             sign(the<PublishingExtension>().publications["maven"])
+        }
+    }
+
+    plugins.withId("jacoco") {
+        tasks.withType<Test> {
+            finalizedBy("jacocoTestCoverageVerification")
+        }
+
+        tasks.withType<JacocoReport> {
+            dependsOn("test")
+            // Enable both XML and HTML outputs
+            reports {
+                // The default XML path will be at build/reports/jacoco/test/jacocoTestReport.xml
+                xml.required.set(true)
+
+                // The default HTML path will be at build/reports/jacoco/test/html/index.html
+                html.required.set(true)
+            }
+        }
+
+        tasks.withType<JacocoCoverageVerification> {
+            dependsOn("jacocoTestReport")
+            violationRules {
+                // Unless we increase the coverage for all projects, setting this to true will fail some. So
+                // this will only be a warning for now
+                isFailOnViolation = false
+                rule {
+                    limit {
+                        // Set the default to 90% coverage over all instructions
+                        minimum = "0.9".toBigDecimal()
+                    }
+                }
+            }
         }
     }
 }

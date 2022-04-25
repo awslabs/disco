@@ -15,18 +15,25 @@
 
 package software.amazon.disco.agent.concurrent;
 
+import net.bytebuddy.matcher.ElementMatchers;
+import org.mockito.ArgumentCaptor;
 import software.amazon.disco.agent.concurrent.decorate.DecoratedCallable;
 import software.amazon.disco.agent.concurrent.decorate.DecoratedRunnable;
-import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.matcher.ElementMatcher;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+import software.amazon.disco.agent.config.AgentConfig;
+import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.agent.interception.InterceptionInstaller;
 
+import java.lang.instrument.ClassFileTransformer;
+import java.lang.instrument.Instrumentation;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
@@ -128,14 +135,19 @@ public class ForkJoinPoolInterceptorTests {
 
     @Test
     public void testInstall() {
-        AgentBuilder agentBuilder = Mockito.mock(AgentBuilder.class);
-        AgentBuilder.Identified.Extendable extendable = Mockito.mock(AgentBuilder.Identified.Extendable.class);
-        AgentBuilder.Identified.Narrowable narrowable = Mockito.mock(AgentBuilder.Identified.Narrowable.class);
-        AgentBuilder.Ignored ignored = Mockito.mock(AgentBuilder.Ignored.class);
-        Mockito.when(agentBuilder.ignore(Mockito.any(ElementMatcher.class))).thenReturn(ignored);
-        Mockito.when(ignored.type(Mockito.any(ElementMatcher.class))).thenReturn(narrowable);
-        Mockito.when(narrowable.transform(Mockito.any(AgentBuilder.Transformer.class))).thenReturn(extendable);
-        AgentBuilder result = new ForkJoinPoolInterceptor().install(agentBuilder);
-        Assert.assertEquals(extendable, result);
+        TestUtils.testInstallableCanBeInstalled(new ForkJoinPoolInterceptor());
+    }
+
+    @Test
+    public void testInstallationInstallerAppliesThenRemoves() {
+        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
+        Instrumentation instrumentation = Mockito.mock(Instrumentation.class);
+        Mockito.when(instrumentation.isRedefineClassesSupported()).thenReturn(true);
+        Mockito.when(instrumentation.getAllLoadedClasses()).thenReturn(new Class[]{});
+        Installable fjpInterceptor = new ForkJoinPoolInterceptor();
+        interceptionInstaller.install(instrumentation, new HashSet<>(Collections.singleton(fjpInterceptor)), new AgentConfig(null), ElementMatchers.none());
+        ArgumentCaptor<ClassFileTransformer> transformerCaptor = ArgumentCaptor.forClass(ClassFileTransformer.class);
+        Mockito.verify(instrumentation).addTransformer(transformerCaptor.capture());
+        Mockito.verify(instrumentation).removeTransformer(Mockito.eq(transformerCaptor.getValue()));
     }
 }

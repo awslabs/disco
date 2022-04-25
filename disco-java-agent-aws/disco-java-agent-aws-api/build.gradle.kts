@@ -18,5 +18,5 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":disco-java-agent:disco-java-agent-api"))
+    compileOnly(project(":disco-java-agent:disco-java-agent-api"))
 }

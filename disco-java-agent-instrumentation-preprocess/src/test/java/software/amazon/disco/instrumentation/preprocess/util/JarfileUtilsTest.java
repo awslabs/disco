@@ -19,7 +19,7 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import software.amazon.disco.instrumentation.preprocess.JarUtils;
+import software.amazon.disco.instrumentation.preprocess.TestUtils;
 
 import java.io.File;
 import java.util.Enumeration;
@@ -39,7 +39,7 @@ public class JarfileUtilsTest {
         srcEntries.put("ClassBBBBBBBBBBBB.class","ClassBBBBBBBBBBBB.class".getBytes());
         srcEntries.put("/CCCC","/CCCC".getBytes());
 
-        File testFile = JarUtils.createJar(temporaryFolder, "Test.jar", srcEntries);
+        File testFile = TestUtils.createJar(temporaryFolder, "Test.jar", srcEntries);
 
         Map<String, byte[]> entriesRead = new HashMap<>();
         try (JarFile jarFile = new JarFile(testFile)) {

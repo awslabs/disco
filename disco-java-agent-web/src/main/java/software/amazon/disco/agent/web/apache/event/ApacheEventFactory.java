@@ -15,13 +15,14 @@
 
 package software.amazon.disco.agent.web.apache.event;
 
+import org.apache.http.HttpRequest;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.HttpResponse;
+
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
-import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
-import software.amazon.disco.agent.web.apache.utils.HttpRequestBaseAccessor;
-import software.amazon.disco.agent.web.apache.utils.HttpResponseAccessor;
 
 /**
  * Create our private events, so that listeners do not have public access to them
@@ -30,23 +31,27 @@ public class ApacheEventFactory {
     /**
      * Create our private events, so that listeners do not have public access to them
      * @param origin the origin of the downstream call e.g. 'Web'
-     * @param accessor a HttpRequestAccessor to get uri and HTTP method
+     * @param request a HttpRequest to get uri and HTTP method
      * @return a {@link ApacheHttpServiceDownstreamRequestEvent}
      */
-    public static HttpServiceDownstreamRequestEvent createDownstreamRequestEvent(String origin, HttpRequestAccessor accessor) {
-        String uri;
-        String method;
-        if (accessor instanceof HttpRequestBaseAccessor) {
+    public static HttpServiceDownstreamRequestEvent createDownstreamRequestEvent(String origin, HttpRequest request) {
+        String uri = null;
+        String method = null;
+        if (request instanceof HttpRequestBase) {
             //we can retrieve the data in a streamlined way, avoiding internal production of the RequestLine
-            HttpRequestBaseAccessor baseAccessor = (HttpRequestBaseAccessor)accessor;
-            uri = baseAccessor.getUri();
-            method = baseAccessor.getMethod();
+            HttpRequestBase baseRequest = (HttpRequestBase)request;
+            if (baseRequest.getURI() != null) {
+                uri = baseRequest.getURI().toString();
+            }
+            method = baseRequest.getMethod();
         } else {
-            uri = accessor.getUriFromRequestLine();
-            method = accessor.getMethodFromRequestLine();
+            if (request.getRequestLine() != null) {
+                uri = request.getRequestLine().getUri();
+                method = request.getRequestLine().getMethod();
+            }
         }
         //TODO - using uri and method as service and operation name is unsatisfactory.
-        ApacheHttpServiceDownstreamRequestEvent requestEvent = new ApacheHttpServiceDownstreamRequestEvent(origin, uri, method, accessor);;
+        ApacheHttpServiceDownstreamRequestEvent requestEvent = new ApacheHttpServiceDownstreamRequestEvent(origin, uri, method, request);
         requestEvent.withMethod(method);
         requestEvent.withUri(uri);
         return requestEvent;
@@ -54,19 +59,23 @@ public class ApacheEventFactory {
 
     /**
      * Create response event with HttpResponse for apache client downstream call
-     * @param responseAccessor a HttpResponseAccessor to get status code etc.
+     * @param response a HttpResponse to get status code etc.
      * @param requestEvent Previously published ServiceDownstreamRequestEvent
      * @param throwable The throwable if the request fails
      * @return  a {@link HttpServiceDownstreamResponseEvent}.
      */
-    public static ServiceDownstreamResponseEvent createServiceResponseEvent(final HttpResponseAccessor responseAccessor, final ServiceDownstreamRequestEvent requestEvent, final Throwable throwable) {
+    public static ServiceDownstreamResponseEvent createServiceResponseEvent(final HttpResponse response, final ServiceDownstreamRequestEvent requestEvent, final Throwable throwable) {
         HttpServiceDownstreamResponseEvent responseEvent = new HttpServiceDownstreamResponseEvent(requestEvent.getOrigin(), requestEvent.getService(), requestEvent.getOperation(), requestEvent);
         if (throwable != null) {
             responseEvent.withThrown(throwable);
         }
-        if (responseAccessor != null) {
-            responseEvent.withStatusCode(responseAccessor.getStatusCode());
-            responseEvent.withContentLength(responseAccessor.getContentLength());
+        if (response != null) {
+            if(response.getStatusLine() != null) {
+                responseEvent.withStatusCode(response.getStatusLine().getStatusCode());
+            }
+            if(response.getEntity() != null) {
+                responseEvent.withContentLength(response.getEntity().getContentLength());
+            }
         }
         return responseEvent;
     }

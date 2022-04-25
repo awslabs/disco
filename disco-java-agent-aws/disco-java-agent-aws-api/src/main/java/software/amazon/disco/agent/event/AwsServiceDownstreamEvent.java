@@ -44,6 +44,9 @@ public interface AwsServiceDownstreamEvent extends ServiceEvent {
     /**
      * Obtain the header map that the particular event holds.
      * @return A key-value pairing map of the headers.
+     *
+     * @deprecated deprecated in favour of {@link HeaderRetrievable} which should be used wherever possible instead.
      */
+    @Deprecated
     Map<String, List<String>> getHeaderMap();
 }

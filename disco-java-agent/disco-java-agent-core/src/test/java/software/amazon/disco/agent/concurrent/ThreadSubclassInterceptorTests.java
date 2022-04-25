@@ -15,21 +15,18 @@
 
 package software.amazon.disco.agent.concurrent;
 
+import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.type.TypeDescription;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import software.amazon.disco.agent.concurrent.decorate.DecoratedThread;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.Listener;
 import software.amazon.disco.agent.event.ThreadEnterEvent;
 import software.amazon.disco.agent.event.ThreadExitEvent;
-import net.bytebuddy.agent.builder.AgentBuilder;
-import net.bytebuddy.description.method.MethodDescription;
-import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.matcher.ElementMatcher;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
 
 public class ThreadSubclassInterceptorTests {
     MyListener listener;
@@ -50,6 +47,17 @@ public class ThreadSubclassInterceptorTests {
     public void testThreadNotMatches() {
         Assert.assertFalse(ThreadSubclassInterceptor.createThreadSubclassTypeMatcher().matches(
                 new TypeDescription.ForLoadedType(Thread.class)
+        ));
+    }
+
+    @Test
+    public void testSubclassesUnderJavaLangRefNotMatches() throws ClassNotFoundException {
+        Assert.assertFalse(ThreadSubclassInterceptor.createThreadSubclassTypeMatcher().matches(
+                new TypeDescription.ForLoadedType(Class.forName("java.lang.ref.Reference$ReferenceHandler"))
+        ));
+
+        Assert.assertFalse(ThreadSubclassInterceptor.createThreadSubclassTypeMatcher().matches(
+                new TypeDescription.ForLoadedType(Class.forName("java.lang.ref.Finalizer$FinalizerThread"))
         ));
     }
 
@@ -121,10 +129,7 @@ public class ThreadSubclassInterceptorTests {
 
     @Test
     public void testInstall() {
-        AgentBuilder agentBuilder = Mockito.mock(AgentBuilder.class);
-        AgentBuilder.Identified.Narrowable narrowable = Mockito.mock(AgentBuilder.Identified.Narrowable.class);
-        Mockito.when(agentBuilder.type(Mockito.any(ElementMatcher.class))).thenReturn(narrowable);
-        new ThreadSubclassInterceptor().install(agentBuilder);
+        TestUtils.testInstallableCanBeInstalled(new ThreadSubclassInterceptor());
     }
 
     static class TestThread extends Thread {

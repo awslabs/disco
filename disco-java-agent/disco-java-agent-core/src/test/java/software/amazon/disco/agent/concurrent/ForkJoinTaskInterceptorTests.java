@@ -15,15 +15,21 @@
 
 package software.amazon.disco.agent.concurrent;
 
-import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.matcher.ElementMatcher;
+import net.bytebuddy.matcher.ElementMatchers;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import software.amazon.disco.agent.concurrent.decorate.DecoratedForkJoinTask;
+import software.amazon.disco.agent.config.AgentConfig;
+import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.agent.interception.InterceptionInstaller;
 
+import java.lang.instrument.ClassFileTransformer;
+import java.lang.instrument.Instrumentation;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.concurrent.CountedCompleter;
 import java.util.concurrent.ForkJoinTask;
 
@@ -43,30 +49,9 @@ public class ForkJoinTaskInterceptorTests {
     }
 
     @Test
-    public void testForkJoinTaskSubclassTypeMatcherMatches() throws Exception {
-        Assert.assertTrue(ForkJoinTaskInterceptor.createForkJoinTaskSubclassTypeMatcher().matches(
-                new TypeDescription.ForLoadedType(CountedCompleter.class)
-        ));
-    }
-
-    @Test
     public void testForkMethodMatcherMatches() throws Exception {
         Assert.assertTrue(ForkJoinTaskInterceptor.createForkMethodMatcher().matches(
                 new MethodDescription.ForLoadedMethod(ForkJoinTask.class.getDeclaredMethod("fork"))
-        ));
-    }
-
-    @Test
-    public void testExecMethodMatcherMatches() throws Exception {
-        Assert.assertTrue(ForkJoinTaskInterceptor.createExecMethodMatcher().matches(
-                new MethodDescription.ForLoadedMethod(CountedCompleter.class.getDeclaredMethod("exec"))
-        ));
-    }
-
-    @Test
-    public void testExecMethodMatcherNotMatchesAbstract() throws Exception {
-        Assert.assertFalse(ForkJoinTaskInterceptor.createExecMethodMatcher().matches(
-                new MethodDescription.ForLoadedMethod(ForkJoinTask.class.getDeclaredMethod("exec"))
         ));
     }
 
@@ -77,24 +62,20 @@ public class ForkJoinTaskInterceptorTests {
     }
 
     @Test
-    public void testExecAdviceEnterSafe() {
-        ForkJoinTaskInterceptor.ExecAdvice.onMethodEnter(Mockito.mock(DecoratedForkJoinTask.class));
-    }
-
-    @Test
-    public void testExecAdviceExitSafe() {
-        ForkJoinTaskInterceptor.ExecAdvice.onMethodExit(Mockito.mock(DecoratedForkJoinTask.class));
-    }
-
-    @Test
     public void testInstall() {
-        AgentBuilder agentBuilder = Mockito.mock(AgentBuilder.class);
-        AgentBuilder.Identified.Extendable extendable = Mockito.mock(AgentBuilder.Identified.Extendable.class);
-        AgentBuilder.Identified.Narrowable narrowable = Mockito.mock(AgentBuilder.Identified.Narrowable.class);
-        Mockito.when(agentBuilder.type(Mockito.any(ElementMatcher.class))).thenReturn(narrowable);
-        Mockito.when(narrowable.transform(Mockito.any(AgentBuilder.Transformer.class))).thenReturn(extendable);
-        Mockito.when(extendable.type(Mockito.any(ElementMatcher.class))).thenReturn(narrowable);
-        AgentBuilder result = new ForkJoinTaskInterceptor().install(agentBuilder);
-        Assert.assertEquals(extendable, result);
+        TestUtils.testInstallableCanBeInstalled(new ForkJoinTaskInterceptor());
+    }
+
+    @Test
+    public void testInstallationInstallerAppliesThenRemoves() {
+        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
+        Instrumentation instrumentation = Mockito.mock(Instrumentation.class);
+        Mockito.when(instrumentation.isRedefineClassesSupported()).thenReturn(true);
+        Mockito.when(instrumentation.getAllLoadedClasses()).thenReturn(new Class[]{});
+        Installable fjtInterceptor = new ForkJoinTaskInterceptor();
+        interceptionInstaller.install(instrumentation, new HashSet<>(Collections.singleton(fjtInterceptor)), new AgentConfig(null), ElementMatchers.none());
+        ArgumentCaptor<ClassFileTransformer> transformerCaptor = ArgumentCaptor.forClass(ClassFileTransformer.class);
+        Mockito.verify(instrumentation).addTransformer(transformerCaptor.capture());
+        Mockito.verify(instrumentation).removeTransformer(Mockito.eq(transformerCaptor.getValue()));
     }
 }

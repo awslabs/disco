@@ -15,24 +15,29 @@
 
 package software.amazon.disco.instrumentation.preprocess.loaders.classfiles;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
-import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
-import software.amazon.disco.instrumentation.preprocess.exceptions.NoModuleToInstrumentException;
-import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
-import software.amazon.disco.instrumentation.preprocess.JarUtils;
 import software.amazon.disco.instrumentation.preprocess.MockEntities;
+import software.amazon.disco.instrumentation.preprocess.TestUtils;
+import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
+import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
 
 import java.io.File;
+import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class JarLoaderTest {
     JarLoader loader;
@@ -43,37 +48,21 @@ public class JarLoaderTest {
 
     @Before
     public void before() {
-        config = PreprocessConfig.builder().jarPaths(MockEntities.makeMockPathsWithDuplicates()).build();
+        config = PreprocessConfig.builder().sourcePath("lib", new HashSet<>(MockEntities.makeMockPathsWithDuplicates())).build();
         loader = new JarLoader();
     }
 
-    @Test(expected = NoModuleToInstrumentException.class)
-    public void testLoadFailWithEmptyPathList() {
-        loader.load(config);
-    }
-
-    @Test(expected = NoModuleToInstrumentException.class)
-    public void testLoadFailWithNullConfig() {
-        loader.load(null);
-    }
-
-    @Test(expected = NoModuleToInstrumentException.class)
-    public void testLoadFailWithNullPathList() {
-        loader.load(PreprocessConfig.builder().build());
-    }
-
     @Test
-    public void testLoadWorksWithMultiplePaths() {
-        JarLoader packageLoader = Mockito.mock(JarLoader.class);
-        JarInfo info = Mockito.mock(JarInfo.class);
+    public void testLoadWorks() {
+        JarLoader packageLoader = Mockito.spy(loader);
+        SourceInfo info = new SourceInfo(new File("a"), null, Collections.emptyMap());
 
-        Mockito.doCallRealMethod().when(packageLoader).load(config);
+        // return the same JarInfo object for all 3 jar paths defined in the config file.
         Mockito.doReturn(info).when(packageLoader).loadJar(Mockito.any(File.class), Mockito.any(ExportStrategy.class));
 
-        List<JarInfo> infos = packageLoader.load(config);
+        packageLoader.load(Paths.get("somePath"), config);
 
-        Mockito.verify(packageLoader, Mockito.times(3)).loadJar(Mockito.any(File.class), Mockito.any(ExportStrategy.class));
-        Assert.assertEquals(3, infos.size());
+        Mockito.verify(packageLoader).loadJar(Mockito.eq(Paths.get("somePath").toFile()), Mockito.any(ExportStrategy.class));
     }
 
     @Test
@@ -84,17 +73,17 @@ public class JarLoaderTest {
         srcEntries.put("A.class", "A.class".getBytes());
         srcEntries.put("B.class", "B.class".getBytes());
 
-        File file = JarUtils.createJar(temporaryFolder, "jarFile", srcEntries);
+        File file = TestUtils.createJar(temporaryFolder, "jarFile", srcEntries);
 
-        JarInfo info = packageLoader.loadJar(file, null);
+        SourceInfo info = packageLoader.loadJar(file, null);
 
         Mockito.verify(packageLoader).injectFileToSystemClassPath(file);
-        Assert.assertEquals(2, info.getClassByteCodeMap().size());
-        Assert.assertEquals(file, info.getFile());
-        Assert.assertTrue(info.getClassByteCodeMap().containsKey("A"));
-        Assert.assertTrue(info.getClassByteCodeMap().containsKey("B"));
-        Assert.assertArrayEquals("A.class".getBytes(), info.getClassByteCodeMap().get("A"));
-        Assert.assertArrayEquals("B.class".getBytes(), info.getClassByteCodeMap().get("B"));
+        assertEquals(2, info.getClassByteCodeMap().size());
+        assertEquals(file, info.getSourceFile());
+        assertTrue(info.getClassByteCodeMap().containsKey("A"));
+        assertTrue(info.getClassByteCodeMap().containsKey("B"));
+        assertArrayEquals("A.class".getBytes(), info.getClassByteCodeMap().get("A"));
+        assertArrayEquals("B.class".getBytes(), info.getClassByteCodeMap().get("B"));
     }
 
     @Test
@@ -103,6 +92,6 @@ public class JarLoaderTest {
 
         List<JarEntry> entries = loader.extractEntries(jarFile);
 
-        Assert.assertEquals(6, entries.size());
+        assertEquals(6, entries.size());
     }
 }

@@ -26,11 +26,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import software.amazon.disco.agent.DiscoAgentTemplate;
 import software.amazon.disco.agent.config.AgentConfig;
+import software.amazon.disco.instrumentation.preprocess.TestUtils;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.NoAgentToLoadException;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.TransformationListener;
-import software.amazon.disco.instrumentation.preprocess.JarUtils;
 
 import java.io.File;
 import java.lang.instrument.Instrumentation;
@@ -80,11 +80,13 @@ public class DiscoAgentLoaderTest {
         Instrumentation instrumentation = Mockito.spy(new TransformerExtractor(delegate));
         AgentBuilder agentBuilder = Mockito.mock(AgentBuilder.class);
         Mockito.when(agentBuilder.with(Mockito.any(ByteBuddy.class))).thenReturn(agentBuilder);
+        Mockito.when(agentBuilder.with(Mockito.any(AgentBuilder.Listener.class))).thenReturn(agentBuilder);
+        Mockito.when(agentBuilder.with(Mockito.any(AgentBuilder.PoolStrategy.class))).thenReturn(agentBuilder);
 
         Map<String, byte[]> entries = new HashMap<>();
         entries.put("Foo.class", "Foo.class".getBytes());
 
-        File file = JarUtils.createJar(temporaryFolder, "TestJarFile", entries);
+        File file = TestUtils.createJar(temporaryFolder, "TestJarFile", entries);
         PreprocessConfig config = PreprocessConfig.builder().agentPath(file.getAbsolutePath()).build();
 
         Assert.assertNull(DiscoAgentTemplate.getAgentConfigFactory());
@@ -97,7 +99,9 @@ public class DiscoAgentLoaderTest {
         Assert.assertNotNull(agentConfigSupplier);
         Assert.assertNotNull(agentConfigSupplier.get());
         agentConfigSupplier.get().getAgentBuilderTransformer().apply(agentBuilder, null);
+        Mockito.verify(agentBuilder).with(Mockito.any(ByteBuddy.class));
         Mockito.verify(agentBuilder).with(Mockito.any(TransformationListener.class));
+        Mockito.verify(agentBuilder).with(Mockito.any(AgentBuilder.PoolStrategy.class));
 
         // check if a ByteBuddy instance with the correct java version is being installed using its own equals method
         Assert.assertEquals(ClassFileVersion.JAVA_V8, DiscoAgentLoader.parseClassFileVersionFromConfig(config));

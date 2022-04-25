@@ -17,13 +17,7 @@ package software.amazon.disco.agent.web;
 
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.interception.Package;
-import software.amazon.disco.agent.interception.templates.DataAccessor;
 import software.amazon.disco.agent.web.apache.httpclient.ApacheHttpClientInterceptor;
-import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
-import software.amazon.disco.agent.web.apache.utils.HttpRequestBaseAccessor;
-import software.amazon.disco.agent.web.apache.utils.HttpResponseAccessor;
-import software.amazon.disco.agent.web.servlet.HttpServletRequestAccessor;
-import software.amazon.disco.agent.web.servlet.HttpServletResponseAccessor;
 import software.amazon.disco.agent.web.servlet.HttpServletServiceInterceptor;
 
 import java.util.Arrays;
@@ -40,16 +34,7 @@ public class WebSupport implements Package {
     public Collection<Installable> get() {
         return Arrays.asList(
             new HttpServletServiceInterceptor(),
-            new ApacheHttpClientInterceptor(),
-
-            //accessors
-            DataAccessor.forConcreteSubclassesOfInterface("org.apache.http.HttpRequest", HttpRequestAccessor.class),
-            DataAccessor.forClassNamed("org.apache.http.client.methods.HttpRequestBase", HttpRequestBaseAccessor.class),
-            DataAccessor.forConcreteSubclassesOfInterface("org.apache.http.HttpResponse", HttpResponseAccessor.class),
-
-            DataAccessor.forConcreteSubclassesOfInterface("javax.servlet.http.HttpServletResponse", HttpServletResponseAccessor.class),
-                DataAccessor.forConcreteSubclassesOfInterface("javax.servlet.http.HttpServletRequest", HttpServletRequestAccessor.class)
-
+            new ApacheHttpClientInterceptor()
         );
     }
 }

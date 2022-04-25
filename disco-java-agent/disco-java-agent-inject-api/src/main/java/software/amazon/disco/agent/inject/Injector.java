@@ -16,6 +16,7 @@
 package software.amazon.disco.agent.inject;
 
 import net.bytebuddy.agent.ByteBuddyAgent;
+import software.amazon.disco.agent.reflect.ReflectiveCall;
 
 import java.io.File;
 import java.lang.instrument.Instrumentation;
@@ -71,6 +72,9 @@ public class Injector {
             File jarFile = new File(agentJarPath);
             jar = addToBootstrapClasspath(instrumentation, jarFile);
 
+            // reset the cached return value of 'isAgentPresent' which prevents reflective calls from being made when the agent is absent.
+            ReflectiveCall.resetCache();
+
             //read MANIFEST to ascertain the premain class
             String premainClass = jar.getManifest().getMainAttributes().getValue("Premain-Class");
 
@@ -88,6 +92,25 @@ public class Injector {
                 }
             }
         }
+    }
+
+    /**
+     * Add a disco plugin of any kind, or an entire agent Jar, to the provided URLClassLoader.
+     *
+     * @param urlClassLoader the URLClassLoader to add the Jar file URL to
+     * @param jarFile the File instance pointing to the Jar file
+     * @return a File referring to the JAR. Calling code is responsible for calling close() on this object.
+     */
+    public static JarFile addToURLClassLoaderClasspath(URLClassLoader urlClassLoader, File jarFile) {
+        try {
+            JarFile jar = new JarFile(jarFile);
+            addURL(urlClassLoader, jarFile.toURI().toURL());
+            return jar;
+        } catch (Throwable t){
+            //safely continue
+        }
+
+        return null;
     }
 
     /**

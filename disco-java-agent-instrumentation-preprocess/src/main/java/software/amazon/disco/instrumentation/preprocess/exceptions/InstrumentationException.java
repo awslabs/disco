@@ -30,4 +30,13 @@ public class InstrumentationException extends RuntimeException {
     public InstrumentationException(String message, Throwable cause) {
         super(PreprocessConstants.MESSAGE_PREFIX + message, cause);
     }
+
+    /**
+     * Constructor
+     *
+     * @param message detailed message explaining the failure
+     */
+    public InstrumentationException(String message) {
+        this(message, null);
+    }
 }

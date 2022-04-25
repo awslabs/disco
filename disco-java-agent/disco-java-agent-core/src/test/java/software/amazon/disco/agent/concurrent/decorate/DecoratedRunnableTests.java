@@ -27,8 +27,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.function.BiFunction;
+
 public class DecoratedRunnableTests {
     private TestListener testListener = null;
+
     @Before
     public void before() {
         EventBus.addListener(testListener = new TestListener());
@@ -47,7 +50,7 @@ public class DecoratedRunnableTests {
         Runnable d = DecoratedRunnable.maybeCreate(r);
         Assert.assertNotEquals(r, d);
         Assert.assertTrue(d instanceof DecoratedRunnable);
-        Assert.assertEquals(r, ((DecoratedRunnable)d).target);
+        Assert.assertEquals(r, ((DecoratedRunnable) d).target);
     }
 
     @Test
@@ -64,8 +67,59 @@ public class DecoratedRunnableTests {
     }
 
     @Test
+    public void testDecorationAndRemovesTX() {
+        TransactionContext.putMetadata("key", "value");
+        Runnable r = Mockito.mock(Runnable.class);
+
+        DecoratedRunnable decorated = DecoratedRunnable.maybeCreate(r, true);
+        decorated.after();
+
+        Assert.assertNull(TransactionContext.getMetadata("key"));
+    }
+
+    @Test
+    public void testDecorationAndNotRemovesTX() {
+        TransactionContext.putMetadata("key", "value");
+        Runnable r = Mockito.mock(Runnable.class);
+
+        DecoratedRunnable decorated = DecoratedRunnable.maybeCreate(r, false);
+        decorated.after();
+
+        Assert.assertEquals("value", TransactionContext.getMetadata("key"));
+    }
+
+    @Test
+    public void testDecorationFunctionAndRemovesTX() {
+        BiFunction<Runnable, Boolean, Runnable> function = new DecoratedRunnable.RunnableDecorateFunction();
+        TransactionContext.putMetadata("key", "value");
+        Runnable r = Mockito.mock(Runnable.class);
+
+        Runnable decorated = function.apply(r, true);
+
+        Assert.assertTrue(decorated instanceof DecoratedRunnable);
+        ((DecoratedRunnable) decorated).after();
+
+        Assert.assertNull(TransactionContext.getMetadata("key"));
+    }
+
+    @Test
+    public void testDecorationFunctionAndNotRemovesTX() {
+        BiFunction<Runnable, Boolean, Runnable> function = new DecoratedRunnable.RunnableDecorateFunction();
+        TransactionContext.putMetadata("key", "value");
+        Runnable r = Mockito.mock(Runnable.class);
+
+        Runnable decorated = function.apply(r, false);
+
+        Assert.assertTrue(decorated instanceof DecoratedRunnable);
+        ((DecoratedRunnable) decorated).after();
+
+        Assert.assertEquals("value", TransactionContext.getMetadata("key"));
+    }
+
+    @Test
     public void testRun() throws Exception {
-        Runnable r = ()->{};
+        Runnable r = () -> {
+        };
         Runnable d = DecoratedRunnable.maybeCreate(r);
         Thread t = new Thread(d);
         t.start();
@@ -80,9 +134,13 @@ public class DecoratedRunnableTests {
             Throwable uncaught;
         }
         UncaughtHolder holder = new UncaughtHolder();
-        Thread.UncaughtExceptionHandler h = (thread, exception)-> {holder.uncaught = exception;};
+        Thread.UncaughtExceptionHandler h = (thread, exception) -> {
+            holder.uncaught = exception;
+        };
 
-        Runnable r = ()->{throw new RuntimeException();};
+        Runnable r = () -> {
+            throw new RuntimeException();
+        };
         Runnable d = DecoratedRunnable.maybeCreate(r);
         Thread t = new Thread(d);
         t.setUncaughtExceptionHandler(h);
@@ -99,9 +157,13 @@ public class DecoratedRunnableTests {
             Throwable uncaught;
         }
         UncaughtHolder holder = new UncaughtHolder();
-        Thread.UncaughtExceptionHandler h = (thread, exception)-> {holder.uncaught = exception;};
+        Thread.UncaughtExceptionHandler h = (thread, exception) -> {
+            holder.uncaught = exception;
+        };
 
-        Runnable r = ()->{throw new Error();};
+        Runnable r = () -> {
+            throw new Error();
+        };
         Runnable d = DecoratedRunnable.maybeCreate(r);
         Thread t = new Thread(d);
         t.setUncaughtExceptionHandler(h);

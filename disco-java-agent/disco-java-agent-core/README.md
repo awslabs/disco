@@ -32,3 +32,11 @@ The code is well supported by tests, including the integration tests for the Con
 
 However, as noted in the top-level README, there is some unfortunate unreliability around these tests since their
 preconditions cannot easily be satisfied in user code.
+
+## Disco Plugins classloader compatibility
+If a class inside a bootstrap plugin references classes from a SDK or framework, this would result in a `ClassDefNotFound` error at runtime 
+since the bootstrap classloader has no visibility to classes loaded by other classloaders. The currently implemented solution is to relocate these
+compiled classes under /resources of the build artifact jar and then use the `ResourcesClassInjector` class from this package to inject these classes
+to the same classloader that loaded the SDK or framework.
+
+For additional detail, please check the java doc of `ResourcesClassInjector`.

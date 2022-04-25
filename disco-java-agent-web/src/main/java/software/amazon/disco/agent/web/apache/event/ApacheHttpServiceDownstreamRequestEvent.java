@@ -15,25 +15,25 @@
 
 package software.amazon.disco.agent.web.apache.event;
 
+import org.apache.http.HttpRequest;
 import software.amazon.disco.agent.event.HeaderReplaceable;
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
-import software.amazon.disco.agent.web.apache.utils.HttpRequestAccessor;
 
 /**
  * Specialization allowing header replacement.
  */
 class ApacheHttpServiceDownstreamRequestEvent extends HttpServiceDownstreamRequestEvent implements HeaderReplaceable {
-    private final HttpRequestAccessor accessor;
+    private final HttpRequest request;
     /**
      * Construct a new ApacheHttpServiceDownstreamRequestEvent
      * @param origin the origin of the downstream call e.g. 'Web' or 'gRPC'
      * @param service the service name e.g. 'WeatherService'
      * @param operation the operation name e.g. 'getWeather'
-     * @param accessor a request accessor capable of header manipulation
+     * @param request a request object capable of header manipulation
      */
-    public ApacheHttpServiceDownstreamRequestEvent(String origin, String service, String operation, HttpRequestAccessor accessor) {
+    public ApacheHttpServiceDownstreamRequestEvent(String origin, String service, String operation, HttpRequest request) {
         super(origin, service, operation);
-        this.accessor = accessor;
+        this.request = request;
     }
 
     /**
@@ -44,8 +44,8 @@ class ApacheHttpServiceDownstreamRequestEvent extends HttpServiceDownstreamReque
      */
     @Override
     public boolean replaceHeader(String name, String value) {
-        accessor.removeHeaders(name);
-        accessor.addHeader(name, value);
+        request.removeHeaders(name);
+        request.addHeader(name, value);
         return true;
     }
 }

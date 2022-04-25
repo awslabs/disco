@@ -16,6 +16,7 @@
 package software.amazon.disco.agent.integtest.concurrent;
 
 
+import org.junit.experimental.runners.Enclosed;
 import software.amazon.disco.agent.integtest.concurrent.source.ForceConcurrency;
 import software.amazon.disco.agent.integtest.concurrent.source.ForkJoinTestBase;
 import org.junit.Rule;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.TimeUnit;
 
+@RunWith(Enclosed.class)
 public class ForkJoinTaskTests {
     @RunWith(Parameterized.class)
     public static class SingleThreadedInvoke extends ForkJoinTestBase.ForkJoinTaskBase {
@@ -48,10 +50,10 @@ public class ForkJoinTaskTests {
         public ForceConcurrency.RetryRule retry = new ForceConcurrency.RetryRule();
 
         @Test
-        public void testMultiThreadedForkJoinTaskForkAndJoin() {
+        public void testMultiThreadedForkJoinTaskForkAndJoin() throws InterruptedException {
             testableForkJoinTask.testBeforeInvocation();
 
-            testableForkJoinTask.forkJoinTask.fork();
+            testableForkJoinTask.doFork();
 
             testableForkJoinTask.forkJoinTask.join();
             testableForkJoinTask.testAfterConcurrentInvocation();
@@ -67,7 +69,7 @@ public class ForkJoinTaskTests {
         public void testMultiThreadedForkJoinTaskForkAndGet() throws Exception {
             testableForkJoinTask.testBeforeInvocation();
 
-            testableForkJoinTask.forkJoinTask.fork();
+            testableForkJoinTask.doFork();
 
             testableForkJoinTask.forkJoinTask.get();
             testableForkJoinTask.testAfterConcurrentInvocation();
@@ -84,7 +86,7 @@ public class ForkJoinTaskTests {
         public void testMultiThreadedForkJoinTaskForkAndGetWithTimeout() throws Exception {
             testableForkJoinTask.testBeforeInvocation();
 
-            testableForkJoinTask.forkJoinTask.fork();
+            testableForkJoinTask.doFork();
 
             testableForkJoinTask.forkJoinTask.get(1, TimeUnit.DAYS);
             testableForkJoinTask.testAfterConcurrentInvocation();
@@ -100,8 +102,15 @@ public class ForkJoinTaskTests {
         public void testMultiThreadedForkJoinTaskInvokeAllCollection() {
             testableForkJoinTask.testBeforeInvocation();
             //create a chain of joins, to help ensure that the one of importance does not complete trivially
-            ForkJoinTask fjt1 = ForkJoinTask.adapt(()->testableForkJoinTask.forkJoinTask.join());
-            ForkJoinTask fjt3 = ForkJoinTask.adapt(()->fjt1.join());
+            ForkJoinTask fjt1 = ForkJoinTask.adapt(()-> {
+                busyWork();
+                testableForkJoinTask.forkJoinTask.join();
+            });
+
+            ForkJoinTask fjt3 = ForkJoinTask.adapt(()-> {
+                busyWork();
+                fjt1.join();
+            });
 
             List<ForkJoinTask> list = Arrays.asList(fjt1, testableForkJoinTask.forkJoinTask, fjt3);
 
@@ -118,7 +127,10 @@ public class ForkJoinTaskTests {
         @Test
         public void testMultiThreadedForkJoinTaskInvokeAllTwoTaskSpecialCase() {
             testableForkJoinTask.testBeforeInvocation();
-            ForkJoinTask fjt1 = ForkJoinTask.adapt(()->testableForkJoinTask.forkJoinTask.join());
+            ForkJoinTask fjt1 = ForkJoinTask.adapt(()-> {
+                busyWork();
+                testableForkJoinTask.forkJoinTask.join();
+            });
 
             ForkJoinTask.invokeAll(fjt1, testableForkJoinTask.forkJoinTask);
             testableForkJoinTask.testAfterConcurrentInvocation();
@@ -134,11 +146,27 @@ public class ForkJoinTaskTests {
         public void testMultiThreadedForkJoinTaskInvokeAllVarargs() {
             testableForkJoinTask.testBeforeInvocation();
             //create a chain of joins, to help ensure that the one of importance does not complete trivially
-            ForkJoinTask fjt1 = ForkJoinTask.adapt(()->testableForkJoinTask.forkJoinTask.join());
-            ForkJoinTask fjt3 = ForkJoinTask.adapt(()->fjt1.join());
+            ForkJoinTask fjt1 = ForkJoinTask.adapt(()-> {
+                busyWork();
+                testableForkJoinTask.forkJoinTask.join();
+            });
+
+            ForkJoinTask fjt3 = ForkJoinTask.adapt(()-> {
+                busyWork();
+                fjt1.join();
+            });
 
             ForkJoinTask.invokeAll(fjt1, testableForkJoinTask.forkJoinTask, fjt3);
             testableForkJoinTask.testAfterConcurrentInvocation();
+        }
+    }
+
+    private static void busyWork() {
+        try {
+            // force a small amount of work to take place, so that work goes to the requested worker thread and not to the main thread.
+            Thread.sleep(1);
+        } catch (InterruptedException e) {
+            //do nothing
         }
     }
 }

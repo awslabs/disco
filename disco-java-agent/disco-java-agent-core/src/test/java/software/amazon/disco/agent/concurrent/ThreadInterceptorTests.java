@@ -15,14 +15,23 @@
 
 package software.amazon.disco.agent.concurrent;
 
-import software.amazon.disco.agent.concurrent.decorate.DecoratedRunnable;
-import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.matcher.ElementMatcher;
+import net.bytebuddy.matcher.ElementMatchers;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import software.amazon.disco.agent.concurrent.preprocess.DiscoRunnableDecorator;
+import software.amazon.disco.agent.config.AgentConfig;
+import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.agent.interception.InterceptionInstaller;
+
+import java.lang.instrument.ClassFileTransformer;
+import java.lang.instrument.Instrumentation;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.function.BiFunction;
 
 public class ThreadInterceptorTests {
     @Test
@@ -40,7 +49,7 @@ public class ThreadInterceptorTests {
     @Test
     public void testStartMethodMatcherMatches() throws Exception {
         Assert.assertTrue(ThreadInterceptor.createStartMethodMatcher()
-            .matches(new MethodDescription.ForLoadedMethod(Thread.class.getDeclaredMethod( "start"))));
+            .matches(new MethodDescription.ForLoadedMethod(Thread.class.getDeclaredMethod("start"))));
     }
 
     @Test
@@ -49,26 +58,56 @@ public class ThreadInterceptorTests {
     }
 
     @Test
-    public void testStartAdviceDecorates() {
-        Runnable r = Mockito.mock(Runnable.class);
-        Runnable d = ThreadInterceptor.StartAdvice.wrap(r);
-        Assert.assertTrue(d instanceof DecoratedRunnable);
+    public void testStartAdviceInvokesDiscoRunnableDecorator() {
+        TestRunnableDecorateFunction testRunnableDecorateFunction = new TestRunnableDecorateFunction();
+        DiscoRunnableDecorator.setDecorateFunction(testRunnableDecorateFunction);
+
+        Assert.assertFalse(testRunnableDecorateFunction.decorateFunctionCalled);
+        Assert.assertFalse(testRunnableDecorateFunction.removeTX);
+        Assert.assertNull(testRunnableDecorateFunction.target);
+
+        Runnable runnable = Mockito.mock(Runnable.class);
+
+        ThreadInterceptor.StartAdvice.onStartEnter(runnable);
+
+        Assert.assertTrue(testRunnableDecorateFunction.decorateFunctionCalled);
+        Assert.assertTrue(testRunnableDecorateFunction.removeTX);
+        Assert.assertSame(runnable, testRunnableDecorateFunction.target);
     }
 
     @Test
-    public void testInstall() throws Exception {
-        AgentBuilder agentBuilder = Mockito.mock(AgentBuilder.class);
-        AgentBuilder.Ignored ignored = Mockito.mock(AgentBuilder.Ignored.class);
-        AgentBuilder.RedefinitionListenable.WithoutBatchStrategy withoutBatchStrategy = Mockito.mock(AgentBuilder.RedefinitionListenable.WithoutBatchStrategy.class);
-        AgentBuilder.Identified.Narrowable narrowable = Mockito.mock(AgentBuilder.Identified.Narrowable.class);
-        Mockito.when(agentBuilder.with(Mockito.any(AgentBuilder.InitializationStrategy.class))).thenReturn(agentBuilder);
-        Mockito.when(agentBuilder.with(Mockito.any(AgentBuilder.RedefinitionStrategy.class))).thenReturn(withoutBatchStrategy);
-        Mockito.when(withoutBatchStrategy.with(Mockito.any(AgentBuilder.TypeStrategy.class))).thenReturn(agentBuilder);
-        Mockito.when(agentBuilder.ignore(Mockito.any(ElementMatcher.class))).thenReturn(ignored);
-        Mockito.when(ignored.type(Mockito.any(ElementMatcher.class))).thenReturn(narrowable);
-        new ThreadInterceptor().install(agentBuilder);
+    public void testInstall() {
+        TestUtils.testInstallableCanBeInstalled(new ThreadInterceptor());
+    }
+
+    @Test
+    public void testInstallationInstallerAppliesThenRemoves() {
+        InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
+        Instrumentation instrumentation = Mockito.mock(Instrumentation.class);
+        Mockito.when(instrumentation.isRedefineClassesSupported()).thenReturn(true);
+        Mockito.when(instrumentation.getAllLoadedClasses()).thenReturn(new Class[]{});
+        Installable threadInterceptor = new ThreadInterceptor();
+        interceptionInstaller.install(instrumentation, new HashSet<>(Collections.singleton(threadInterceptor)), new AgentConfig(null), ElementMatchers.none());
+        ArgumentCaptor<ClassFileTransformer> transformerCaptor = ArgumentCaptor.forClass(ClassFileTransformer.class);
+        Mockito.verify(instrumentation).addTransformer(transformerCaptor.capture());
+        Mockito.verify(instrumentation).removeTransformer(Mockito.eq(transformerCaptor.getValue()));
     }
 
     static class ThreadSubclass extends Thread {
+    }
+
+    static class TestRunnableDecorateFunction implements BiFunction<Runnable, Boolean, Runnable>{
+        public boolean removeTX;
+        public boolean decorateFunctionCalled;
+        public Runnable target;
+
+        @Override
+        public Runnable apply(Runnable runnable, Boolean aBoolean) {
+            removeTX = aBoolean;
+            decorateFunctionCalled = true;
+            target = runnable;
+
+            return runnable;
+        }
     }
 }

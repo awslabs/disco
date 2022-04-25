@@ -185,6 +185,14 @@ public class TransactionContextTests {
     }
 
     @Test
+    public void testGetPrivateMetadataThreadLocal() {
+        TransactionContext.putMetadata("foo", "bar");
+        ConcurrentMap<String, MetadataItem> metadata = TransactionContext.getPrivateMetadataThreadLocal().get();
+        Assert.assertEquals(TransactionContext.UNINITIALIZED_TRANSACTION_CONTEXT_VALUE, metadata.get(TransactionContext.TRANSACTION_ID_KEY).get());
+        Assert.assertEquals("bar", metadata.get("foo").get());
+    }
+
+    @Test
     public void testSetPrivateMetadata() {
         ConcurrentMap<String, MetadataItem> metadata = new ConcurrentHashMap<>();
         metadata.put(TransactionContext.TRANSACTION_ID_KEY, new MetadataItem("foo"));

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License").
+ *   You may not use this file except in compliance with the License.
+ *   A copy of the License is located at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   or in the "license" file accompanying this file. This file is distributed
+ *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ *   express or implied. See the License for the specific language governing
+ *   permissions and limitations under the License.
+ */
+
 package software.amazon.disco.agent.awsv2;
 
 import net.bytebuddy.agent.builder.AgentBuilder;
@@ -10,6 +25,7 @@ import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
+import software.amazon.disco.agent.plugin.ResourcesClassInjector;
 
 import static net.bytebuddy.matcher.ElementMatchers.hasSuperType;
 import static net.bytebuddy.matcher.ElementMatchers.isAbstract;
@@ -31,9 +47,22 @@ public class AWSClientBuilderInterceptor implements Installable {
     @Override
     public AgentBuilder install(AgentBuilder agentBuilder) {
         return agentBuilder
-                .type(buildClassMatcher())
-                .transform((builder, typeDescription, classLoader, module) ->
-                        builder.method(buildMethodMatcher()).intercept(Advice.to(AWSClientBuilderInterceptorMethodDelegation.class)));
+            .type(buildClassMatcher())
+            .transform((builder, typeDescription, classLoader, module) -> {
+                ResourcesClassInjector.injectAllClasses(
+                        classLoader,
+                        AWSClientBuilderInterceptor.class.getClassLoader(),
+                        "software.amazon.disco.agent.awsv2.DiscoExecutionInterceptor",
+                        "software.amazon.disco.agent.event.AwsServiceDownstreamRequestEventImpl",
+                        "software.amazon.disco.agent.event.AwsServiceDownstreamResponseEventImpl"
+                );
+
+                return new AgentBuilder.Transformer.ForAdvice()
+                    .include(this.getClass().getClassLoader())
+                    .advice(buildMethodMatcher(), this.getClass().getClasses()[0].getName())
+                    .transform(builder, typeDescription, classLoader, module);
+                }
+            );
     }
 
     /**
@@ -41,7 +70,7 @@ public class AWSClientBuilderInterceptor implements Installable {
      * so as to not load any AWS SDK V2 classes referenced within eagerly, which would cause ClassNotFoundException
      * for Disco customers using this installable without using the AWS SDK V2.
      */
-    public static class AWSClientBuilderInterceptorMethodDelegation {
+    public static class AWSClientBuilderInterceptorAdvice {
 
         /**
          * The SdkClientBuilder#build method is intercepted, and this method is inlined in front of it.
@@ -55,7 +84,7 @@ public class AWSClientBuilderInterceptor implements Installable {
          * @param invoker the object that invoked the build method originally
          * @param origin  identifier of the intercepted method, for debugging/logging
          */
-        @Advice.OnMethodEnter
+        @Advice.OnMethodEnter(suppress = Throwable.class)
         public static void enter(@Advice.This final SdkClientBuilder invoker,
                                  @Advice.Origin final String origin)
         {
@@ -63,15 +92,11 @@ public class AWSClientBuilderInterceptor implements Installable {
                 log.debug("DiSCo(AWSv2) method interception of " + origin);
             }
 
-            try {
-                ClientOverrideConfiguration configuration = ClientOverrideConfiguration
-                        .builder()
-                        .addExecutionInterceptor(new DiscoExecutionInterceptor())
-                        .build();
-                invoker.overrideConfiguration(configuration);
-            } catch (Throwable t) {
-                log.error("Disco(AWSv2) Failed to add Execution Interceptor to client " + origin, t);
-            }
+            ClientOverrideConfiguration configuration = ClientOverrideConfiguration
+                    .builder()
+                    .addExecutionInterceptor(new DiscoExecutionInterceptor())
+                    .build();
+            invoker.overrideConfiguration(configuration);
         }
     }
 

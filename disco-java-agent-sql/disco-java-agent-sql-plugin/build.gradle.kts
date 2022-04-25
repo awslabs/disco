@@ -22,7 +22,8 @@ plugins {
 tasks.shadowJar  {
     manifest {
         attributes(mapOf(
-            "Disco-Installable-Classes" to "software.amazon.disco.agent.sql.SqlSupport"
+            "Disco-Installable-Classes" to "software.amazon.disco.agent.sql.SqlSupport",
+            "Disco-Classloader" to "bootstrap"
         ))
     }
 }

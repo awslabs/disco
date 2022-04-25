@@ -21,6 +21,13 @@ plugins {
 
 dependencies {
     implementation(project(":disco-java-agent:disco-java-agent-core"))
+    testImplementation(project(":disco-java-agent:disco-java-agent-api"))
+    testImplementation(project(":disco-java-agent:disco-java-agent-inject-api"))
+}
+
+//prevent tests from importing core classes directly - only allow them to use the public api
+configurations.testImplementation {
+    exclude(module="disco-java-agent-core")
 }
 
 tasks.shadowJar  {
@@ -36,4 +43,17 @@ tasks.shadowJar  {
                 "Boot-Class-Path" to archiveFileName.get()
         ))
     }
+}
+
+tasks.named<Test>("test") {
+    //load the agent TWICE for the tests for agent deduplication (and allow debugging on the usual socket)
+    //we also communicate the full path to the agent in a System variable
+    val ver = project.version
+    var agentPath = "./build/libs/disco-java-agent-$ver.jar"
+    val agentArg = "-javaagent:$agentPath=extraverbose"
+    jvmArgs("-agentlib:jdwp=transport=dt_socket,address=localhost:1337,server=y,suspend=n",
+            "$agentArg:loggerfactory=software.amazon.disco.agent.TestLoggerFactory",
+            agentArg,
+            "-DdiscoAgentPath=$agentPath"
+    )
 }

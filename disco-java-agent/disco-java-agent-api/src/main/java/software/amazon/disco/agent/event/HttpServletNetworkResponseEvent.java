@@ -15,6 +15,7 @@
 
 package software.amazon.disco.agent.event;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -81,5 +82,30 @@ public class HttpServletNetworkResponseEvent extends AbstractNetworkProtocolResp
     @Override
     public NetworkType getNetworkType() {
         return NetworkType.TCP;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getFirstHeader(String key) {
+        List<String> headers = getHeaders(key);
+        return headers !=null && !headers.isEmpty() ? headers.get(0) : null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<String> getHeaders(String key) {
+        return getAllHeaders().get(key);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<String, List<String>> getAllHeaders() {
+        return getHeaderMap();
     }
 }

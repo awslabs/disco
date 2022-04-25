@@ -21,9 +21,15 @@ import software.amazon.disco.agent.logging.Logger;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
+import software.amazon.disco.agent.matchers.TrieNameMatcher;
 
+import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
 import java.util.function.Supplier;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
@@ -35,6 +41,12 @@ public class InterceptionInstaller {
     private static final InterceptionInstaller INSTANCE = new InterceptionInstaller(new DefaultAgentBuilderFactory());
     private static final Logger log = LogManager.getLogger(InterceptionInstaller.class);
     private final Supplier<AgentBuilder> agentBuilderFactory;
+    /**
+     * Common low-level and otherwise problematic namespaces to ignore.
+     */
+    private static final String[] IGNORE_PREFIXES = new String[] {"sun.", "com.sun.", "java.lang.ClassLoader$", "jdk.", "org.jacoco.", "org.junit.",
+            "org.aspectj.", "software.amazon.disco.agent."};
+    private static final ElementMatcher.Junction<? super TypeDescription> TRIE_BASED_IGNORE_MATCHER_INSTANCE = new TrieNameMatcher<>(IGNORE_PREFIXES);
 
     /**
      * Non-public constructor for singleton semantics. Package-private for tests
@@ -62,6 +74,7 @@ public class InterceptionInstaller {
                         ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
         final ElementMatcher<? super TypeDescription> ignoreMatcher = createIgnoreMatcher(customIgnoreMatcher);
 
+        List<ClassFileTransformer> disposables = new ArrayList<>(3);
         for (Installable installable: installables) {
             //We create a new Agent for each Installable, otherwise their matching rules can
             //compete with each other.
@@ -79,8 +92,30 @@ public class InterceptionInstaller {
             agentBuilder = installable.install(agentBuilder);
 
             if (agentBuilder != null) {
-                agentBuilder.installOn(instrumentation);
+                ClassFileTransformer transformer = agentBuilder.installOn(instrumentation);
+
+                //3 of our Core installables are special cases which are strictly one-shot. They each
+                //intercept a particular class (not 'any subclass of' style matching), and furthermore
+                //these are JDK classes and so can only be loaded a maximum of once, into the bootstrap classloader,
+                //therefore we know that once they have been applied, they are dead weight.
+                //In the case of Thread, it applies the transformation immediately as Thread has already been loaded.
+                //In the case of FJP and FJT we force the class to load before disposing of the interceptor.
+                //Better factoring of this might be to have a subclass of Installable like 'DisposableInstallable', but its
+                //use would be pretty dangerous - and generally wrong for any non-bootstrap class - because even when an
+                //interceptor appears to only type match one specific class, that class could be loaded multiple times into
+                //multiple loaders. So for now at least this coupling here makes it completely locked in and specific.
+                if (installable.getClass().getName().endsWith("ThreadInterceptor")
+                 || installable.getClass().getName().endsWith("ForkJoinPoolInterceptor")
+                 || installable.getClass().getName().endsWith("ForkJoinTaskInterceptor")) {
+                    disposables.add(transformer);
+                }
             }
+        }
+
+        ForkJoinPool.class.getClassLoader(); //force class to be loaded and transformed
+        ForkJoinTask.class.getClassLoader(); //force class to be loaded and transformed
+        for (ClassFileTransformer transformer: disposables) {
+            instrumentation.removeTransformer(transformer);
         }
     }
 
@@ -91,23 +126,13 @@ public class InterceptionInstaller {
      * @return - a matcher suitable for passing to AgentBuilder#ignore
      */
     public static ElementMatcher.Junction<? super TypeDescription> createIgnoreMatcher(ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
-        ElementMatcher.Junction<? super TypeDescription> excludedNamespaces =
-            //low-level pieces of the JDK and runtime
-            nameStartsWith("sun.")
-            .or(nameStartsWith("com.sun."))
-            .or(nameStartsWith("jdk."))
-
-            //3rd party libraries
-            .or(nameStartsWith("org.jacoco."))
-            .or(nameStartsWith("org.junit."))
-            .or(nameStartsWith("org.aspectj."))
-
-            //disco itself and its internals
-            .or(nameStartsWith("software.amazon.disco.agent.")
-                .and(not(nameStartsWith("software.amazon.disco.agent.integtest."))));
-
-        return excludedNamespaces.or(customIgnoreMatcher);
-
+        //TrieNameMatcher - Ignore low-level pieces of the JDK and runtime, 3rd party libraries
+        //disco itself and its internals - not to ignore "software.amazon.disco.agent.integtest" to test the interceptors.
+        //Required to be added in non-test code, as test code does not have an opportunity to inject or
+        //modify these entries as they happen at class loading.
+        return (TRIE_BASED_IGNORE_MATCHER_INSTANCE
+                    .and(not(nameStartsWith("software.amazon.disco.agent.integtest."))))
+                .or(customIgnoreMatcher);
     }
 
     /**

@@ -18,9 +18,25 @@ plugins {
     `maven-publish`
 }
 
+val pluginImplementation by configurations.creating {}
+configurations {
+    testImplementation.extendsFrom(configurations.get("pluginImplementation"))
+    compileOnly.extendsFrom(configurations.get("pluginImplementation"))
+}
+
 dependencies {
     implementation(project(":disco-java-agent:disco-java-agent-core"))
     testImplementation("org.mockito", "mockito-core", "1.+")
-    testImplementation("javax.servlet", "javax.servlet-api", "3.0.1")
-    testImplementation("org.apache.httpcomponents", "httpclient", "4.5.10")
+    pluginImplementation("javax.servlet", "javax.servlet-api", "3.0.1")
+    pluginImplementation("org.apache.httpcomponents", "httpclient", "4.5.10")
 }
+
+// For classes which need to be accessed in the context of the application code's classloader, they need to be injected/forced
+// into that classloader. They cannot be placed in the bootstrap classloader, nor any isolated/orphaned classloader, since they
+// either inherit from, or use, classes from the AWS SDK, which are assumed not to be present on the bootstrap classloader
+ext.set("classesToMove", arrayOf(
+        "software.amazon.disco.agent.web.servlet.HttpServletServiceMethodDelegation",
+        "software.amazon.disco.agent.web.apache.event.ApacheEventFactory",
+        "software.amazon.disco.agent.web.apache.event.ApacheHttpServiceDownstreamRequestEvent",
+        "software.amazon.disco.agent.web.apache.httpclient.ApacheHttpClientMethodDelegation"
+))

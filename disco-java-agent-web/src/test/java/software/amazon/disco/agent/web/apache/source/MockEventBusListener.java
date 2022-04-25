@@ -12,7 +12,6 @@
  *   express or implied. See the License for the specific language governing
  *   permissions and limitations under the License.
  */
-
 package software.amazon.disco.agent.web.apache.source;
 
 import software.amazon.disco.agent.event.Event;

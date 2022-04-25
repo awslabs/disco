@@ -62,8 +62,6 @@ class ExecutorInterceptor implements Installable {
      * Advice class to decorate the execute() method of any implementation of the Executor interface
      */
     public static class ExecuteAdvice {
-        public static final MethodInterceptionCounter interceptionCounter = new MethodInterceptionCounter();
-
         /**
          * ByteBuddy advice method to capture the Runnable before it is used, and decorate it.
          *
@@ -88,24 +86,7 @@ class ExecutorInterceptor implements Installable {
          * @return the decorated command
          */
         public static Runnable methodEnter(Runnable command) {
-            boolean reentrant = interceptionCounter.hasIntercepted();
-            interceptionCounter.increment();
-            if (reentrant) {
-                return command;
-            }
             return DecoratedRunnable.maybeCreate(command);
-        }
-
-        /**
-         * Advice method to finalize the interception counter, making sure that nested calls of execute() will return it to zero
-         */
-        @Advice.OnMethodExit(onThrowable = Throwable.class)
-        public static void onMethodExit() {
-            methodExit();
-        }
-
-        public static void methodExit() {
-            interceptionCounter.decrement();
         }
 
         /**

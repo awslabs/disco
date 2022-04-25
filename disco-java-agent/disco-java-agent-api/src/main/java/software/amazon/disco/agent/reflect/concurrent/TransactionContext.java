@@ -35,7 +35,7 @@ public class TransactionContext {
     static final String TRANSACTIONCONTEXT_CLASS = ".concurrent.TransactionContext";
 
     /**
-     * Create a default UUID transaction ID
+     * Create a default transaction ID
      * @return the tx stack depth.
      */
     public static int create() {

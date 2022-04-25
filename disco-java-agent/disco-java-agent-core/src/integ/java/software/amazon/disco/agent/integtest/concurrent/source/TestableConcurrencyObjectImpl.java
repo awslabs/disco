@@ -115,7 +115,7 @@ public class TestableConcurrencyObjectImpl implements TestableConcurrencyObject 
     public void perform() {
         concurrencyMethodWasCalled = true;
         //if this is the first time, or if so far a collection of work has been single threaded
-        if (executionThreadId == null || executionThreadId == beforeThreadId) {
+        if (executionThreadId == null || executionThreadId.equals(beforeThreadId)) {
             executionTransactionId = TransactionContext.get();
             executionMetadataValue = String.class.cast(TransactionContext.getMetadata(metadataKey));
             executionThreadId = Thread.currentThread().getId();

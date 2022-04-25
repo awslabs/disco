@@ -55,11 +55,18 @@ import java.util.jar.Manifest;
  *                  method processed *after* all plugins have had their Installables processed.
  * Disco-Listener-Classes: a space-separated list of fully qualified class names which are expected to inherit from Listener
  *                         and have a no-args constructor. Listener registration for all plugins will occure after one-off initialization for all plugins
- * Disco-Bootstrap-Classloader: if set to the literal case-insensitive string 'true', this JAR file will be added to the runtime's bootstrap
+ * Disco-Bootstrap-Classloader: referenced in the event the 'Disco-Classloader' attribute is absent. if set to the literal
+ *                              case-insensitive string 'true', this JAR file will be added to the runtime's bootstrap
  *                              classloader. Any other value, or the absence of this attribute, means the plugin will be loaded
- *                              via the system classloader like a normal runtime dependency. It is not usually necessary to
- *                              specify this attribute, unless Installables wish to intercept JDK classes.
- *
+ *                              via a dedicated classloader. It is not usually necessary to specify this attribute,
+ *                              unless Installables wish to intercept JDK classes.
+ * Disco-Classloader: allowable values include "bootstrap", "system", and "plugin".
+ *                    if set to the literal case-insensitive string 'system', this JAR file will be added to the runtime's system
+ *                    classloader. If set to the literal case-insensitive string 'bootstrap', this JAR file will be added to the
+ *                    bootstrap classloader. If otherwise set to the literal case-insensitive string 'plugin', this JAR
+ *                    file will be added to a dedicated PluginClassLoader. Any other will result in failure to load the plugin.
+ *                    The absence of this attribute will defer to the Disco-Bootstrap-Classloader attribute for
+ *                    determining the classloader to use.
  * At startup, the decoupled disco agent searches the Config's pluginPath for such JAR files, and loads the plugins according
  * to the Manifest's content.
  */
@@ -70,12 +77,12 @@ public class PluginDiscovery {
     static class ClassInfo {
         final String pluginName;
         final Class<?> clazz;
-        final boolean bootstrap;
+        final ClassLoaderType classLoaderType;
 
-        ClassInfo(String pluginName, Class<?> clazz, boolean bootstrap) {
+        ClassInfo(String pluginName, Class<?> clazz, ClassLoaderType classLoaderType) {
             this.pluginName = pluginName;
             this.clazz = clazz;
-            this.bootstrap = bootstrap;
+            this.classLoaderType = classLoaderType;
         }
     }
     private static List<ClassInfo> installableClasses;
@@ -193,6 +200,14 @@ public class PluginDiscovery {
     }
 
     /**
+     * Getter for the pluginOutcomes map.
+     * @return a map with key as the plugin name and value as its corresponding PluginOutcome object.
+     */
+    public static Map<String, PluginOutcome> getPluginOutcomes(){
+        return pluginOutcomes;
+    }
+
+    /**
      * Process a single JAR file which is assumed to be a plugin
      * @param instrumentation and instrumentation instance, used to add discovered plugins to classpaths
      * @param jarFile the jar file to be processed
@@ -218,14 +233,16 @@ public class PluginDiscovery {
         String initClassName = attributes.getValue("Disco-Init-Class");
         String installableClassNames = attributes.getValue("Disco-Installable-Classes");
         String listenerClassNames = attributes.getValue("Disco-Listener-Classes");
-        String bootstrapClassloader = attributes.getValue("Disco-Bootstrap-Classloader");
+        String bootstrapClassloaderAttribute = attributes.getValue("Disco-Bootstrap-Classloader");
+        String classLoaderAttribute = attributes.getValue("Disco-Classloader");
 
         //check that at least one of the attributes is present
         boolean isPlugin =
                 (initClassName != null)
               || installableClassNames != null
               || listenerClassNames != null
-              || bootstrapClassloader != null;
+              || bootstrapClassloaderAttribute != null
+              || classLoaderAttribute != null;
 
         if (!isPlugin) {
             log.info("DiSCo(Core) JAR file manifest contains no Disco attributes, skipping this file");
@@ -235,59 +252,90 @@ public class PluginDiscovery {
         //process the plugin based on the Manifest
         String pluginName = jarFile.getName();
         pluginOutcomes.put(pluginName, new PluginOutcome(pluginName));
-        boolean bootstrap = loadJar(instrumentation, jarFile, bootstrapClassloader);
-        pluginOutcomes.get(pluginName).bootstrap = bootstrap;
-        processInitClass(pluginName, initClassName, bootstrap);
-        processInstallableClasses(pluginName, installableClassNames, bootstrap, runtimeOnly);
-        processListenerClasses(pluginName, listenerClassNames, bootstrap);
+        ClassLoaderType classLoaderType = getClassLoaderFromAttributes(bootstrapClassloaderAttribute, classLoaderAttribute);
+        pluginOutcomes.get(pluginName).classLoaderType = classLoaderType;
+        if (classLoaderType.equals(ClassLoaderType.INVALID)) {
+            //this JAR provided an invalid input for 'Disco-Classloader' and thus should not be loaded
+            return;
+        }
+        ClassLoader classLoader = loadJar(instrumentation, jarFile, classLoaderType);
+        processInitClass(pluginName, initClassName, classLoader, classLoaderType);
+        processInstallableClasses(pluginName, installableClassNames, classLoader, runtimeOnly, classLoaderType);
+        processListenerClasses(pluginName, listenerClassNames, classLoader, classLoaderType);
+    }
+
+    /**
+     * Get the ClassLoaderType from the provided Manifest attributes
+     * @param bootstrapClassLoader the content of the Disco-Bootstrap-Classloader manifest attribute
+     * @param classLoaderAttribute the content of the Disco-Classloader manifest attribute
+     * @return The ClassLoaderType representing the ClassLoader the plugin will be loaded from
+     */
+    static ClassLoaderType getClassLoaderFromAttributes(String bootstrapClassLoader, String classLoaderAttribute) {
+        if (classLoaderAttribute != null) {
+            classLoaderAttribute = classLoaderAttribute.trim().toUpperCase();
+            try {
+                return ClassLoaderType.valueOf(classLoaderAttribute);
+            } catch (IllegalArgumentException e) {
+                // unrecognized value for the attribute
+                return ClassLoaderType.INVALID;
+            }
+        } else if (bootstrapClassLoader != null) {
+            if (bootstrapClassLoader.trim().equalsIgnoreCase("true")) {
+                return ClassLoaderType.BOOTSTRAP;
+            }
+        }
+        // TODO: The below should be replaced with ClassLoadType.PLUGIN after plugins have stopped using classes only found in the system classloader
+        return ClassLoaderType.SYSTEM;
     }
 
     /**
      * Having discovered a plugin JAR, add it to the classloader as specified in its Manifest
      * @param instrumentation and instrumentation instance, used to add discovered plugins to classpaths
      * @param jarFile the jar file to be processed
-     * @param bootstrapClassLoader the content of the Disco-Bootstrap-Classloader manifest attribute
-     * @return true if the Jar file is considered for the bootstrap or false if not
+     * @param classLoaderType the classloader to load the plugin into
+     * @return The ClassLoader in which the plugin JAR was added to
      * @throws Exception JAR file processing may produce I/O exceptions
      */
-    static boolean loadJar(Instrumentation instrumentation, File jarFile, String bootstrapClassLoader) throws Exception {
-        boolean bootstrap = false;
-        if (bootstrapClassLoader != null) {
-            if (bootstrapClassLoader.trim().equalsIgnoreCase("true")) {
-                bootstrap = true;
-            }
-        }
-
+    static ClassLoader loadJar(Instrumentation instrumentation, File jarFile, ClassLoaderType classLoaderType) throws Exception {
         JarFile jar = null;
-        if (bootstrap) {
-            if (LogManager.isDebugEnabled()) {
-                log.debug("DiSCo(Core) attempting to load JAR file into bootstrap classloader: " + jarFile.getName());
-            }
-            jar = Injector.addToBootstrapClasspath(instrumentation, jarFile);
-        } else {
-            if (LogManager.isDebugEnabled()) {
-                log.debug("DiSCo(Core) attempting to load JAR file into system classloader: " + jarFile.getName());
-            }
-            jar = Injector.addToSystemClasspath(instrumentation, jarFile);
+        ClassLoader classLoader = null;
+        if (LogManager.isDebugEnabled()) {
+            log.debug("DiSCo(Core) attempting to load JAR file into " + classLoaderType.name() + " classloader: " + jarFile.getName());
+        }
+        switch (classLoaderType) {
+            case SYSTEM:
+                jar = Injector.addToSystemClasspath(instrumentation, jarFile);
+                classLoader = ClassLoader.getSystemClassLoader();
+                break;
+            case BOOTSTRAP:
+                jar = Injector.addToBootstrapClasspath(instrumentation, jarFile);
+                classLoader = null;
+                break;
+            case PLUGIN:
+                PluginClassLoader pluginClassLoader = new PluginClassLoader();
+                jar = Injector.addToURLClassLoaderClasspath(pluginClassLoader, jarFile);
+                classLoader = pluginClassLoader;
+                break;
         }
         if (jar != null) {
             jar.close();
         }
 
-        return bootstrap;
+        return classLoader;
     }
 
     /**
      * Helper method to discover the Class specified for initialization via the init() static method
      * @param pluginName the name of the plugin JAR file where the init class is defined
      * @param initClassName the name of the init class determined from the Manifest
-     * @param bootstrap true if the plugin is requesting to be loaded by the bootstrap classloader
+     * @param classLoader the classloader the plugin was loaded by
+     * @param classLoaderType the ClassLoaderType representing the classloader that loaded this plugin
      * @throws Exception reflection errors may occur if the class cannot be found
      */
-    static void processInitClass(String pluginName, String initClassName, boolean bootstrap) throws Exception {
+    static void processInitClass(String pluginName, String initClassName, ClassLoader classLoader, ClassLoaderType classLoaderType) throws Exception {
         if (initClassName != null) {
-            Class<?> clazz = classForName(initClassName.trim(), bootstrap);
-            ClassInfo initInfo = new ClassInfo(pluginName, clazz, bootstrap);
+            Class<?> clazz = classForName(initClassName.trim(), classLoader);
+            ClassInfo initInfo = new ClassInfo(pluginName, clazz, classLoaderType);
             initClasses.add(initInfo);
         }
     }
@@ -296,11 +344,12 @@ public class PluginDiscovery {
      * Helper method to discover the Classes specified for Installables in the plugin
      * @param pluginName the name of the plugin JAR file where the classes are defined
      * @param installableClassNames the names of the Installable or Package classes determined from the Manifest
-     * @param bootstrap true if the plugin is requesting to be loaded by the bootstrap classloader
+     * @param classLoader the classloader the plugin was loaded by
      * @param runtimeOnly true if the agent is configured to be runtime only, thus no Installables will be used for instrumentation.
+     * @param classLoaderType the ClassLoaderType representing the classloader that loaded this plugin
      * @throws Exception reflection errors may occur if the class cannot be found
      */
-    static void processInstallableClasses(String pluginName, String installableClassNames, boolean bootstrap, boolean runtimeOnly) throws Exception {
+    static void processInstallableClasses(String pluginName, String installableClassNames, ClassLoader classLoader, boolean runtimeOnly, ClassLoaderType classLoaderType) throws Exception {
         if (installableClassNames != null) {
             String[] classNames = splitString(installableClassNames);
             for (String className: classNames) {
@@ -310,9 +359,9 @@ public class PluginDiscovery {
                 }
 
                 try {
-                    Class<?> clazz = classForName(className.trim(), bootstrap);
+                    Class<?> clazz = classForName(className.trim(), classLoader);
                     if (Installable.class.isAssignableFrom(clazz) || Package.class.isAssignableFrom(clazz)) {
-                        ClassInfo installableInfo = new ClassInfo(pluginName, clazz, bootstrap);
+                        ClassInfo installableInfo = new ClassInfo(pluginName, clazz, classLoaderType);
                         installableClasses.add(installableInfo);
                     } else {
                         log.warn("DiSCo(Core) specified Installable is not an instance of Installable or Package: " + className);
@@ -328,10 +377,11 @@ public class PluginDiscovery {
      * Helper method to discover the Classes specified to be Listeners in the Plugin.
      * @param pluginName the name of the plugin JAR file where the classes are defined
      * @param listenerClassNames the names of the Listener classes determined from the Manifest
-     * @param bootstrap true if the plugin is requesting to be loaded by the bootstrap classloader
+     * @param classLoader the classloader the plugin was loaded by
+     * @param classLoaderType the ClassLoaderType representing the classloader that loaded this plugin
      * @throws Exception reflection errors may occur if the class cannot be found
      */
-    static void processListenerClasses(String pluginName, String listenerClassNames, boolean bootstrap) throws Exception {
+    static void processListenerClasses(String pluginName, String listenerClassNames, ClassLoader classLoader, ClassLoaderType classLoaderType) throws Exception {
         if (listenerClassNames != null) {
             String[] classNames = splitString(listenerClassNames);
             for (String className : classNames) {
@@ -339,9 +389,9 @@ public class PluginDiscovery {
                     log.debug("DiSCo(Core) attempting to add Listener from plugin using class: " + className);
                 }
                 try {
-                    Class<?> clazz = classForName(className.trim(), bootstrap);
+                    Class<?> clazz = classForName(className.trim(), classLoader);
                     if (Listener.class.isAssignableFrom(clazz)) {
-                        ClassInfo installableInfo = new ClassInfo(pluginName, clazz, bootstrap);
+                        ClassInfo installableInfo = new ClassInfo(pluginName, clazz, classLoaderType);
                         listenerClasses.add(installableInfo);
                     } else {
                         log.warn("DiSCo(Core) specified Listener is not an instance of Listener: " + className);
@@ -354,17 +404,16 @@ public class PluginDiscovery {
     }
 
     /**
-     * Helper method to load a class with the foreknowledge of whether this plugin is being loaded into the bootstrap classloader or not.
+     * Helper method to load a class with the foreknowledge of the classloader that loaded this plugin.
      * @param name the name of the class to try and load
-     * @param bootstrap true if loading into the bootstrap classloader
+     * @param classLoader the classloader the plugin was loaded by
      * @return the Class after loading.
      */
-    static Class<?> classForName(String name, boolean bootstrap) throws Exception {
-        return bootstrap
+    static Class<?> classForName(String name, ClassLoader classLoader) throws Exception {
+        return
             //the initialize param is false so that static initializers are not yet called until we really want
             //to instantiate the class
-            ? Class.forName(name, false, null)
-            : Class.forName(name, false, ClassLoader.getSystemClassLoader());
+            Class.forName(name, false, classLoader);
     }
 
     /**

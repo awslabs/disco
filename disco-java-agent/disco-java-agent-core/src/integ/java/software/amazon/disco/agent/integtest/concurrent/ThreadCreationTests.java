@@ -15,6 +15,8 @@
 
 package software.amazon.disco.agent.integtest.concurrent;
 
+import org.junit.Assert;
+import org.junit.experimental.runners.Enclosed;
 import software.amazon.disco.agent.integtest.concurrent.source.TestableConcurrencyObjectImpl;
 import software.amazon.disco.agent.integtest.concurrent.source.TestRunnableFactory;
 import org.junit.After;
@@ -22,12 +24,17 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import software.amazon.disco.agent.logging.LoggerFactory;
+import software.amazon.disco.agent.reflect.logging.Logger;
 
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.LogManager;
 
 /**
  * Test the propagation of TransactionContext when manually creating new Thread objects
  */
+@RunWith(Enclosed.class)
 public class ThreadCreationTests {
 
     @RunWith(Parameterized.class)
@@ -79,6 +86,40 @@ public class ThreadCreationTests {
         @Test
         public void testRunnableThreadStart() throws Exception {
             run(testableRunnable);
+        }
+    }
+
+    public static class NullThreadTargetTest {
+        AtomicBoolean failed = new AtomicBoolean(false);
+        @Test
+        public void testNullThreadTarget() throws Exception {
+            //ensure no logging during this operation.
+            Logger.installLoggerFactory(name -> new software.amazon.disco.agent.logging.Logger() {
+                @Override
+                public void log(Level level, String message) {
+                    log(level, message, null);
+                }
+
+                @Override
+                public void log(Level level, Throwable t) {
+                    log(level, null, t);
+                }
+
+                @Override
+                public void log(Level level, String message, Throwable t) {
+                    if (level.ordinal() >= Level.INFO.ordinal()) {
+                        failed.set(true);
+                    }
+                }
+            });
+
+            Thread t = new Thread();
+            t.start();
+            t.join();
+            Logger.installLoggerFactory(null);
+
+            Assert.assertFalse(failed.get());
+
         }
     }
 

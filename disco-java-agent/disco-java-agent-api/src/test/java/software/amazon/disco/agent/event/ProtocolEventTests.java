@@ -43,6 +43,8 @@ public class ProtocolEventTests {
 
         test(event);
 
+
+
         Assert.assertEquals("Tue, 24 Oct 1995 08:12:31 GMT", event.getDate());
         Assert.assertEquals("amazon.com", event.getHost());
         Assert.assertEquals("http://aws.amazon.com", event.getHTTPOrigin());
@@ -56,14 +58,14 @@ public class ProtocolEventTests {
         Assert.assertEquals(1500, event.getDestinationPort());
         Assert.assertEquals(request, event.getRequest());
 
-        Assert.assertEquals(event.getDate(), event.getHeaderData("date"));
-        Assert.assertEquals(event.getHost(), event.getHeaderData("host"));
-        Assert.assertEquals(event.getHTTPOrigin(), event.getHeaderData("origin"));
-        Assert.assertEquals(event.getUserAgent(), event.getHeaderData("user-agent"));
-        Assert.assertEquals(event.getReferer(), event.getHeaderData("referer"));
+        Assert.assertEquals(event.getDate(), event.getFirstHeader("date"));
+        Assert.assertEquals(event.getHost(), event.getFirstHeader("host"));
+        Assert.assertEquals(event.getHTTPOrigin(), event.getFirstHeader("origin"));
+        Assert.assertEquals(event.getUserAgent(), event.getFirstHeader("user-agent"));
+        Assert.assertEquals(event.getReferer(), event.getFirstHeader("referer"));
         Assert.assertEquals(event.getLocalIPAddress(), event.getDestinationIP());
         Assert.assertEquals(event.getRemoteIPAddress(), event.getSourceIP());
-        Assert.assertEquals("data", event.getHeaderData("custom-header"));
+        Assert.assertEquals("data", event.getFirstHeader("custom-header"));
     }
 
     @Test
@@ -81,7 +83,7 @@ public class ProtocolEventTests {
         Assert.assertEquals(response, event.getResponse());
         Assert.assertEquals(requestEvent, event.getHttpRequestEvent());
         Assert.assertEquals(200, event.getStatusCode());
-        Assert.assertEquals("data", event.getHeaderData("custom-header"));
+        Assert.assertEquals("data", event.getFirstHeader("custom-header"));
     }
 
     private void test(NetworkProtocolEvent event) {

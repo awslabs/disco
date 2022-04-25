@@ -19,8 +19,9 @@ import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
 import org.mockito.Mockito;
 import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
-import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentedClassState;
-import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JarInfo;
+import software.amazon.disco.instrumentation.preprocess.export.JarExportStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentationArtifact;
+import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.SourceInfo;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -71,14 +72,14 @@ public class MockEntities {
         return file;
     }
 
-    public static Map<String, InstrumentedClassState> makeInstrumentedClassesMap() {
-        final Map<String, InstrumentedClassState> classes = new HashMap<>();
-        final InstrumentedClassState stateOne = new InstrumentedClassState("installable_a", new byte[]{12});
+    public static Map<String, InstrumentationArtifact> makeInstrumentedClassesMap() {
+        final Map<String, InstrumentationArtifact> classes = new HashMap<>();
+        final InstrumentationArtifact stateOne = new InstrumentationArtifact("installable_a", new byte[]{12});
 
         stateOne.update("installable_b", new byte[]{15});
         classes.put("ClassD", stateOne);
-        classes.put("ClassE", new InstrumentedClassState("installable_b", new byte[]{13}));
-        classes.put("ClassF", new InstrumentedClassState("installable_c", new byte[]{14}));
+        classes.put("ClassE", new InstrumentationArtifact("installable_b", new byte[]{13}));
+        classes.put("ClassF", new InstrumentationArtifact("installable_c", new byte[]{14}));
 
         return classes;
     }
@@ -115,15 +116,16 @@ public class MockEntities {
         return type;
     }
 
-    public static JarInfo makeMockJarInfo(){
-        final JarInfo info = Mockito.mock(JarInfo.class);
+    public static SourceInfo makeMockJarInfo(){
+        final SourceInfo info = Mockito.mock(SourceInfo.class);
 
         final File mockFile = Mockito.mock(File.class);
-        final ExportStrategy mockStrategy = Mockito.mock(ExportStrategy.class);
+        final ExportStrategy mockStrategy = Mockito.mock(JarExportStrategy.class);
 
-        Mockito.lenient().when(info.getFile()).thenReturn(mockFile);
+        Mockito.lenient().when(info.getSourceFile()).thenReturn(mockFile);
         Mockito.lenient().when(info.getExportStrategy()).thenReturn(mockStrategy);
         Mockito.lenient().when(mockFile.getName()).thenReturn("mock.jar");
+        Mockito.lenient().when(info.getClassByteCodeMap()).thenReturn(Collections.singletonMap("SomeClass", "SomeClass".getBytes()));
 
         return info;
     }

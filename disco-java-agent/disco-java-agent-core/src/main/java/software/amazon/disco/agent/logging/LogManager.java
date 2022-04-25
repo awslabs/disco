@@ -93,10 +93,11 @@ public class LogManager {
      * 2) will be called once per each Logger already created/supplied via getLogger, to replace them with a Logger of its
      * own creation
      *
-     * @param loggerFactory the LoggerFactory to use from now on, and to retroactively apply to already-created Loggers
+     * @param loggerFactory the LoggerFactory to use from now on, and to retroactively apply to already-created Loggers.
+     *                      If this parameter is null, the Logger will be reset to the default no-op operations.
      */
     public static void installLoggerFactory(LoggerFactory loggerFactory) {
-        installedLoggerFactory = loggerFactory;
+        installedLoggerFactory = loggerFactory == null ? new NullLoggerFactory() : loggerFactory;
         for (Map.Entry<String, LevelAwareDelegatingLogger> entry: namedLoggers.entrySet()) {
             entry.getValue().setDelegate(loggerFactory.createLogger(entry.getKey()));
         }

@@ -64,6 +64,19 @@ public class InjectorTests {
     }
 
     @Test
+    public void testAddToURLClassLoaderClasspath() throws Exception {
+        MyURLClassLoader myURLClassLoader = new MyURLClassLoader();
+        final String name = "testAddToURLClassLoaderClasspath";
+        URL url;
+        url = myURLClassLoader.getResource(name);
+        Assert.assertNull(url);
+        File dummyJarFile = createJar(name, false);
+        Injector.addToURLClassLoaderClasspath(myURLClassLoader, dummyJarFile);
+        url = myURLClassLoader.getResource(name);
+        Assert.assertNotNull(url);
+    }
+
+    @Test
     public void testAddToSystemClasspath() throws Exception {
         final String name = "testAddToSystemClasspath";
         URL url;

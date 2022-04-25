@@ -66,11 +66,6 @@ public class TestForkJoinTaskFactory {
             this.innerTestable = innerTestable;
         }
 
-        NonThrowingTestableForkJoinTask(ForkJoinTask forkJoinTask) {
-            this.forkJoinTask = forkJoinTask;
-            this.innerTestable = null;
-        }
-
         void setForkJoinTask(ForkJoinTask forkJoinTask) {
             this.forkJoinTask = forkJoinTask;
         }
@@ -124,6 +119,21 @@ public class TestForkJoinTaskFactory {
             } else {
                 innerTestable.testAfterSingleThreadedInvocation();
             }
+        }
+
+        /**
+         * Invokes .fork() on the underlying ForkJoinTask object.
+         *
+         * Since the main thread invoking forkJoinTask.fork() is not a participant of an explicitly created ForkJoinPool, the dispatched task
+         * will be submitted to {@link java.util.concurrent.ForkJoinPool#common} which has the built-in feature to also allow the main thread to
+         * "steal" submitted tasks upon invoking .join(). The call to Thread.sleep() is to ensure that worker threads will have a chance to "steal"
+         * the submitted task before the main thread does.
+         *
+         * @throws InterruptedException
+         */
+        public void doFork() throws InterruptedException {
+            this.forkJoinTask.fork();
+            Thread.sleep(1);
         }
     }
 

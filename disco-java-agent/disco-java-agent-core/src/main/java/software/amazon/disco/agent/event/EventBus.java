@@ -63,7 +63,11 @@ public class EventBus {
 
         for (Set<Listener> listenerSet : listeners.values()) {
             for (Listener l : listenerSet) {
-                l.listen(e);
+                try {
+                    l.listen(e);
+                } catch (Exception ex) {
+                    log.error("Disco(Core) Listener " + l.getClass().getName() + " threw exception during event publication", ex);
+                }
             }
         }
     }

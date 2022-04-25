@@ -15,6 +15,10 @@
 
 package software.amazon.disco.agent.concurrent.decorate;
 
+import software.amazon.disco.agent.concurrent.preprocess.DiscoRunnableDecorator;
+
+import java.util.function.BiFunction;
+
 /**
  * Given a Runnable object used for thread hand-off, decorate it with thread-info metadata, to allow propagation
  * of DiSCo TransactionContext.
@@ -24,6 +28,7 @@ public class DecoratedRunnable extends Decorated implements Runnable {
 
     /**
      * Create a new DecoratedRunnable. Package-private, to enforce use of factory methods.
+     *
      * @param target the Runnable to decorate
      */
     DecoratedRunnable(Runnable target) {
@@ -33,24 +38,50 @@ public class DecoratedRunnable extends Decorated implements Runnable {
 
     /**
      * Factory method to decorate a Runnable only if it is not already a DecoratedRunnable
+     *
      * @param target the Runnable to consider for decoration
      * @return a DecoratedRunnable representing the input Runnable
      */
-    public static Runnable maybeCreate(Runnable target) {
+    public static DecoratedRunnable maybeCreate(Runnable target) {
         if (target == null) {
             return null;
         }
 
         if (target instanceof DecoratedRunnable) {
-            return target;
+            return (DecoratedRunnable) target;
         }
 
         return new DecoratedRunnable(target);
     }
 
     /**
-     * When the DecoratedRunnable is executed, perform DiSCo TransactionContext propagation, as necessary
+     * Factory method to decorate a Runnable only if it is not already a DecoratedRunnable
      *
+     * @param target the Runnable to consider for decoration
+     * @param removeTX whether to remove the transaction context of the decorated Runnable or not
+     * @return a DecoratedRunnable representing the input Runnable
+     */
+    public static DecoratedRunnable maybeCreate(Runnable target, boolean removeTX) {
+        DecoratedRunnable decoratedRunnable = maybeCreate(target);
+
+        if (decoratedRunnable != null && removeTX) {
+            decoratedRunnable.removeTransactionContext(true);
+        }
+        return decoratedRunnable;
+    }
+
+    /**
+     * Get the underlying runnable that is the target of decoration.
+     *
+     * @return the target runnable.
+     */
+    public Runnable getTarget() {
+        return target;
+    }
+
+    /**
+     * When the DecoratedRunnable is executed, perform DiSCo TransactionContext propagation, as necessary
+     * <p>
      * {@inheritDoc}
      */
     @Override
@@ -62,6 +93,17 @@ public class DecoratedRunnable extends Decorated implements Runnable {
             throw t;
         } finally {
             after();
+        }
+    }
+
+    /**
+     * A function to be passed to {@link DiscoRunnableDecorator} in order to be applied to decorate Runnables. This
+     * function simply invokes the static {@link DecoratedRunnable#maybeCreate(Runnable)}.
+     */
+    public static class RunnableDecorateFunction implements BiFunction<Runnable, Boolean, Runnable> {
+        @Override
+        public Runnable apply(Runnable target, Boolean removeTX) {
+            return maybeCreate(target, removeTX);
         }
     }
 }

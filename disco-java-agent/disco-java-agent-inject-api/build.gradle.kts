@@ -23,5 +23,12 @@ dependencies {
     //we use the ByteBuddyAgent for an install-after-startup injection strategy, but do not want to inadvertently
     //pull all of BB into the client's code.
     implementation("net.bytebuddy", "byte-buddy-agent", "1.10.14")
+    compileOnly(project(":disco-java-agent:disco-java-agent-api"))
+
     testImplementation("net.bytebuddy", "byte-buddy-dep", "1.10.14")
+    testImplementation(project(":disco-java-agent:disco-java-agent-api"))
+}
+
+tasks.named("shadowJar") {
+    mustRunAfter(":disco-java-agent:disco-java-agent-core:test")
 }

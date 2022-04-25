@@ -18,36 +18,40 @@ package software.amazon.disco.instrumentation.preprocess.instrumentation;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
+import software.amazon.disco.instrumentation.preprocess.MockEntities;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
+import software.amazon.disco.instrumentation.preprocess.exceptions.InstrumentationException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
-import software.amazon.disco.instrumentation.preprocess.export.JarExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.DiscoAgentLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.TransformerExtractor;
-import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JarInfo;
+import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.ClassFileLoader;
+import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.DirectoryLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JarLoader;
-import software.amazon.disco.instrumentation.preprocess.MockEntities;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
-import java.lang.instrument.Instrumentation;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
 
 @RunWith(MockitoJUnitRunner.class)
 public class StaticInstrumentationTransformerTest {
-    private static final String PACKAGE_SUFFIX = "suffix";
-
-    StaticInstrumentationTransformer spyTransformer;
-    PreprocessConfig config;
+    @Rule()
+    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Mock
     DiscoAgentLoader mockAgentLoader;
@@ -56,115 +60,120 @@ public class StaticInstrumentationTransformerTest {
     JarLoader mockJarPackageLoader;
 
     @Mock
-    JarInfo jarInfo;
+    DirectoryLoader mockDirectoryLoader;
+
+    PreprocessConfig config;
+    Map<Class<? extends ClassFileLoader>, ClassFileLoader> loaders;
+    File fakeJar;
 
     @Before
-    public void before() {
+    public void before() throws IOException {
+        fakeJar = temporaryFolder.newFile("someJar.jar");
+
+        Mockito.doReturn(MockEntities.makeMockJarInfo())
+            .when(mockJarPackageLoader)
+            .load(Mockito.any(Path.class), Mockito.any(PreprocessConfig.class));
+
+        Mockito.doReturn(MockEntities.makeMockJarInfo())
+            .when(mockDirectoryLoader)
+            .load(Mockito.any(Path.class), Mockito.any(PreprocessConfig.class));
+
         config = PreprocessConfig.builder()
-                .agentPath("a path")
-                .jarPath("a path")
-                .suffix(PACKAGE_SUFFIX)
-                .build();
+            .agentPath("a path")
+            .sourcePath("lib", new HashSet<>(Arrays.asList(fakeJar.getAbsolutePath(), temporaryFolder.getRoot().getAbsolutePath())))
+            .failOnUnresolvableDependency(false)
+            .build();
 
-        spyTransformer = Mockito.spy(
-                StaticInstrumentationTransformer.builder()
-                        .jarLoader(mockJarPackageLoader)
-                        .agentLoader(mockAgentLoader)
-                        .config(config)
-                        .build()
-        );
-
-        Mockito.doReturn(Arrays.asList(MockEntities.makeMockJarInfo()))
-                .when(mockJarPackageLoader).load(Mockito.any(PreprocessConfig.class));
+        loaders = new HashMap<>();
+        loaders.put(JarLoader.class, mockJarPackageLoader);
+        loaders.put(DirectoryLoader.class, mockDirectoryLoader);
     }
 
     @After
-    public void after(){
+    public void after() {
         TransformerExtractor.getTransformers().clear();
     }
 
     @Test(expected = InvalidConfigEntryException.class)
-    public void testTransformFailsWithNullConfig(){
+    public void testTransformFailsWithNullConfig() {
         StaticInstrumentationTransformer.builder()
-                .config(null)
-                .build()
-                .transform();
+            .config(null)
+            .build()
+            .transform();
     }
 
     @Test
     public void testTransformWorksWithVerboseLogLevel() {
         config = PreprocessConfig.builder()
-                .agentPath("a path")
-                .jarPath("a path")
-                .logLevel(Level.TRACE)
-                .build();
+            .logLevel(Level.TRACE)
+            .build();
 
-        StaticInstrumentationTransformer.builder()
-                .jarLoader(mockJarPackageLoader)
-                .agentLoader(mockAgentLoader)
-                .config(config)
-                .build().transform();
+        configureStaticInstrumentationTransformer().transform();
 
-        Assert.assertEquals(Level.TRACE, LogManager.getLogger().getLevel());
+        assertEquals(Level.TRACE, LogManager.getLogger().getLevel());
     }
 
     @Test
     public void testTransformWorksWithDefaultLogLevel() {
-        spyTransformer.transform();
-        Assert.assertEquals(LogManager.getLogger().getLevel(), Level.INFO);
+        StaticInstrumentationTransformer transformer = configureStaticInstrumentationTransformer();
+
+        transformer.transform();
+
+        assertEquals(LogManager.getLogger().getLevel(), Level.INFO);
     }
 
     @Test
-    public void testTransformWorksAndInvokesLoadAgentAndPackages() {
-        spyTransformer = Mockito.spy(
-                StaticInstrumentationTransformer.builder()
-                        .jarLoader(mockJarPackageLoader)
-                        .agentLoader(mockAgentLoader)
-                        .config(config)
-                        .build()
-        );
-        spyTransformer.transform();
+    public void testTransformWorksAndInvokesHelperMethods() {
+        StaticInstrumentationTransformer transformer = configureStaticInstrumentationTransformer();
+
+        transformer.transform();
 
         Mockito.verify(mockAgentLoader).loadAgent(Mockito.any(PreprocessConfig.class), Mockito.any(TransformerExtractor.class));
-        Mockito.verify(mockJarPackageLoader).load(Mockito.any(PreprocessConfig.class));
+        Mockito.verify(mockJarPackageLoader, Mockito.times(1)).load(Mockito.any(Path.class), Mockito.any(PreprocessConfig.class));
+        Mockito.verify(mockDirectoryLoader, Mockito.times(1)).load(Mockito.any(Path.class), Mockito.any(PreprocessConfig.class));
+
+        Mockito.verify(transformer).processAllSources();
+        Mockito.verify(transformer).logInstrumentationSummary();
     }
 
     @Test
-    public void testTransformWorksAndInvokesPackageLoader() {
-        spyTransformer.transform();
+    public void testProcessAllSourcesWorksAndPopulatesInstrumentationOutcome() {
+        StaticInstrumentationTransformer transformer = configureStaticInstrumentationTransformer();
 
-        Mockito.verify(mockJarPackageLoader).load(Mockito.any(PreprocessConfig.class));
-        Mockito.verify(spyTransformer).applyInstrumentation(Mockito.any());
+        transformer.processAllSources();
+
+        assertEquals(2, transformer.getAllOutcomes().size());
+        assertEquals(InstrumentationOutcome.Status.NO_OP, transformer.getAllOutcomes().get(0).getStatus());
+        assertEquals(InstrumentationOutcome.Status.NO_OP, transformer.getAllOutcomes().get(1).getStatus());
     }
 
     @Test
-    public void testApplyInstrumentationWorks() throws IllegalClassFormatException {
-        Instrumentation delegate = Mockito.mock(Instrumentation.class);
-        JarExportStrategy strategy = Mockito.mock(JarExportStrategy.class);
-        Map<String, InstrumentedClassState> instrumentedClasses = MockEntities.makeInstrumentedClassesMap();
-        File file = Mockito.mock(File.class);
+    public void testProcessAllSourcesWorksAndPopulatesInstrumentationOutcomeWithSourceLoadingError() throws IllegalClassFormatException {
+        StaticInstrumentationTransformer transformer = configureStaticInstrumentationTransformer();
 
-        Map<String, byte[]> byteArrayMap = new HashMap<>();
-        byteArrayMap.put("ClassA", new byte[]{1});
-        byteArrayMap.put("ClassB", new byte[]{2});
+        TransformerExtractor.getTransformers().clear();
 
-        TransformerExtractor transformerExtractor = new TransformerExtractor(delegate);
-        ClassFileTransformer transformer_1 = Mockito.mock(ClassFileTransformer.class);
-        ClassFileTransformer transformer_2 = Mockito.mock(ClassFileTransformer.class);
-        transformerExtractor.addTransformer(transformer_1);
-        transformerExtractor.addTransformer(transformer_2);
+        ClassFileTransformer mockTransformer = Mockito.mock(ClassFileTransformer.class);
+        TransformerExtractor.getTransformers().add(mockTransformer);
+        Mockito.doThrow(new InstrumentationException("some thing went wrong", new IllegalStateException())).when(mockTransformer)
+            .transform(Mockito.any(), Mockito.anyString(), Mockito.isNull(), Mockito.isNull(), Mockito.any(byte[].class));
 
-        Mockito.when(jarInfo.getExportStrategy()).thenReturn(strategy);
-        Mockito.when(jarInfo.getClassByteCodeMap()).thenReturn(byteArrayMap);
-        Mockito.when(jarInfo.getFile()).thenReturn(file);
-        Mockito.when(file.getAbsolutePath()).thenReturn("mock/path");
-        Mockito.doReturn(instrumentedClasses).when(spyTransformer).getInstrumentedClasses();
+        transformer.processAllSources();
 
-        spyTransformer.applyInstrumentation(jarInfo);
+        assertEquals(2, transformer.getAllOutcomes().size());
+        assertEquals(InstrumentationOutcome.Status.WARNING_OCCURRED, transformer.getAllOutcomes().get(0).getStatus());
+        assertEquals(InstrumentationOutcome.Status.WARNING_OCCURRED, transformer.getAllOutcomes().get(1).getStatus());
+    }
 
-        Mockito.verify(strategy).export(jarInfo, instrumentedClasses, config);
-        Mockito.verify(transformer_1).transform(Mockito.any(ClassLoader.class), Mockito.eq("ClassA"), Mockito.eq(null), Mockito.eq(null), Mockito.eq(new byte[]{1}));
-        Mockito.verify(transformer_1).transform(Mockito.any(ClassLoader.class), Mockito.eq("ClassB"), Mockito.eq(null), Mockito.eq(null), Mockito.eq(new byte[]{2}));
-        Assert.assertTrue(instrumentedClasses.isEmpty());
+    private StaticInstrumentationTransformer configureStaticInstrumentationTransformer() {
+        StaticInstrumentationTransformer transformer = Mockito.spy(
+            StaticInstrumentationTransformer.builder()
+                .classFileLoaders(loaders)
+                .agentLoader(mockAgentLoader)
+                .config(config)
+                .build()
+        );
+
+        return transformer;
     }
 }

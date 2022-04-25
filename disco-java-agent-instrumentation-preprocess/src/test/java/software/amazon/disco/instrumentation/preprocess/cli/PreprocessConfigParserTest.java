@@ -16,18 +16,31 @@
 package software.amazon.disco.instrumentation.preprocess.cli;
 
 import org.apache.logging.log4j.Level;
-import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import software.amazon.disco.instrumentation.preprocess.TestUtils;
 import software.amazon.disco.instrumentation.preprocess.exceptions.ArgumentParserException;
+import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class PreprocessConfigParserTest {
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
+
     String outputDir = "/d";
     String serialization = "/s";
-    String agent = "/a";
+    String agent = "/agent_path";
+    String jdkpath = "/java.base.jmod";
     String suffix = "-suffix";
 
     static PreprocessConfigParser preprocessConfigParser;
@@ -67,65 +80,175 @@ public class PreprocessConfigParserTest {
 
     @Test
     public void parseCommandLineWorksWithDifferentLogLevels() {
-        PreprocessConfig config = preprocessConfigParser.parseCommandLine(new String[]{"--verbose"});
         PreprocessConfig silentConfig = preprocessConfigParser.parseCommandLine(new String[]{"--silent"});
+        PreprocessConfig verboseConfig = preprocessConfigParser.parseCommandLine(new String[]{"--verbose"});
+        PreprocessConfig extraverboseConfig = preprocessConfigParser.parseCommandLine(new String[]{"--extraverbose"});
 
-        Assert.assertEquals(Level.TRACE, config.getLogLevel());
-        Assert.assertEquals(Level.OFF, silentConfig.getLogLevel());
+        assertEquals(Level.OFF, silentConfig.getLogLevel());
+        assertEquals(Level.DEBUG, verboseConfig.getLogLevel());
+        assertEquals(Level.ALL, extraverboseConfig.getLogLevel());
+    }
+
+    @Test
+    public void parseCommandLineWorksAndReturnsConfigWithDefaultValue() {
+        String[] args = new String[]{
+            "--sourcepaths", "/d1:/d2:/d3",
+            "--agentPath", agent
+        };
+        PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
+
+        assertFalse(config.isFailOnUnresolvableDependency());
+        assertEquals(Level.INFO, config.getLogLevel());
+        assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/d3")), config.getSourcePaths().get(""));
     }
 
     @Test
     public void parseCommandLineWorksWithFullCommandNamesAndReturnsConfigFile() {
         String[] args = new String[]{
-                "--outputDir", outputDir,
-                "--jarpaths", "/d1", "/d2", "/d3",
-                "--serializationpath", serialization,
-                "--agentPath", agent,
-                "--suffix", suffix,
-                "--javaversion", "11",
-                "--agentarg","arg"
+            "--outputDir", outputDir,
+            "--sourcepaths", "/d1:/d2:/d3@lib",
+            "--serializationpath", serialization,
+            "--agentPath", agent,
+            "--suffix", suffix,
+            "--javaversion", "11",
+            "--agentarg", "arg",
+            "--jdksupport", jdkpath,
+            "--failonunresolvabledependency"
         };
 
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
 
-        Assert.assertEquals(outputDir, config.getOutputDir());
-        Assert.assertEquals(serialization, config.getSerializationJarPath());
-        Assert.assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/d3")), config.getJarPaths());
-        Assert.assertEquals(agent, config.getAgentPath());
-        Assert.assertEquals(suffix, config.getSuffix());
-        Assert.assertEquals("11", config.getJavaVersion());
-        Assert.assertEquals("arg", config.getAgentArg());
+        assertEquals(outputDir, config.getOutputDir());
+        assertEquals(serialization, config.getSerializationJarPath());
+        assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/d3")), config.getSourcePaths().get("lib"));
+        assertEquals(agent, config.getAgentPath());
+        assertEquals(suffix, config.getSuffix());
+        assertEquals("11", config.getJavaVersion());
+        assertEquals("arg", config.getAgentArg());
+        assertEquals(jdkpath, config.getJdkPath());
+        assertTrue(config.isFailOnUnresolvableDependency());
     }
 
     @Test
     public void testParseCommandLineWorksWithShortHandCommandNamesAndReturnsConfigFile() {
         String[] args = new String[]{
-                "-out", outputDir,
-                "-jps", "/d1", "/d2", "/d3",
-                "-sp", serialization,
-                "-ap", agent,
-                "-suf", suffix,
-                "-jv", "11",
-                "-arg","arg"
+            "-out", outputDir,
+            "-sps", "/d1:/d2:/D3@lib",
+            "-sp", serialization,
+            "-ap", agent,
+            "-suf", suffix,
+            "-jv", "11",
+            "-arg", "arg",
+            "-jdks", jdkpath
         };
 
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
 
-        Assert.assertEquals(outputDir, config.getOutputDir());
-        Assert.assertEquals(serialization, config.getSerializationJarPath());
-        Assert.assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/d3")), config.getJarPaths());
-        Assert.assertEquals(agent, config.getAgentPath());
-        Assert.assertEquals(suffix, config.getSuffix());
-        Assert.assertEquals("11", config.getJavaVersion());
-        Assert.assertEquals("arg", config.getAgentArg());
+        assertEquals(outputDir, config.getOutputDir());
+        assertEquals(serialization, config.getSerializationJarPath());
+        assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/D3")), config.getSourcePaths().get("lib"));
+        assertEquals(agent, config.getAgentPath());
+        assertEquals(suffix, config.getSuffix());
+        assertEquals("11", config.getJavaVersion());
+        assertEquals("arg", config.getAgentArg());
+        assertEquals(jdkpath, config.getJdkPath());
     }
 
     @Test
-    public void testParseCommandLineWithDuplicatePaths(){
+    public void testParseCommandLineWorksWithPathToResponseFile() throws Exception {
+        String fileContent = " -out " + outputDir + " -ap " + agent;
+        File responseFile = TestUtils.createFile(tempFolder.getRoot(), "@response.txt", fileContent.getBytes());
+
         String[] args = new String[]{
-                "-jps", "/d1", "/d1", "/d2",
+            "@" + responseFile.getAbsolutePath()
         };
+
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
-        Assert.assertEquals(2, config.getJarPaths().size());
+        assertEquals(outputDir, config.getOutputDir());
+        assertEquals(agent, config.getAgentPath());
+    }
+
+    @Test
+    public void testParseCommandLineAppendsResponseFileArgsWithCommandLineArgs() throws Exception {
+        String fileContent = " -out " + outputDir + " -ap " + agent;
+        File responseFile = TestUtils.createFile(tempFolder.getRoot(), "@response.txt", fileContent.getBytes());
+
+        String[] args = new String[]{"@" + responseFile.getAbsolutePath(), "-sps", "/d1:/d1:/d2", "-out", "new_value"};
+
+        PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
+
+        assertEquals(agent, config.getAgentPath());
+        assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2")), config.getSourcePaths().get(""));
+
+        // value from response file should be overridden by value from command line arg
+        assertEquals("new_value", config.getOutputDir());
+    }
+
+    @Test
+    public void testParseCommandLineJoinsResponseFileSourcePathsWithCommandLineSourcePaths() throws Exception {
+        String fileContent = "-sps /d3:/d4:/d5 -sps /d6@lib";
+        File responseFile = TestUtils.createFile(tempFolder.getRoot(), "@response.txt", fileContent.getBytes());
+
+        String[] args = new String[]{"@" + responseFile.getAbsolutePath(), "-sps", "/d1:/d1:/d2"};
+
+        PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
+
+        assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/d3", "/d4", "/d5")), config.getSourcePaths().get(""));
+        assertEquals(new HashSet<>(Arrays.asList("/d6")), config.getSourcePaths().get("lib"));
+    }
+
+    @Test
+    public void testParseCommandLineWorksWithDuplicatePaths() {
+        String[] args = new String[]{"-sps", "/d1:/d1:/d2@lib",};
+
+        PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
+
+        assertEquals(1, config.getSourcePaths().size());
+        assertEquals(2, config.getSourcePaths().get("lib").size());
+    }
+
+    @Test(expected = InvalidConfigEntryException.class)
+    public void testParseCommandLineFailsWithInvalidSourcePathOption(){
+        String[] args = new String[]{"-sps", "/d1:/d1:/d2@lib@tomcat",};
+
+        preprocessConfigParser.parseCommandLine(args);
+    }
+
+    @Test
+    public void testReadOptionsFromFileWorksWithSingleWhiteSpace() throws Exception {
+        String fileContent = " -out " + outputDir + " -ap " + agent;
+        File responseFile = TestUtils.createFile(tempFolder.getRoot(), "@response.txt", fileContent.getBytes());
+
+        List<String> args = preprocessConfigParser.readArgsFromFile(responseFile.getAbsolutePath());
+
+        assertEquals(4, args.size());
+        assertEquals("-out", args.get(0));
+        assertEquals(outputDir, args.get(1));
+        assertEquals("-ap", args.get(2));
+        assertEquals(agent, args.get(3));
+    }
+
+    @Test
+    public void testReadOptionsFromFileWorksWithMultipleWhiteSpaceAndTab() throws Exception {
+        String fileContent = "   -out   " + outputDir + " -ap\t" + agent;
+        File responseFile = TestUtils.createFile(tempFolder.getRoot(), "@response.txt", fileContent.getBytes());
+
+        List<String> args = preprocessConfigParser.readArgsFromFile(responseFile.getAbsolutePath());
+
+        assertEquals(4, args.size());
+        assertEquals("-out", args.get(0));
+        assertEquals(outputDir, args.get(1));
+        assertEquals("-ap", args.get(2));
+        assertEquals(agent, args.get(3));
+    }
+
+    @Test(expected = ArgumentParserException.class)
+    public void testReadOptionsFromFileFailsWhenPathToResponseFileIsNonExistent() {
+        preprocessConfigParser.readArgsFromFile("path_to_file");
+    }
+
+    @Test(expected = ArgumentParserException.class)
+    public void testReadOptionsFromFileFailsWhenPathToResponseFileIsADirectory() {
+        preprocessConfigParser.readArgsFromFile(tempFolder.getRoot().getAbsolutePath());
     }
 }

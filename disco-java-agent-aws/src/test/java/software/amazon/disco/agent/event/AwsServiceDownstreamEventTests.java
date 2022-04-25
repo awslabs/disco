@@ -1,3 +1,18 @@
+/*
+ * Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License").
+ *   You may not use this file except in compliance with the License.
+ *   A copy of the License is located at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   or in the "license" file accompanying this file. This file is distributed
+ *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ *   express or implied. See the License for the specific language governing
+ *   permissions and limitations under the License.
+ */
+
 package software.amazon.disco.agent.event;
 
 import com.amazonaws.DefaultRequest;
@@ -70,13 +85,12 @@ public class AwsServiceDownstreamEventTests {
 
     @Test
     public void testReplaceHeaderInV1Request() {
-        DefaultRequest request = new DefaultRequest("my_service");
+        DefaultRequest<?> request = new DefaultRequest<>("my_service");
         Assert.assertTrue(request.getHeaders().isEmpty());
 
         ServiceDownstreamRequestEvent event = new AwsV1ServiceDownstreamRequestEventImpl(ORIGIN, SERVICE, OPERATION);
         event.withRequest(request);
 
-        Assert.assertTrue(event instanceof HeaderReplaceable);
         HeaderReplaceable replaceable = (HeaderReplaceable) event;
         replaceable.replaceHeader(HEADER_KEY, HEADER_VALUE);
 
@@ -91,10 +105,9 @@ public class AwsServiceDownstreamEventTests {
                 .withHeaderMap(headerMap)
                 .withSdkHttpRequest(httpRequestMock);
 
-        Assert.assertTrue(requestEvent instanceof HeaderReplaceable);
         requestEvent.replaceHeader(HEADER_KEY, HEADER_VALUE);
 
-        Assert.assertEquals(headerMap, requestEvent.getHeaderMap());
+        Assert.assertEquals(headerMap, requestEvent.getAllHeaders());
         Assert.assertEquals(1, headerMap.size());
         Assert.assertEquals(1, headerMap.get(HEADER_KEY).size());
         Assert.assertEquals(HEADER_VALUE, headerMap.get(HEADER_KEY).get(0));
@@ -109,12 +122,12 @@ public class AwsServiceDownstreamEventTests {
     private static class AppendHeader implements Answer<Object> {
         public final Map<String, List<String>> headers;
 
-        public AppendHeader(Map headers) {
+        public AppendHeader(Map<String, List<String>> headers) {
             this.headers = headers;
         }
 
         @Override
-        public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+        public Object answer(InvocationOnMock invocationOnMock) {
             List<String> valueList = new ArrayList<>();
             valueList.add(invocationOnMock.getArgument(1));
             headers.put(invocationOnMock.getArgument(0), valueList);

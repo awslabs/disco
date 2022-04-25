@@ -15,17 +15,19 @@
 
 package software.amazon.disco.agent.concurrent;
 
-import software.amazon.disco.agent.concurrent.decorate.DecoratedRunnable;
-import software.amazon.disco.agent.interception.Installable;
-import software.amazon.disco.agent.logging.LogManager;
-import software.amazon.disco.agent.logging.Logger;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
+import software.amazon.disco.agent.concurrent.preprocess.DiscoRunnableDecorator;
+import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.agent.logging.LogManager;
+import software.amazon.disco.agent.logging.Logger;
 
-import static net.bytebuddy.matcher.ElementMatchers.*;
+import static net.bytebuddy.matcher.ElementMatchers.is;
+import static net.bytebuddy.matcher.ElementMatchers.named;
+import static net.bytebuddy.matcher.ElementMatchers.noneOf;
 
 /**
  * A Java concurrency primitive is a Thread - instantiable one of two ways: 1) by subclassing and overriding the run() method
@@ -85,23 +87,7 @@ class ThreadInterceptor implements Installable {
          */
         @Advice.OnMethodEnter
         public static void onStartEnter(@Advice.FieldValue(value="target", readOnly=false) Runnable target) {
-            target = wrap(target);
-        }
-
-        /**
-         * Trampoline method to allow debugging from Advice. Performs the work of Runnable decoration
-         * @param target the 'target' field of the Thread, containing a Runnable
-         * @return the decorated Runnable, or the same Runnable if an error occurred
-         */
-        public static Runnable wrap(Runnable target) {
-            try {
-                Runnable decorated = DecoratedRunnable.maybeCreate(target);
-                //and set this decorated object back into the Thread object
-                return decorated;
-            } catch (Exception e) {
-                log.error("DiSCo(Concurrency) unable to redirect Thread subclass to a DecoratedRunnable");
-                return target;
-            }
+             target = DiscoRunnableDecorator.maybeDecorate(target);
         }
     }
 }

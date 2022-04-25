@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentMap;
  * with extra metadata regarding thread provenance. This metadata is encapsulated in this abstraction.
  */
 public abstract class Decorated {
+    private boolean removeTransactionContext;
     protected Long ancestralThreadId;
     protected long parentThreadId;
     ConcurrentMap<String, MetadataItem> parentTransactionContext;
@@ -34,6 +35,7 @@ public abstract class Decorated {
      * Construct a new object to hold thread provenance information.
      */
     protected Decorated() {
+        this.removeTransactionContext = false;
         this.parentTransactionContext = TransactionContext.getPrivateMetadata();
         MetadataItem data = parentTransactionContext.get(TransactionContext.TRANSACTION_OWNING_THREAD_KEY);
         this.ancestralThreadId = (Long)data.get();
@@ -41,16 +43,24 @@ public abstract class Decorated {
     }
 
     /**
+     * Set whether or not to fully remove the TransactionContext at the end of the after() treatment. Defaults false.
+     * @param removeTransactionContext true/false to remove() or not.
+     */
+    public void removeTransactionContext(boolean removeTransactionContext) {
+        this.removeTransactionContext = removeTransactionContext;
+    }
+
+    /**
      * Convenience method to call before the execution of the dispatched object method eg. run() or call()
      */
     public void before() {
-        ConcurrentUtils.set(ancestralThreadId, parentThreadId, parentTransactionContext);
+        ConcurrentUtils.enter(ancestralThreadId, parentThreadId, parentTransactionContext);
     }
 
     /**
      * Convenience method to call after the execution of the dispatched object method eg. run() or call()
      */
     public void after() {
-        ConcurrentUtils.clear(ancestralThreadId, parentThreadId, parentTransactionContext);
+        ConcurrentUtils.exit(ancestralThreadId, parentThreadId, parentTransactionContext, removeTransactionContext);
     }
 }

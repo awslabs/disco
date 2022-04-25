@@ -23,12 +23,21 @@ import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants
  */
 public class InvalidConfigEntryException extends RuntimeException {
     /**
-     * Constructor that calls its parent with a fixed message
+     * Constructor
      *
      * @param configEntry config entry that is invalid
-     * @pram t cause of the error
+     * @param t           cause of the error
      */
     public InvalidConfigEntryException(String configEntry, Throwable t) {
         super(PreprocessConstants.MESSAGE_PREFIX + "Invalid configuration entry: " + configEntry, t);
+    }
+
+    /**
+     * Constructor
+     *
+     * @param configEntry config entry that is invalid
+     */
+    public InvalidConfigEntryException(String configEntry) {
+        super(PreprocessConstants.MESSAGE_PREFIX + "Invalid configuration entry: " + configEntry, null);
     }
 }
