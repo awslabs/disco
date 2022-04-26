@@ -22,6 +22,9 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import software.amazon.disco.agent.reflect.logging.Logger;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Test the propagation of TransactionContext when manually creating new subclasses of Threads
@@ -86,11 +89,35 @@ public class ThreadSubclassCreationTests {
 
     @Test()
     public void testSubclassThreadRun() {
+        AtomicBoolean failed = new AtomicBoolean(false);
+
+        //ensure no logging during this operation.
+        Logger.installLoggerFactory(name -> new software.amazon.disco.agent.logging.Logger() {
+            @Override
+            public void log(Level level, String message) {
+                log(level, message, null);
+            }
+
+            @Override
+            public void log(Level level, Throwable t) {
+                log(level, null, t);
+            }
+
+            @Override
+            public void log(Level level, String message, Throwable t) {
+                if (level.ordinal() >= Level.INFO.ordinal()) {
+                    failed.set(true);
+                }
+            }
+        });
+
         ThreadSubclass t = new ThreadSubclass();
         TestRunnableFactory.TestableRunnable r = new TestRunnableFactory.NonThrowingTestableRunnable();
         t.testableRunnable = r;
         r.testBeforeInvocation();
         t.run();
+        Logger.installLoggerFactory(null);
         r.testAfterSingleThreadedInvocation();
+        Assert.assertFalse(failed.get());
     }
 }

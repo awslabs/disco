@@ -15,6 +15,9 @@
 
 package software.amazon.disco.agent.interception;
 
+import software.amazon.disco.agent.logging.LogManager;
+import software.amazon.disco.agent.logging.Logger;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -22,7 +25,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * This can help to avoid interceptor doing business logic multiple times in some method chaining
  */
 public class MethodInterceptionCounter {
-    private final ThreadLocal<AtomicInteger> localReferenceCounter;
+    private static final Logger log = LogManager.getLogger(MethodInterceptionCounter.class);
+    final ThreadLocal<AtomicInteger> localReferenceCounter;
 
     /**
      * Construct a new MethodInterceptionCounter.
@@ -33,49 +37,32 @@ public class MethodInterceptionCounter {
 
     /**
      * Increase the counter by 1.
+     * @return the new value
      */
-    public void increment() {
-        if (getReferenceCounter() == null) {
-            clear();
-        }
-        getReferenceCounter().getAndIncrement();
+    public int increment() {
+        return localReferenceCounter.get().incrementAndGet();
     }
 
     /**
      * Decrease the counter by 1.
+     * @return the new value. May be less than zero, indicating a counting error, but the method will internally correct
+     * the real value to zero in this case
      */
-    public void decrement() {
-        if (getReferenceCounter() == null) {
-            clear();
-        } else {
-            if (getReferenceCounter().decrementAndGet() <= 0) {
-                clear();
+    public int decrement() {
+        int ret = localReferenceCounter.get().decrementAndGet();
+        if (ret < 0) {
+            if (LogManager.isDebugEnabled()) {
+                log.debug("Disco(Core) method interception counter dropped below zero, indicating increment/decrement mismatch", new RuntimeException());
             }
+            localReferenceCounter.get().set(0);
         }
+        return ret;
     }
 
     /**
      * @return true if current method has intercepted already.
      */
     public boolean hasIntercepted() {
-        if (getReferenceCounter() == null) {
-            clear();
-            return false;
-        }
-        return getReferenceCounter().get() > 0;
-    }
-
-    /**
-     * @return The counter value, which suggests how many times this method has intercepted.
-     */
-    AtomicInteger getReferenceCounter() {
-        return localReferenceCounter.get();
-    }
-
-    /**
-     * Clears the value of the counter, and restores it to its initial value.
-     */
-    private void clear() {
-        localReferenceCounter.remove();
+        return localReferenceCounter.get().get() > 0;
     }
 }

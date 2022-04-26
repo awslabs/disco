@@ -1,3 +1,18 @@
+/*
+ * Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License").
+ *   You may not use this file except in compliance with the License.
+ *   A copy of the License is located at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   or in the "license" file accompanying this file. This file is distributed
+ *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ *   express or implied. See the License for the specific language governing
+ *   permissions and limitations under the License.
+ */
+
 package software.amazon.disco.agent.sql;
 
 import com.mysql.cj.jdbc.CallableStatement;
@@ -154,16 +169,14 @@ public class JdbcExecuteInterceptorTest {
 
     @Test
     public void testQueryStringExtractedFromParams() throws NoSuchMethodException {
-        Object[] params = {QUERY};
-        String parsed = JdbcExecuteInterceptor.parseQueryFromStatement(myStatement, params);
+        String parsed = JdbcExecuteInterceptor.parseQueryFromStatement(PreparedStatement.class, Statement.class, myStatement, QUERY);
 
         assertEquals(QUERY, parsed);
     }
 
     @Test
     public void testQueryStringExtractedWithToString() throws NoSuchMethodException {
-        Object[] params = {};
-        String parsed = JdbcExecuteInterceptor.parseQueryFromStatement(myCallableStatement, params);
+        String parsed = JdbcExecuteInterceptor.parseQueryFromStatement(PreparedStatement.class, Statement.class, myCallableStatement, null);
 
         // MyCallableStatement has toString() overloaded
         assertEquals(myCallableStatement.toString(), parsed);
@@ -171,8 +184,8 @@ public class JdbcExecuteInterceptorTest {
 
     @Test
     public void testQueryStringNotExtracted() throws NoSuchMethodException {
-        Object[] params = {};
-        String parsed = JdbcExecuteInterceptor.parseQueryFromStatement(myPreparedStatement, params);
+        String query = "";
+        String parsed = JdbcExecuteInterceptor.parseQueryFromStatement(PreparedStatement.class, Statement.class, myPreparedStatement, query);
 
         // MyPreparedStatement does not have toString() overloaded
         assertNull(parsed);
@@ -180,8 +193,7 @@ public class JdbcExecuteInterceptorTest {
 
     @Test
     public void testRequestEventCreation() {
-        Object[] params = {QUERY};
-        ServiceRequestEvent event = JdbcExecuteInterceptor.enter(params, null, mockStatement);
+         ServiceRequestEvent event = JdbcExecuteInterceptor.enter(QUERY, null, mockStatement);
 
         assertEquals(JdbcExecuteInterceptor.SQL_ORIGIN, event.getOrigin());
         assertEquals(DB_NAME, event.getService());
@@ -191,8 +203,7 @@ public class JdbcExecuteInterceptorTest {
 
     @Test
     public void testRequestEventPublish() {
-        Object[] params = {QUERY};
-        ServiceRequestEvent event = JdbcExecuteInterceptor.enter(params, null, mockStatement);
+        ServiceRequestEvent event = JdbcExecuteInterceptor.enter(QUERY,null, mockStatement);
 
         assertEquals(event, mockListener.getReceivedEvents().get(0));
     }

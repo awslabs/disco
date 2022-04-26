@@ -17,6 +17,8 @@ package software.amazon.disco.instrumentation.preprocess.instrumentation;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
+import lombok.Singular;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,18 +28,22 @@ import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.AgentLoaderNotProvidedException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InstrumentationException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
-import software.amazon.disco.instrumentation.preprocess.exceptions.ClassFileLoaderNotProvidedException;
-import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentationOutcome.Status;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.AgentLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.TransformerExtractor;
-import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JarInfo;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.ClassFileLoader;
+import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.DirectoryLoader;
+import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JDKModuleLoader;
+import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JarLoader;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
-import java.lang.instrument.ClassFileTransformer;
-import java.lang.instrument.IllegalClassFormatException;
-import java.security.ProtectionDomain;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Class responsible to orchestrate the instrumentation process involving agent loading, package loading, instrumentation
@@ -49,11 +55,19 @@ import java.util.Map;
 @Builder
 @AllArgsConstructor
 public class StaticInstrumentationTransformer {
+    public static final String INSTRUMENTED_JDK_RELATIVE_PATH = "jdk";
     private static final Logger log = LogManager.getLogger(StaticInstrumentationTransformer.class);
 
-    private final ClassFileLoader jarLoader;
-    private final AgentLoader agentLoader;
     private final PreprocessConfig config;
+    private final List<InstrumentationOutcome> sourcesFailedToBeInstrumented = new ArrayList<>();
+    private final List<InstrumentationOutcome> sourcesInstrumented = new ArrayList<>();
+    private final AgentLoader agentLoader;
+
+    @Singular
+    private final Map<Class<? extends ClassFileLoader>, ClassFileLoader> classFileLoaders;
+
+    @Getter
+    private final List<InstrumentationOutcome> allOutcomes = new ArrayList<>();
 
     /**
      * This method initiates the transformation process of all packages found under the provided paths. All Runtime exceptions
@@ -61,6 +75,7 @@ public class StaticInstrumentationTransformer {
      * and trigger the program to exit with status 1
      */
     public void transform() {
+        log.info("Initiating build time instrumentation...");
         if (config == null) {
             throw new InvalidConfigEntryException("No configuration provided", null);
         }
@@ -70,58 +85,87 @@ public class StaticInstrumentationTransformer {
         if (agentLoader == null) {
             throw new AgentLoaderNotProvidedException();
         }
-        if (jarLoader == null) {
-            throw new ClassFileLoaderNotProvidedException();
-        }
 
         agentLoader.loadAgent(config, new TransformerExtractor(Injector.createInstrumentation()));
 
-        log.info(PreprocessConstants.MESSAGE_PREFIX + TransformerExtractor.getTransformers().size() + " Installables loaded.");
+        processAllSources();
 
-        // Apply instrumentation on all loaded jars
-        for (final JarInfo info : jarLoader.load(config)) {
-            applyInstrumentation(info);
-        }
+        logInstrumentationSummary();
     }
 
     /**
-     * Triggers instrumentation of classes by invoking {@link ClassFileTransformer#transform(ClassLoader, String, Class, ProtectionDomain, byte[])} of
-     * all ClassFileTransformers extracted via a {@link TransformerExtractor} and saves the transformed byte code according to the provided {@link ExportStrategy export strategy}
-     * on a local file.
-     *
-     * @param jarInfo information of a loaded jar file such as all the class files it contains.
+     * Process all sources to be statically instrumented, including the JDK itself if path to java home is supplied.
      */
-    protected void applyInstrumentation(JarInfo jarInfo) {
-        log.info(PreprocessConstants.MESSAGE_PREFIX + "Applying transformation on: " + jarInfo.getFile().getAbsolutePath());
-        log.info(PreprocessConstants.MESSAGE_PREFIX + "Classes found: " + jarInfo.getClassByteCodeMap().size());
+    protected void processAllSources(){
+        final List<InstrumentationTask> tasks = new ArrayList<>();
 
-        for (Map.Entry<String, byte[]> entry : jarInfo.getClassByteCodeMap().entrySet()) {
-            try {
-                for (ClassFileTransformer transformer : TransformerExtractor.getTransformers()) {
-                    final String internalName = entry.getKey().replace('.','/');
-                    final byte[] bytecodeToTransform = getInstrumentedClasses().containsKey(internalName) ?
-                            getInstrumentedClasses().get(internalName).getClassBytes() : entry.getValue();
+        // each map entry represents a collection of sources to be processed that share the same relative output path. For example, a collection of Jars
+        // that will all end up in 'lib'.
+        for (final Map.Entry<String, Set<String>> entry : config.getSourcePaths().entrySet()) {
+            for (final String source : entry.getValue()) {
+                try {
+                    final Path pathToSrc = Paths.get(source);
+                    final Path actualPathToSrc = Files.isSymbolicLink(pathToSrc) ? Files.readSymbolicLink(pathToSrc) : pathToSrc;
+                    final Class<? extends ClassFileLoader> loaderType = actualPathToSrc.toFile().isFile() ? JarLoader.class : DirectoryLoader.class;
 
-                    transformer.transform(ClassLoader.getSystemClassLoader(), entry.getKey(), null, null, bytecodeToTransform);
+                    if (classFileLoaders.get(loaderType) != null) {
+                        tasks.add(new InstrumentationTask(classFileLoaders.get(loaderType), actualPathToSrc, config, entry.getKey()));
+                    } else {
+                        throw new InstrumentationException("Loader not provided: " + loaderType.getName());
+                    }
+
+                } catch (Exception e) {
+                    throw new InstrumentationException("Failed to configure loader for source: " + source, e);
                 }
-            } catch (IllegalClassFormatException e) {
-                throw new InstrumentationException("Failed to instrument : " + entry.getKey(), e);
             }
         }
 
-        log.debug(PreprocessConstants.MESSAGE_PREFIX + getInstrumentedClasses().size() + " classes transformed");
-        jarInfo.getExportStrategy().export(jarInfo, getInstrumentedClasses(), config);
+        if (config.getJdkPath() != null) {
+            tasks.add(new InstrumentationTask(new JDKModuleLoader(), Paths.get(config.getJdkPath()), config, INSTRUMENTED_JDK_RELATIVE_PATH));
+        }
 
-        // empty the map in preparation for transforming another package
-        getInstrumentedClasses().clear();
+        // process all created tasks
+        for (InstrumentationTask task : tasks) {
+            final InstrumentationOutcome outcome = task.applyInstrumentation();
+            allOutcomes.add(outcome);
+
+            if (outcome.getStatus().equals(Status.NO_OP)) {
+                continue;
+            }
+
+            if (outcome.hasFailed()) {
+                sourcesFailedToBeInstrumented.add(outcome);
+            } else {
+                sourcesInstrumented.add(outcome);
+            }
+        }
     }
 
     /**
-     * Fetches instrumented classes from the listener attached to all {@link software.amazon.disco.agent.interception.Installable installables}.
-     *
-     * @return a Map of class name as key and {@link InstrumentedClassState} as value
+     * Log Build-Time Instrumentation summary
      */
-    protected Map<String, InstrumentedClassState> getInstrumentedClasses() {
-        return TransformationListener.getInstrumentedTypes();
+    protected void logInstrumentationSummary() {
+        final boolean isVerbose = log.getLevel().isLessSpecificThan(Level.DEBUG);
+
+        log.info(PreprocessConstants.MESSAGE_PREFIX + "Build-Time Instrumentation summary:");
+        log.info(PreprocessConstants.MESSAGE_PREFIX + "Sources processed: " + allOutcomes.size());
+        log.info(PreprocessConstants.MESSAGE_PREFIX + "Sources instrumented: " + sourcesInstrumented.size());
+
+        if (isVerbose) {
+            for (InstrumentationOutcome outcome : sourcesInstrumented) {
+                log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
+            }
+        }
+
+        log.info(PreprocessConstants.MESSAGE_PREFIX + "Sources containing classes with unresolvable dependencies: " + sourcesFailedToBeInstrumented.size());
+
+        for (InstrumentationOutcome outcome : sourcesFailedToBeInstrumented) {
+            log.debug(PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
+            if (isVerbose) {
+                outcome.getFailedClasses().forEach(
+                    clazz -> log.debug(PreprocessConstants.MESSAGE_PREFIX + "\t+ " + clazz)
+                );
+            }
+        }
     }
 }

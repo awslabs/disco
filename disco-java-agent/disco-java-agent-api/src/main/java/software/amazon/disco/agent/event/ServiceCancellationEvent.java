@@ -13,6 +13,7 @@
  *   permissions and limitations under the License.
  */
 package software.amazon.disco.agent.event;
+
 /**
  * Specialization of ServiceEvent for service requests. Requests and Cancellations are dispatched separately,
  * Events are triggered before and after cancellation of request

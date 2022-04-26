@@ -1,5 +1,22 @@
+/*
+ * Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License").
+ *   You may not use this file except in compliance with the License.
+ *   A copy of the License is located at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   or in the "license" file accompanying this file. This file is distributed
+ *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ *   express or implied. See the License for the specific language governing
+ *   permissions and limitations under the License.
+ */
+
 package software.amazon.disco.agent.awsv1;
 
+import com.amazonaws.AmazonWebServiceRequest;
+import com.amazonaws.Request;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.method.MethodDescription;
@@ -36,42 +53,24 @@ public class AWSClientInvokeInterceptor implements Installable {
 
     /**
      * This method is inlined by ByteBuddy before the doInvoke() method inside each of the AWS clients.
-     * It reflectively acquires the service and operation names for the request, taking care to swallow and log
-     * any reflective exceptions. It uses the collected data to create a {@link ServiceDownstreamRequestEvent}
+     * It  acquires the service and operation names for the request, and uses the collected data to create a {@link ServiceDownstreamRequestEvent}
      * and publish it to the Disco event bus.
      *
      * @param request - The method signature of the intercepted call is:
-     *                  Response (DefaultRequest, HttpResponseHandler, ExecutionContext
+     *                  Response (Request, HttpResponseHandler, ExecutionContext
      *                  The first argument is the request object which is the argument we need.
      * @param origin - an identifier of the intercepted Method, for logging/debugging
      * @return - The Disco event created
      */
-    @Advice.OnMethodEnter
-    public static ServiceDownstreamRequestEvent enter(@Advice.Argument(0) final Object request,
-                                                      @Advice.Origin final String origin)
-    {
+    @Advice.OnMethodEnter(suppress = Throwable.class)
+    public static ServiceDownstreamRequestEvent enter(@Advice.Argument(0) final Request<?> request, @Advice.Origin final String origin) {
         if (LogManager.isDebugEnabled()) {
             log.debug("DiSCo(AWSv1) method interception of " + origin);
         }
 
-        String service = null;
-        String operation = null;
-
-        //Retrieve name of AWS service we are calling
-        try {
-            service = (String) request.getClass().getMethod("getServiceName").invoke(request);
-        } catch (Exception e) {
-            log.warn("Disco(AWSv1) failed to retrieve service name from AWS client request", e);
-        }
-
-
-        //Original request contains both the operation name and the request object
-        try {
-            Object originalRequest = request.getClass().getMethod("getOriginalRequest").invoke(request);
-            operation = originalRequest.getClass().getSimpleName().replace("Request", "");
-        } catch (Exception e) {
-            log.warn("Disco(AWSv1) failed to retrieve operation name from AWS client request", e);
-        }
+        String service = request.getServiceName();
+        AmazonWebServiceRequest originalRequest = request.getOriginalRequest();
+        String operation = originalRequest.getClass().getSimpleName().replace("Request", "");
 
         ServiceDownstreamRequestEvent requestEvent = new AwsV1ServiceDownstreamRequestEventImpl(AWS_V1_ORIGIN, service, operation);
         requestEvent.withRequest(request);
@@ -89,7 +88,7 @@ public class AWSClientInvokeInterceptor implements Installable {
      * @param response - The response returned from the AWS Client's request
      * @param thrown - The throwable thrown by the request, if any
      */
-    @Advice.OnMethodExit(onThrowable = Throwable.class)
+    @Advice.OnMethodExit(onThrowable = Throwable.class, suppress = Throwable.class)
     public static void exit(@Advice.Enter final ServiceDownstreamRequestEvent requestEvent,
                             @Advice.Return final Object response,
                             @Advice.Thrown final Throwable thrown)
@@ -114,7 +113,8 @@ public class AWSClientInvokeInterceptor implements Installable {
         return agentBuilder
                 .type(buildClassMatcher())
                 .transform(new AgentBuilder.Transformer.ForAdvice()
-                    .advice(buildMethodMatcher(), AWSClientInvokeInterceptor.class.getName()));
+                    .include(this.getClass().getClassLoader()) //ensure that bytebuddy can see this classloader, not just the destination class' classloader, when resolving types
+                    .advice(buildMethodMatcher(), this.getClass().getName()));
     }
 
     /**

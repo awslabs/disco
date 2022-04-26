@@ -24,11 +24,11 @@ import static software.amazon.disco.agent.event.AwsServiceDownstreamEvent.DataKe
  * Specialization of a ServiceDownstreamRequestEvent, to encapsulate data specific to Aws downstream call requests.
  * Implementation of inherited methods are in the disco-java-agent-aws package.
  */
-public abstract class AwsServiceDownstreamRequestEvent extends ServiceDownstreamRequestEvent implements AwsServiceDownstreamEvent, HeaderReplaceable {
+public abstract class AwsServiceDownstreamRequestEvent extends ServiceDownstreamRequestEvent implements AwsServiceDownstreamEvent, HeaderReplaceable, HeaderRetrievable {
     /**
      * Keys to use in the data map
      */
-    enum DataKey {
+    protected enum DataKey {
         /**
          * The region of the request
          */
@@ -56,7 +56,11 @@ public abstract class AwsServiceDownstreamRequestEvent extends ServiceDownstream
     /**
      * Retrieve the underlying Http header map for the outgoing request.
      * @return an immutable header map
+     *
+     * @deprecated deprecated in favour of {@link HeaderRetrievable} which should be used wherever possible instead.
      */
+    @Deprecated
+    @Override
     public Map<String, List<String>> getHeaderMap() {
         return (Map<String, List<String>>) getData(HEADER_MAP.name());
     }

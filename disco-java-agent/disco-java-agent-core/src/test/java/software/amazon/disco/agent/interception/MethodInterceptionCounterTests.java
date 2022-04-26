@@ -15,6 +15,7 @@
 
 package software.amazon.disco.agent.interception;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import software.amazon.disco.agent.interception.MethodInterceptionCounter;
@@ -35,38 +36,39 @@ public class MethodInterceptionCounterTests {
     public void testReferenceCounter() {
         int methodChained10Times = 10;
 
-        assertEquals(0, counter.getReferenceCounter().get());
+        assertEquals(0, counter.localReferenceCounter.get().get());
         assertFalse(counter.hasIntercepted());
 
         for (int i = 1; i <= methodChained10Times; i++) {
             counter.increment();
-            assertEquals(i, counter.getReferenceCounter().get());
+            assertEquals(i, counter.localReferenceCounter.get().get());
             assertTrue(counter.hasIntercepted());
         }
 
         for (int i = methodChained10Times; i > 0; i--) {
-            assertEquals(i, counter.getReferenceCounter().get());
+            assertEquals(i, counter.localReferenceCounter.get().get());
             assertTrue(counter.hasIntercepted());
             counter.decrement();
         }
 
-        assertEquals(0, counter.getReferenceCounter().get());
+        assertEquals(0, counter.localReferenceCounter.get().get());
         assertFalse(counter.hasIntercepted());
     }
 
     @Test
-    public void testDecrementAndIncrement() {
-        assertEquals(0, counter.getReferenceCounter().get());
+    public void testDecrementBelowZeroAndIncrement() {
+        assertEquals(0, counter.localReferenceCounter.get().get());
         assertFalse(counter.hasIntercepted());
 
-        counter.decrement();
+        int minusOne = counter.decrement();
+        Assert.assertEquals(-1, minusOne);
 
-        assertEquals(0, counter.getReferenceCounter().get());
+        assertEquals(0, counter.localReferenceCounter.get().get());
         assertFalse(counter.hasIntercepted());
 
         counter.increment();
 
-        assertEquals(1, counter.getReferenceCounter().get());
+        assertEquals(1, counter.localReferenceCounter.get().get());
         assertTrue(counter.hasIntercepted());
     }
 }

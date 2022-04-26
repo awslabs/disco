@@ -1,5 +1,29 @@
 # Change Log
 
+## Version 0.12.0 - 04/25/2022
+
+### Major new features
+
+* Introduced build-time instrumentation (BTI) feature under disco-java-agent-instrumentation-preprocess. BTI addresses issues caused by runtime instrumentation overhead such as longer startup time by instrumenting the JDK and all the dependencies at build-time instead.
+* Added `PluginClassLoader`. This is the new default class loader for loading Disco plugins.
+* Added a new plugin to support transaction context (TX) propagation for Kotlin coroutines.
+
+### Minor new features
+
+* Implemented `TrieNameMatcher` to match class name using Trie data structure.
+* Generated transaction ID using ThreadLocalRandom. The implementation is adapted from X-Ray SDK FastIdGenerator.
+* Provided timing metric to measure how long it take for Disco agent to start.
+* Disposed of Thread, ForkJoinPool, and ForkJoinTask interceptors after they are applied once. This is an optimization to bypass class matching for these named classes.
+
+### Bug fixes
+
+* Added check to prevent Disco agent to be loaded more than once.
+* Cleaned up ThreadLocal transaction context when the thread ends or is pushed back into the pool.
+* Fixed NPE when Thread is instantiated without a target.
+* Fixed ClassCircularityError when running with security manager. This is a known problem with ByteBuddy, since the [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-java-instrumentation/pull/4557) also encountered it.
+* Handled exceptions in Disco EventBus when listening to incoming events.
+* Upgraded to the latest `net.bytebuddy:byte-buddy-dep-1.12.6` and `org.ow2.asm:asm-9.2`.
+
 ## Version 0.11.0 - 04/07/2021
 
 * Added additional SQL interception support for prepared statements and calls [PR #16](https://github.com/awslabs/disco/pull/16)

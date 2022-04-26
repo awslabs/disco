@@ -19,7 +19,7 @@ package software.amazon.disco.agent.event;
  * An event that occurs after to serving a http, network request. This
  * event holds information about the result after serving that request.
  */
-public interface HttpNetworkProtocolResponseEvent extends NetworkProtocolResponseEvent {
+public interface HttpNetworkProtocolResponseEvent extends NetworkProtocolResponseEvent, HeaderRetrievable {
     /**
      * The HTTP status code
      * @return The http status code of the response.

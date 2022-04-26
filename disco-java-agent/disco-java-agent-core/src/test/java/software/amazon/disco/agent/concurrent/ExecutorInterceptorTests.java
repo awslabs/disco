@@ -17,7 +17,6 @@
 package software.amazon.disco.agent.concurrent;
 
 import software.amazon.disco.agent.concurrent.decorate.DecoratedRunnable;
-import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
@@ -69,23 +68,12 @@ public class ExecutorInterceptorTests {
 
     @Test
     public void testInstall() {
-        AgentBuilder agentBuilder = Mockito.mock(AgentBuilder.class);
-        AgentBuilder.RedefinitionListenable.WithoutBatchStrategy withoutBatchStrategy = Mockito.mock(AgentBuilder.RedefinitionListenable.WithoutBatchStrategy.class);
-        AgentBuilder.Identified.Extendable extendable = Mockito.mock(AgentBuilder.Identified.Extendable.class);
-        AgentBuilder.Identified.Narrowable narrowable = Mockito.mock(AgentBuilder.Identified.Narrowable.class);
-        Mockito.when(agentBuilder.with(Mockito.any(AgentBuilder.InitializationStrategy.class))).thenReturn(agentBuilder);
-        Mockito.when(agentBuilder.with(Mockito.any(AgentBuilder.RedefinitionStrategy.class))).thenReturn(withoutBatchStrategy);
-        Mockito.when(withoutBatchStrategy.with(Mockito.any(AgentBuilder.TypeStrategy.class))).thenReturn(agentBuilder);
-        Mockito.when(agentBuilder.type(Mockito.any(ElementMatcher.class))).thenReturn(narrowable);
-        Mockito.when(narrowable.transform(Mockito.any(AgentBuilder.Transformer.class))).thenReturn(extendable);
-        AgentBuilder result = new ExecutorInterceptor().install(agentBuilder);
-        Assert.assertEquals(extendable, result);
+        TestUtils.testInstallableCanBeInstalled(new ExecutorInterceptor());
     }
 
     @Test
     public void testExecuteAdvice() {
         ExecutorInterceptor.ExecuteAdvice.onMethodEnter(Mockito.mock(Runnable.class));
-        ExecutorInterceptor.ExecuteAdvice.onMethodExit(); //ensure interception counter is decremented
     }
 
     @Test
@@ -98,7 +86,6 @@ public class ExecutorInterceptorTests {
         Runnable r = Mockito.mock(Runnable.class);
         Runnable d = ExecutorInterceptor.ExecuteAdvice.methodEnter(r);
         Assert.assertTrue(d instanceof DecoratedRunnable);
-        ExecutorInterceptor.ExecuteAdvice.onMethodExit(); //ensure interception counter is decremented
     }
 }
 

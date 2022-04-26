@@ -15,6 +15,11 @@
 
 package software.amazon.disco.agent;
 
+import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.matcher.ElementMatcher;
+import net.bytebuddy.matcher.ElementMatchers;
+import software.amazon.disco.agent.concurrent.decorate.DecoratedRunnable;
+import software.amazon.disco.agent.concurrent.preprocess.DiscoRunnableDecorator;
 import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.config.AgentConfigParser;
 import software.amazon.disco.agent.interception.Installable;
@@ -24,9 +29,6 @@ import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.agent.logging.LoggerFactory;
 import software.amazon.disco.agent.plugin.PluginDiscovery;
 import software.amazon.disco.agent.plugin.PluginOutcome;
-import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.matcher.ElementMatcher;
-import net.bytebuddy.matcher.ElementMatchers;
 
 import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
@@ -80,6 +82,7 @@ public class DiscoAgentTemplate {
 
     /**
      * Set whether or not to allow a plugin search
+     *
      * @param allowPlugins true to allow plugins (which is the default), or false to prevent
      */
     public void setAllowPlugins(boolean allowPlugins) {
@@ -89,6 +92,7 @@ public class DiscoAgentTemplate {
     /**
      * Set an extra ignore rule for ByteBuddy, if you know of extra rules beyond the defaults that make sense for your
      * agent.
+     *
      * @param customIgnoreMatcher - an ignore matcher which will be logically OR'd with the default
      */
     public void setCustomIgnoreMatcher(ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
@@ -100,7 +104,7 @@ public class DiscoAgentTemplate {
      * boilerplate initialization common to both.
      *
      * @param instrumentation the Instrumentation object given to every Agent, to transform bytecode
-     * @param installables the agent supplies a collection of Installables to be installed.
+     * @param installables    the agent supplies a collection of Installables to be installed.
      * @return information about any loaded plugins
      */
     public Collection<PluginOutcome> install(Instrumentation instrumentation, Set<Installable> installables) {
@@ -111,8 +115,8 @@ public class DiscoAgentTemplate {
      * This method wraps installation of hooks on behalf of agents, performing default
      * boilerplate initialization common to both.
      *
-     * @param instrumentation the Instrumentation object given to every Agent, to transform bytecode
-     * @param installables the agent supplies a collection of Installables to be installed.
+     * @param instrumentation     the Instrumentation object given to every Agent, to transform bytecode
+     * @param installables        the agent supplies a collection of Installables to be installed.
      * @param customIgnoreMatcher an extra ignore rule to be OR'd with the default
      * @return information about any loaded plugins
      */
@@ -133,12 +137,15 @@ public class DiscoAgentTemplate {
         }
 
         //give each installable the chance to handle command line args
-        for (Installable installable: installables) {
+        for (Installable installable : installables) {
             log.info("DiSCo(Core) passing arguments to " + installable.getClass().getSimpleName() + " to process");
             installable.handleArguments(config.getArgs());
         }
 
         interceptionInstaller.install(instrumentation, installables, config, customIgnoreMatcher);
+
+        // sets the BiFunction to be indirectly invoked by Thread's intercepted 'start()' method to decorate its Runnable target.
+        DiscoRunnableDecorator.setDecorateFunction(new DecoratedRunnable.RunnableDecorateFunction());
 
         //after Installables have been installed, process the remaining plugin behaviour
         if (allowPlugins) {
@@ -150,6 +157,7 @@ public class DiscoAgentTemplate {
 
     /**
      * Get the AgentConfig for inspection if needed
+     *
      * @return the AgentConfig which was created via DiscoAgentTemplate construction
      */
     public AgentConfig getConfig() {
@@ -158,6 +166,7 @@ public class DiscoAgentTemplate {
 
     /**
      * For tests, override the interception installer
+     *
      * @param interceptionInstaller - a new (presumably mock) InterceptionInstaller to use
      * @return the previous InterceptionInstaller
      */
@@ -170,6 +179,7 @@ public class DiscoAgentTemplate {
     /**
      * Override the default AgentConfig behavior, which is to read from the command line, if there is an alternative source of configuration.
      * Must be called before constructing DiscoAgentTemplate.
+     *
      * @param factory the new supplier of an AgentConfig to use.
      */
     public static void setAgentConfigFactory(Supplier<AgentConfig> factory) {

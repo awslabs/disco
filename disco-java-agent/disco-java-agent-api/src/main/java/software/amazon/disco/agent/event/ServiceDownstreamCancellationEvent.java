@@ -13,6 +13,7 @@
  *   permissions and limitations under the License.
  */
 package software.amazon.disco.agent.event;
+
 /**
  * An event issued to the event bus when downstream service request is cancelled
  */

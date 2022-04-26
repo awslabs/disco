@@ -52,7 +52,7 @@ It's sometimes desirable to be able to interact with Disco's runtime, if a Disco
 
 For example, in client service code there may be a particular API where the service owners
 can elect a semantically meaningful value for the TransactionContext Transaction ID, instead of
-using the default UUID. If this service owner had a logging Agent built on disco, that might be
+using the default ID. If this service owner had a logging Agent built on disco, that might be
 a good tool for 'joining up' lines of log coming from various threads, but being able to have each
 line of log use a more suitable ID would be a benefit. In this case, client code may call:
 

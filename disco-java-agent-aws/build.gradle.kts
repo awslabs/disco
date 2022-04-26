@@ -19,7 +19,8 @@ plugins {
 }
 
 dependencies {
-    // Compile against AWS SDK V2, but we do not take a runtime dependency on it
+    // Compile against AWS SDKs, but we do not take a runtime dependency on them
+    compileOnly("com.amazonaws", "aws-java-sdk-core", "1.11.840")
     compileOnly("software.amazon.awssdk", "sdk-core", "2.13.76")
 
     implementation(project(":disco-java-agent-aws:disco-java-agent-aws-api"))
@@ -30,3 +31,12 @@ dependencies {
     testImplementation("com.amazonaws", "aws-java-sdk-sqs", "1.11.840")
     testImplementation("software.amazon.awssdk", "dynamodb", "2.13.76")
 }
+
+// For classes which need to be accessed in the context of the application code's classloader, they need to be injected/forced
+// into that classloader. They cannot be placed in the bootstrap classloader, nor any isolated/orphaned classloader, since they
+// either inherit from, or use, classes from the AWS SDK, which are assumed not to be present on the bootstrap classloader
+ext.set("classesToMove", arrayOf(
+        "software.amazon.disco.agent.awsv2.DiscoExecutionInterceptor",
+        "software.amazon.disco.agent.event.AwsServiceDownstreamRequestEventImpl",
+        "software.amazon.disco.agent.event.AwsServiceDownstreamResponseEventImpl"
+))

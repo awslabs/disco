@@ -16,6 +16,7 @@
 package software.amazon.disco.agent.integtest.concurrent;
 
 import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import software.amazon.disco.agent.integtest.concurrent.source.TestCallableFactory;
@@ -26,6 +27,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 // Specific tests for the additional public methods of the ScheduledThreadPoolExecutor
+@RunWith(Enclosed.class)
 public class ScheduledThreadPoolExecutorTests {
     @RunWith(Parameterized.class)
     public static class ScheduleRunnable extends ExecutorServiceTests.Base {

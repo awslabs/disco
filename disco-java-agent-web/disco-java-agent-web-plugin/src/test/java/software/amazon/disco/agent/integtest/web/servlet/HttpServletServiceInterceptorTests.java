@@ -15,11 +15,12 @@
 
 package software.amazon.disco.agent.integtest.web.servlet;
 
-import software.amazon.disco.agent.event.AbstractTransactionEvent;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.HttpNetworkProtocolRequestEvent;
 import software.amazon.disco.agent.event.HttpNetworkProtocolResponseEvent;
 import software.amazon.disco.agent.event.Listener;
+import software.amazon.disco.agent.event.TransactionBeginEvent;
+import software.amazon.disco.agent.event.TransactionEndEvent;
 import software.amazon.disco.agent.integtest.web.servlet.source.FakeChainedServiceCallServlet;
 import software.amazon.disco.agent.integtest.web.servlet.source.FakeOverriddenNestedServlet;
 import software.amazon.disco.agent.integtest.web.servlet.source.FakeOverriddenServlet;
@@ -51,13 +52,16 @@ public class HttpServletServiceInterceptorTests {
 
     @Before
     public void before() {
+        // ensure TX begins in a good state
+        Assert.assertFalse(TransactionContext.isWithinCreatedContext());
+
         request = Mockito.mock(HttpServletRequest.class);
         response = Mockito.mock(HttpServletResponse.class);
 
         // Required for servlet's service() calls
         Mockito.when(request.getMethod()).thenReturn("GET");
         Mockito.when(request.getProtocol()).thenReturn("HTTP/1.1");
-
+        Mockito.when(request.getRequestURL()).thenReturn(new StringBuffer("URI"));
         eventBusListener = new EventBusListener();
         EventBus.addListener(eventBusListener);
     }
@@ -65,7 +69,8 @@ public class HttpServletServiceInterceptorTests {
     @After
     public void after() {
         EventBus.removeListener(eventBusListener);
-        TransactionContext.clear();
+        // ensure TX is left in a good state
+        Assert.assertFalse(TransactionContext.isWithinCreatedContext());
     }
 
     @Test
@@ -89,10 +94,8 @@ public class HttpServletServiceInterceptorTests {
         // Confirm that the overridden service method was ran.
         Assert.assertTrue(servlet.didRunService());
 
-        // Ensure that we captured 2 events. Signifies that we matched it.
-        Assert.assertEquals(2, eventBusListener.events.size());
-        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
-        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
+        // Ensure that we captured 4 events. Signifies that we matched it.
+        testEvents();
     }
 
     @Test
@@ -105,12 +108,10 @@ public class HttpServletServiceInterceptorTests {
         // Ensure that the chain of "service()" methods were all called.
         Assert.assertEquals(1, indicator.size());
 
-        // Ensure that we captured only 2 events. Chained calls should not give us more events.
+        // Ensure that we captured only 4 events. Chained calls should not give us more events.
         // The matcher "shouldn't" capture the other events anyways, but as a sanity check,
         // it's always good to ensure that more events aren't added through chained calls.
-        Assert.assertEquals(2, eventBusListener.events.size());
-        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
-        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
+        testEvents();
     }
 
     @Test
@@ -118,10 +119,9 @@ public class HttpServletServiceInterceptorTests {
         FakeOverriddenNestedServlet servlet = new FakeOverriddenNestedServlet();
         servlet.service(request, response);
 
-        // Ensure that we captured only 2 events. Nested servlets reference count via the TX and only emit one pair of events
-        Assert.assertEquals(2, eventBusListener.events.size());
-        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
-        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
+        // Ensure that we captured only 4 events. Nested servlets reference count via the TX and only emit one pair of TX events
+        //and one pair of Service events
+        testEvents();
 
         // ensure TX is left in a good state
         Assert.assertFalse(TransactionContext.isWithinCreatedContext());
@@ -139,10 +139,9 @@ public class HttpServletServiceInterceptorTests {
             //fail() above if this was *not* thrown
         }
 
-        // Ensure that we captured only 2 events. Nested servlets reference count via the TX and only emit one pair of events
-        Assert.assertEquals(2, eventBusListener.events.size());
-        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
-        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
+        // Ensure that we captured only 4 events. Nested servlets reference count via the TX and only emit one pair of TX events
+        //and one pair of Service events
+        testEvents();
 
         // ensure TX is left in a good state
         Assert.assertFalse(TransactionContext.isWithinCreatedContext());
@@ -161,10 +160,8 @@ public class HttpServletServiceInterceptorTests {
             thrown = e;
         }
 
-        // Even though the service threw an exception, we still got http events.
-        Assert.assertEquals(2, eventBusListener.events.size());
-        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
-        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
+        // Even though the service threw an exception, we still got http and TX events.
+        testEvents();
     }
 
     // helper to test the same conditions for a variety of different concrete servlets
@@ -206,13 +203,11 @@ public class HttpServletServiceInterceptorTests {
         response = new HttpServletResponseWrapper(response);
         servlet.service(request, response);
 
-        // Ensure that we get only two events, even when a subclass and a superclass are both instrumented.
-        Assert.assertEquals(2, eventBusListener.events.size());
-        Assert.assertTrue(eventBusListener.events.get(0) instanceof HttpNetworkProtocolRequestEvent);
-        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolResponseEvent);
+        // Ensure that we get only 4 events, even when a subclass and a superclass are both instrumented.
+        testEvents();
 
-        HttpNetworkProtocolRequestEvent requestEvent = (HttpNetworkProtocolRequestEvent) eventBusListener.events.get(0);
-        HttpNetworkProtocolResponseEvent responseEvent = (HttpNetworkProtocolResponseEvent) eventBusListener.events.get(1);
+        HttpNetworkProtocolRequestEvent requestEvent = (HttpNetworkProtocolRequestEvent) eventBusListener.events.get(1);
+        HttpNetworkProtocolResponseEvent responseEvent = (HttpNetworkProtocolResponseEvent) eventBusListener.events.get(2);
 
         // Request Event assertions
         Assert.assertEquals(requestEvent, responseEvent.getHttpRequestEvent());
@@ -238,6 +233,14 @@ public class HttpServletServiceInterceptorTests {
         Assert.assertEquals(response.getHeader("more-custom-header"), responseEvent.getHeaderData("more-custom-header"));
     }
 
+    private void testEvents() {
+        Assert.assertEquals(4, eventBusListener.events.size());
+        Assert.assertTrue(eventBusListener.events.get(0) instanceof TransactionBeginEvent);
+        Assert.assertTrue(eventBusListener.events.get(1) instanceof HttpNetworkProtocolRequestEvent);
+        Assert.assertTrue(eventBusListener.events.get(2) instanceof HttpNetworkProtocolResponseEvent);
+        Assert.assertTrue(eventBusListener.events.get(3) instanceof TransactionEndEvent);
+    }
+
     class EventBusListener implements Listener {
         List<Event> events = new LinkedList<>();
         @Override
@@ -247,8 +250,7 @@ public class HttpServletServiceInterceptorTests {
 
         @Override
         public void listen(Event e) {
-            //ignore events of no concern to these tests
-            if (e instanceof AbstractTransactionEvent) {
+            if (!TransactionContext.isWithinCreatedContext()) {
                 return;
             }
             events.add(e);

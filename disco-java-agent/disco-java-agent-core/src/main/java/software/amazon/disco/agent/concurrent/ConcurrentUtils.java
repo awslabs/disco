@@ -35,7 +35,7 @@ public class ConcurrentUtils {
      * @param parentThreadId the threadId of the thread which created the object being passed across thread boundary
      * @param discoTransactionContext the parent's TransactionContext map.
      */
-    public static void set(long ancestralThreadId, long parentThreadId, ConcurrentMap<String, MetadataItem> discoTransactionContext) {
+    public static void enter(long ancestralThreadId, long parentThreadId, ConcurrentMap<String, MetadataItem> discoTransactionContext) {
         if (discoTransactionContext == null) {
             log.error("DiSCo(Core) could not propagate null context from thread id " + ancestralThreadId + " to thread id " + Thread.currentThread().getId());
             return;
@@ -49,12 +49,21 @@ public class ConcurrentUtils {
     }
 
     /**
-     * Clear the transaction context, if running in a child of the ancestral thread
+     * Signals that a sub-thread is exiting. If running in a child of the ancestral thread this method publishes the ThreadExitEvent
+     * as a pair with the ThreadEnterEvent emitted from enter(). To avoid unnecessary work, the TransactionContext itself is
+     * not cleared or removed unless explicitly requested. Since the thread's business logic is exiting at this time, the TX can be
+     * safely left in place, as nothing can reach it and inspect it. If this is the real end of the lifetime of a Thread, the
+     * Thread and Thread subclass interceptors will request removal of the ThreadLocal TransactionContext for garbage collection.
+     * If a reusable 'pooled' thread the TransactionContext will be refreshed to the correct state the next time this thread is
+     * subject to a call to enter() instead.
+     *
      * @param ancestralThreadId the threadId of the thread which created the TransactionContext for this family of threads
      * @param parentThreadId the threadId of the thread which created the object being passed across thread boundary
      * @param discoTransactionContext the parent's TransactionContext map.
+     * @param removeTransactionContext true if the TransactionContext ThreadLocal data should be removed for garbage collection
      */
-    public static void clear(long ancestralThreadId, long parentThreadId, ConcurrentMap<String, MetadataItem> discoTransactionContext) {
+    public static void exit(long ancestralThreadId, long parentThreadId,
+                            ConcurrentMap<String, MetadataItem> discoTransactionContext, boolean removeTransactionContext) {
         if (discoTransactionContext == null) {
             return;
         }
@@ -62,7 +71,10 @@ public class ConcurrentUtils {
         long thisThreadId = Thread.currentThread().getId();
         if (ancestralThreadId != thisThreadId && !isDiscoNullId(discoTransactionContext)) {
             EventBus.publish(new ThreadExitEvent("Concurrency", parentThreadId, Thread.currentThread().getId()));
-            TransactionContext.clear();
+        }
+
+        if (removeTransactionContext) {
+            TransactionContext.remove();
         }
     }
 

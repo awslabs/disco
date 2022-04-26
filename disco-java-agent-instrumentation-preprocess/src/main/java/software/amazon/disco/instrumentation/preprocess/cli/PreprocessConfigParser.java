@@ -20,9 +20,18 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.Level;
 import software.amazon.disco.instrumentation.preprocess.exceptions.ArgumentParserException;
+import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Parses command line arguments supplied to the preprocess tool.
@@ -45,46 +54,41 @@ public class PreprocessConfigParser {
         setupAcceptedFlags();
         PreprocessConfig.PreprocessConfigBuilder builder = PreprocessConfig.builder();
 
+        final LinkedList<String> argsToParse = new LinkedList(Arrays.asList(args));
         OptionToMatch flagBeingMatched = null;
 
-        for (String arg : args) {
+        while (!argsToParse.isEmpty()) {
+            final String arg = argsToParse.pop().trim();
             final String argLowered = arg.toLowerCase();
 
-            if (flagBeingMatched == null) {
-                // no previous flag found, expecting a flag
+            if (argLowered.startsWith("@")) {
+                // prepends args retrieved from response file in the beginning of the queue to respect order
+                argsToParse.addAll(0, readArgsFromFile(arg.substring(1)));
+                continue;
+            }
 
-                if (!ACCEPTED_FLAGS.containsKey(argLowered)) {
+            if (flagBeingMatched == null) {
+                // no previous flag found or previous flag already matched, expecting a new flag
+                final OptionToMatch option = ACCEPTED_FLAGS.get(argLowered);
+
+                if (option == null) {
                     throw new ArgumentParserException("Flag: [" + arg + "] is invalid");
                 }
 
-                final OptionToMatch option = ACCEPTED_FLAGS.get(argLowered);
                 if (option.hasArgument) {
-                    flagBeingMatched = ACCEPTED_FLAGS.get(argLowered);
+                    // parser is now expecting an argument in the next iteration
+                    flagBeingMatched = option;
                 } else {
                     processFlagWithNoArg(argLowered, builder);
                 }
             } else {
                 // previous flag still expecting an argument but another flag is discovered
-                if (ACCEPTED_FLAGS.containsKey(argLowered) && !flagBeingMatched.isMatched()) {
+                if (ACCEPTED_FLAGS.containsKey(argLowered)) {
                     throw new ArgumentParserException("Flag: [" + flagBeingMatched.getFlag() + "] requires an argument");
                 }
 
-                // a previously detected option that accepts multi values is now finished matching its arguments.
-                // and a new option is now being matched
-                if (ACCEPTED_FLAGS.containsKey(argLowered) && flagBeingMatched.isMatched()) {
-                    final OptionToMatch option = ACCEPTED_FLAGS.get(argLowered);
-
-                    if (option.hasArgument) {
-                        flagBeingMatched = option;
-                    } else {
-                        processFlagWithNoArg(argLowered, builder);
-                    }
-                    continue;
-                }
-
-                if (flagBeingMatched.hasArgument) {
-                    flagBeingMatched = matchArgWithFlag(flagBeingMatched, arg, builder);
-                }
+                matchArgWithFlag(flagBeingMatched, arg, builder);
+                flagBeingMatched = null;
             }
         }
 
@@ -100,38 +104,39 @@ public class PreprocessConfigParser {
      * Setups the map that contains all the accepted options of this CLI.
      */
     protected void setupAcceptedFlags() {
-        ACCEPTED_FLAGS.put("--help", new OptionToMatch("--help", false, false));
-        ACCEPTED_FLAGS.put("--verbose", new OptionToMatch("--verbose", false, false));
-        ACCEPTED_FLAGS.put("--silent", new OptionToMatch("--silent", false, false));
+        ACCEPTED_FLAGS.put("--help", new OptionToMatch("--help", false));
+        ACCEPTED_FLAGS.put("--verbose", new OptionToMatch("--verbose", false));
+        ACCEPTED_FLAGS.put("--extraverbose", new OptionToMatch("--extraverbose", false));
+        ACCEPTED_FLAGS.put("--silent", new OptionToMatch("--silent", false));
+        ACCEPTED_FLAGS.put("--failonunresolvabledependency", new OptionToMatch("--failonunresolvabledependency", false));
 
-        ACCEPTED_FLAGS.put("--outputdir", new OptionToMatch("--outputdir", true, false));
-        ACCEPTED_FLAGS.put("--jarpaths", new OptionToMatch("--jarpaths", true, true));
-        ACCEPTED_FLAGS.put("--agentpath", new OptionToMatch("--agentpath", true, false));
-        ACCEPTED_FLAGS.put("--serializationpath", new OptionToMatch("--serializationpath", true, false));
-        ACCEPTED_FLAGS.put("--suffix", new OptionToMatch("--suffix", true, false));
-        ACCEPTED_FLAGS.put("--javaversion", new OptionToMatch("--javaversion", true, false));
-        ACCEPTED_FLAGS.put("--agentarg", new OptionToMatch("--agentarg", true, false));
+        ACCEPTED_FLAGS.put("--outputdir", new OptionToMatch("--outputdir", true));
+        ACCEPTED_FLAGS.put("--sourcepaths", new OptionToMatch("--sourcepaths", true));
+        ACCEPTED_FLAGS.put("--agentpath", new OptionToMatch("--agentpath", true));
+        ACCEPTED_FLAGS.put("--serializationpath", new OptionToMatch("--serializationpath", true));
+        ACCEPTED_FLAGS.put("--suffix", new OptionToMatch("--suffix", true));
+        ACCEPTED_FLAGS.put("--javaversion", new OptionToMatch("--javaversion", true));
+        ACCEPTED_FLAGS.put("--agentarg", new OptionToMatch("--agentarg", true));
+        ACCEPTED_FLAGS.put("--jdksupport", new OptionToMatch("--jdksupport", true));
 
-        ACCEPTED_FLAGS.put("-out", new OptionToMatch("-out", true, false));
-        ACCEPTED_FLAGS.put("-jps", new OptionToMatch("-jps", true, true));
-        ACCEPTED_FLAGS.put("-ap", new OptionToMatch("-ap", true, false));
-        ACCEPTED_FLAGS.put("-sp", new OptionToMatch("-sp", true, false));
-        ACCEPTED_FLAGS.put("-suf", new OptionToMatch("-suf", true, false));
-        ACCEPTED_FLAGS.put("-jv", new OptionToMatch("-jv", true, false));
-        ACCEPTED_FLAGS.put("-arg", new OptionToMatch("-arg", true, false));
+        ACCEPTED_FLAGS.put("-out", new OptionToMatch("-out", true));
+        ACCEPTED_FLAGS.put("-sps", new OptionToMatch("-sps", true));
+        ACCEPTED_FLAGS.put("-ap", new OptionToMatch("-ap", true));
+        ACCEPTED_FLAGS.put("-sp", new OptionToMatch("-sp", true));
+        ACCEPTED_FLAGS.put("-suf", new OptionToMatch("-suf", true));
+        ACCEPTED_FLAGS.put("-jv", new OptionToMatch("-jv", true));
+        ACCEPTED_FLAGS.put("-arg", new OptionToMatch("-arg", true));
+        ACCEPTED_FLAGS.put("-jdks", new OptionToMatch("-jdks", true));
     }
 
     /**
-     * Matches the argument to the previously discovered flag. eg: [-out <arg to match>].
+     * Matches the argument to the previously discovered flag. eg: -out 'arg to match'.
      *
      * @param option   a valid option to be matched with an argument
      * @param argument argument to be matched to the flag
      * @param builder  {@link PreprocessConfig.PreprocessConfigBuilder builder} to build the {@link PreprocessConfig}
-     * @return the same {@link OptionToMatch} instance if the option accepts multiple values, null if option only accepts one value.
      */
-    protected OptionToMatch matchArgWithFlag(OptionToMatch option, String argument, PreprocessConfig.PreprocessConfigBuilder builder) {
-        OptionToMatch result = null;
-
+    protected void matchArgWithFlag(OptionToMatch option, String argument, PreprocessConfig.PreprocessConfigBuilder builder) {
         switch (option.getFlag().toLowerCase()) {
             case "-out":
             case "--outputdir":
@@ -141,11 +146,15 @@ public class PreprocessConfigParser {
             case "-sp":
                 builder.serializationJarPath(argument);
                 break;
-            case "-jps":
-            case "--jarpaths":
-                builder.jarPath(argument);
-                option.isMatched = true;
-                result = option;
+            case "-sps":
+            case "--sourcepaths":
+                final String[] segments = argument.split("@");
+
+                if (segments.length > 2) {
+                    throw new InvalidConfigEntryException("Invalid value provided for sourcePaths");
+                }
+
+                addToSourceMap(builder, segments.length == 1 ? "" : segments[1], segments[0].split(":"));
                 break;
             case "-ap":
             case "--agentpath":
@@ -163,15 +172,19 @@ public class PreprocessConfigParser {
             case "--javaversion":
                 builder.javaVersion(argument);
                 break;
+            case "-jdks":
+            case "--jdksupport":
+                builder.jdkPath(argument);
+                break;
             default:
                 // will never be invoked since flags are already validated.
         }
 
-        return result;
+        option.isMatched = true;
     }
 
     /**
-     * Matches the argument to the previously discovered flag. eg: [-out <arg to match>].
+     * Matches the argument to the previously discovered flag. eg: -out 'arg to match'.
      *
      * @param flag    a valid previously discovered flag
      * @param builder {@link PreprocessConfig.PreprocessConfigBuilder builder} to build the {@link PreprocessConfig}
@@ -182,13 +195,62 @@ public class PreprocessConfigParser {
                 // ignore this flag since its not supplied as the first arg.
                 break;
             case "--verbose":
-                builder.logLevel(Level.TRACE);
+                builder.logLevel(Level.DEBUG);
+                break;
+            case "--extraverbose":
+                builder.logLevel(Level.ALL);
                 break;
             case "--silent":
                 builder.logLevel(Level.OFF);
                 break;
+            case "--failonunresolvabledependency":
+                builder.failOnUnresolvableDependency(true);
+                break;
             default:
                 // will never be invoked since flags are already validated.
+        }
+    }
+
+    /**
+     * Extract the string content from a text file.
+     *
+     * @param filePath path to the text file
+     * @return an array of string args
+     */
+    protected List<String> readArgsFromFile(final String filePath) {
+        final File file = new File(filePath);
+        if (!file.exists() || file.isDirectory()) {
+            throw new ArgumentParserException("Invalid response file: " + filePath);
+        }
+
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            final StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+            }
+
+            return Arrays.asList(sb.toString().trim().split("\\s+"));
+        } catch (Throwable t) {
+            throw new ArgumentParserException("Failed to read options from response file: " + filePath);
+        }
+    }
+
+    /**
+     * Helper method to append sources to be processed to the existing map entry if exists.
+     *
+     * @param builder PreprocessConfigBuilder instance to be used to create the final config
+     * @param key     relative path where the transformed source file(s) will be stored
+     * @param sources sources to be processed
+     */
+    private void addToSourceMap(final PreprocessConfig.PreprocessConfigBuilder builder, final String key, final String[] sources) {
+        // Needs to build the config file in order to retrieve the corresponding map entry due to the lack of getters for builder
+        final Map<String, Set<String>> existingSources = builder.build().getSourcePaths();
+
+        if (existingSources.containsKey(key)) {
+            existingSources.get(key).addAll(Arrays.asList(sources));
+        } else {
+            builder.sourcePath(key, new HashSet<>(Arrays.asList(sources)));
         }
     }
 
@@ -201,7 +263,6 @@ public class PreprocessConfigParser {
     class OptionToMatch {
         final String flag;
         final boolean hasArgument;
-        final boolean acceptsMultiValues;
 
         boolean isMatched;
     }

@@ -17,17 +17,19 @@ package software.amazon.disco.instrumentation.preprocess.loaders.classfiles;
 
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 
-import java.util.List;
+import java.nio.file.Path;
 
 /**
  * Interface to load byte[] of compiled classes to be instrumented
  */
 public interface ClassFileLoader {
     /**
-     * Loads bytecode of classes and aggregate them into a single list of {@link JarInfo}.
+     * Loads bytecode of classes and aggregate them into a single instance of {@link SourceInfo}. If the original source path was
+     * a Symbolic link, the passed in 'path' param is the resolved file that the link was pointing to.
      *
-     * @param config a PreprocessConfig containing information to perform module instrumentation
-     * @return list of {@link JarInfo} loaded by this package loader. Empty if no modules found.
+     * @param path               path to the source to be statically instrumented
+     * @param config             a PreprocessConfig containing information to perform Build-Time Instrumentation
+     * @return an instance of {@link SourceInfo} loaded by this loader. null if no classes found.
      */
-    List<JarInfo> load(PreprocessConfig config);
+    SourceInfo load(Path path, PreprocessConfig config);
 }

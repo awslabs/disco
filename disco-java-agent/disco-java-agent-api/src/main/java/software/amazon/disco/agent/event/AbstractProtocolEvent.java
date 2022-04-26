@@ -15,7 +15,9 @@
 
 package software.amazon.disco.agent.event;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,7 +28,7 @@ public abstract class AbstractProtocolEvent extends AbstractEvent implements Pro
 
     public AbstractProtocolEvent(String origin) {
         super(origin);
-        withData(DataKey.HEADER_MAP.name(), new HashMap<String, String>());
+        withData(DataKey.HEADER_MAP.name(), new HashMap<String, List<String>>());
     }
 
     /**
@@ -44,9 +46,9 @@ public abstract class AbstractProtocolEvent extends AbstractEvent implements Pro
      *
      * @return the internal header map.
      */
-    protected Map<String, String> getHeaderMap() {
+    protected Map<String, List<String>> getHeaderMap() {
         @SuppressWarnings("unchecked")
-        Map<String, String> headerMap = (Map<String, String>) getData(DataKey.HEADER_MAP.name());
+        Map<String, List<String>> headerMap = (Map<String, List<String>>) getData(DataKey.HEADER_MAP.name());
         return headerMap;
     }
 
@@ -57,7 +59,11 @@ public abstract class AbstractProtocolEvent extends AbstractEvent implements Pro
      * @return the 'this' for method chaining
      */
     public AbstractProtocolEvent withHeaderMap(Map<String, String> inputMap) {
-        getHeaderMap().putAll(inputMap);
+        Map<String, List<String>> transformedInputMap = new HashMap<>();
+        for (Map.Entry<String, String> entry : inputMap.entrySet()) {
+            transformedInputMap.put(entry.getKey(), Collections.singletonList(entry.getValue()));
+        }
+        getHeaderMap().putAll(transformedInputMap);
         return this;
     }
 
@@ -74,18 +80,21 @@ public abstract class AbstractProtocolEvent extends AbstractEvent implements Pro
             // Retrieval will return null, so the listener will know it's unable to retrieve the data.
             return this;
         }
-        Map<String, String> headerMap = getHeaderMap();
-        headerMap.put(key, value);
+        Map<String, List<String>> headerMap = getHeaderMap();
+        headerMap.put(key, Collections.singletonList(value));
         return this;
     }
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated deprecated in favour of {@link HeaderRetrievable} which should be used wherever possible instead.
      */
+    @Deprecated
     @Override
     public String getHeaderData(String key) {
-        Map<String, String> headerMap = getHeaderMap();
-        return headerMap.get(key);
+        List<String> headers = getHeaderMap().get(key);
+        return headers !=null && !headers.isEmpty() ? headers.get(0) : null;
     }
 
 }

@@ -96,6 +96,17 @@ public class EventBusTests {
     }
 
     @Test
+    public void testPublishEventToMultipleListenersWhenFirstThrows() {
+        Listener listener1 = new ThrowingListener();
+        MyListener listener2 = new MyListener();
+        EventBus.addListener(listener1);
+        EventBus.addListener(listener2);
+        Event event = Mockito.mock(Event.class);
+        EventBus.publish(event);
+        Assert.assertEquals(event, listener2.received);
+    }
+
+    @Test
     public void testPresentListenerIsPresent() {
         Listener listener = Mockito.mock(Listener.class);
         Mockito.when(listener.getPriority()).thenReturn(0);
@@ -133,6 +144,18 @@ public class EventBusTests {
         @Override
         public void listen(Event event) {
             received = event;
+        }
+    }
+
+    class ThrowingListener implements Listener {
+        @Override
+        public int getPriority() {
+            return 0;
+        }
+
+        @Override
+        public void listen(Event event) {
+            throw new RuntimeException();
         }
     }
 }

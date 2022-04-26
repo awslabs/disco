@@ -18,6 +18,7 @@ package software.amazon.disco.instrumentation.preprocess.loaders.agents;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.ClassFileVersion;
 import net.bytebuddy.agent.builder.AgentBuilder;
+import net.bytebuddy.pool.TypePool;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.disco.agent.DiscoAgentTemplate;
@@ -32,6 +33,8 @@ import software.amazon.disco.instrumentation.preprocess.instrumentation.Transfor
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.lang.instrument.Instrumentation;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
 
 /**
@@ -63,10 +66,12 @@ public class DiscoAgentLoader implements AgentLoader {
 
         // AgentConfig passed here as String will be ignored by Disco core if AgentConfigFactory is set
         Injector.loadAgent(
-                instrumentation,
-                config.getAgentPath(),
-                null
+            instrumentation,
+            config.getAgentPath(),
+            null
         );
+
+        log.info(PreprocessConstants.MESSAGE_PREFIX + TransformerExtractor.getTransformers().size() + " Installables loaded.");
     }
 
     /**
@@ -106,9 +111,14 @@ public class DiscoAgentLoader implements AgentLoader {
      * @return an AgentBuilder transformer suitable for the code InterceptionInstaller.
      */
     private BiFunction<AgentBuilder, Installable, AgentBuilder> getAgentBuilderTransformer(ClassFileVersion version) {
+        final ConcurrentMap<ClassLoader, TypePool.CacheProvider> typePoolCache = new ConcurrentHashMap<>();
+        typePoolCache.put(getClass().getClassLoader(), new TypePool.CacheProvider.Simple());
+
         return (agentBuilder, installable) -> agentBuilder
-                .with(new ByteBuddy(version))
-                .with(new TransformationListener(uuidGenerate(installable)));
+            .with(new ByteBuddy(version))
+            .with(new TransformationListener(uuidGenerate(installable)))
+            .with(new AgentBuilder.PoolStrategy.WithTypePoolCache.Simple(typePoolCache))
+            .with(AgentBuilder.InitializationStrategy.NoOp.INSTANCE);
     }
 }
 

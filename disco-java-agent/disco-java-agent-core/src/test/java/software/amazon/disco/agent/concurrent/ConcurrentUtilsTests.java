@@ -47,11 +47,11 @@ public class ConcurrentUtilsTests {
     }
 
     @Test
-    public void testSet() {
+    public void testEnter() {
         ConcurrentMap<String, MetadataItem> transactionContext = new ConcurrentHashMap<>();
         transactionContext.put(TransactionContext.TRANSACTION_ID_KEY, new MetadataItem("id"));
         transactionContext.put("foo", new MetadataItem("bar"));
-        ConcurrentUtils.set(-1, 0, transactionContext);
+        ConcurrentUtils.enter(-1, 0, transactionContext);
         Assert.assertEquals("bar", TransactionContext.getMetadata("foo"));
         Assert.assertEquals(1, listener.received.size());
         Event event = listener.received.iterator().next();
@@ -62,11 +62,28 @@ public class ConcurrentUtilsTests {
     }
 
     @Test
-    public void testClear() {
+    public void testExit() {
         ConcurrentMap<String, MetadataItem> transactionContext = new ConcurrentHashMap<>();
-        transactionContext.put(TransactionContext.TRANSACTION_ID_KEY, new MetadataItem("id"));
-        transactionContext.put("foo", new MetadataItem("bar"));
-        ConcurrentUtils.clear(-1, 0, transactionContext);
+        TransactionContext.set("id");
+        TransactionContext.putMetadata("foo", "bar");
+        ConcurrentUtils.exit(-1, 0, TransactionContext.getPrivateMetadata(), false);
+        Assert.assertEquals("id", TransactionContext.get());
+        Assert.assertEquals("bar", TransactionContext.getMetadata("foo"));
+        Assert.assertEquals(1, listener.received.size());
+        Event event = listener.received.iterator().next();
+        Assert.assertEquals(ThreadExitEvent.class, event.getClass());
+        ThreadEvent threadEvent = (ThreadEvent)event;
+        Assert.assertEquals(0, threadEvent.getParentId());
+        Assert.assertEquals(Thread.currentThread().getId(), threadEvent.getChildId());
+    }
+
+    @Test
+    public void testExitAndRemove() {
+        ConcurrentMap<String, MetadataItem> transactionContext = new ConcurrentHashMap<>();
+        TransactionContext.set("id");
+        TransactionContext.putMetadata("foo", "bar");
+        ConcurrentUtils.exit(-1, 0, TransactionContext.getPrivateMetadata(), true);
+        Assert.assertEquals("disco_null_id", TransactionContext.get());
         Assert.assertNull(TransactionContext.getMetadata("foo"));
         Assert.assertEquals(1, listener.received.size());
         Event event = listener.received.iterator().next();
@@ -77,46 +94,46 @@ public class ConcurrentUtilsTests {
     }
 
     @Test
-    public void testSetWithNullContext() {
-        ConcurrentUtils.set(-1, 0, null);
+    public void testEnterWithNullContext() {
+        ConcurrentUtils.enter(-1, 0, null);
         Assert.assertTrue(listener.received.isEmpty());
     }
 
     @Test
-    public void testClearWithNullContext() {
-        ConcurrentUtils.clear(-1, 0, null);
+    public void testExitWithNullContext() {
+        ConcurrentUtils.exit(-1, 0, null, false);
         Assert.assertTrue(listener.received.isEmpty());
     }
 
     @Test
-    public void testSetWithDefaultContext() {
+    public void testEnterWithDefaultContext() {
         ConcurrentMap<String, MetadataItem> transactionContext = new ConcurrentHashMap<>();
         transactionContext.put(TransactionContext.TRANSACTION_ID_KEY, new MetadataItem(TransactionContext.getUninitializedTransactionContextValue()));
-        ConcurrentUtils.set(-1, 0, transactionContext);
+        ConcurrentUtils.enter(-1, 0, transactionContext);
         Assert.assertTrue(listener.received.isEmpty());
     }
 
     @Test
-    public void testClearWithDefaultContext() {
+    public void testExitWithDefaultContext() {
         ConcurrentMap<String, MetadataItem> transactionContext = new ConcurrentHashMap<>();
         transactionContext.put(TransactionContext.TRANSACTION_ID_KEY, new MetadataItem(TransactionContext.getUninitializedTransactionContextValue()));
-        ConcurrentUtils.clear(-1, 0, transactionContext);
+        ConcurrentUtils.exit(-1, 0, transactionContext, false);
         Assert.assertTrue(listener.received.isEmpty());
     }
 
     @Test
-    public void testSetWithSameThreadId() {
+    public void testEnterWithSameThreadId() {
         ConcurrentMap<String, MetadataItem> transactionContext = new ConcurrentHashMap<>();
         transactionContext.put(TransactionContext.TRANSACTION_ID_KEY, new MetadataItem("id"));
-        ConcurrentUtils.set(Thread.currentThread().getId(), 0, transactionContext);
+        ConcurrentUtils.enter(Thread.currentThread().getId(), 0, transactionContext);
         Assert.assertTrue(listener.received.isEmpty());
     }
 
     @Test
-    public void testClearWithSameThreadId() {
+    public void testExitWithSameThreadId() {
         ConcurrentMap<String, MetadataItem> transactionContext = new ConcurrentHashMap<>();
         transactionContext.put(TransactionContext.TRANSACTION_ID_KEY, new MetadataItem("id"));
-        ConcurrentUtils.clear(Thread.currentThread().getId(), 0, transactionContext);
+        ConcurrentUtils.exit(Thread.currentThread().getId(), 0, transactionContext, false);
         Assert.assertTrue(listener.received.isEmpty());
     }
 

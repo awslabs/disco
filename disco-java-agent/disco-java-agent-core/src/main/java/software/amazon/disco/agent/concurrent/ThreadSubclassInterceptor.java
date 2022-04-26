@@ -15,13 +15,15 @@
 
 package software.amazon.disco.agent.concurrent;
 
-import software.amazon.disco.agent.concurrent.decorate.DecoratedThread;
-import software.amazon.disco.agent.interception.Installable;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
+import software.amazon.disco.agent.concurrent.decorate.DecoratedThread;
+import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.agent.logging.LogManager;
+import software.amazon.disco.agent.logging.Logger;
 
 import java.lang.reflect.Modifier;
 
@@ -33,6 +35,7 @@ import static net.bytebuddy.matcher.ElementMatchers.*;
  */
 class ThreadSubclassInterceptor implements Installable {
     public static final String DISCO_DECORATION_FIELD_NAME = "discoDecoration";
+    public static Logger log = LogManager.getLogger(ThreadSubclassInterceptor.class);
 
     /**
      * {@inheritDoc}
@@ -69,8 +72,11 @@ class ThreadSubclassInterceptor implements Installable {
          */
         public static DecoratedThread methodEnter() {
             try {
-                return new DecoratedThread();
+                DecoratedThread decoratedThread = new DecoratedThread();
+                decoratedThread.removeTransactionContext(true);
+                return decoratedThread;
             } catch (Exception e) {
+                log.error("DiSCo(Concurrency) unable to propagate context in Thread subclass", e);
                 return null;
             }
         }
@@ -95,9 +101,11 @@ class ThreadSubclassInterceptor implements Installable {
          */
         public static void methodEnter(DecoratedThread discoDecoration) {
             try {
-                discoDecoration.before();
+                if (discoDecoration != null) {
+                    discoDecoration.before();
+                }
             } catch (Exception e) {
-
+                log.error("DiSCo(Concurrency) unable to propagate context in Thread subclass", e);
             }
         }
 
@@ -116,20 +124,23 @@ class ThreadSubclassInterceptor implements Installable {
          */
         public static void methodExit(DecoratedThread discoDecoration) {
             try {
-                discoDecoration.after();
+                if (discoDecoration != null) {
+                    discoDecoration.after();
+                }
             } catch (Exception e) {
-
+                log.error("DiSCo(Concurrency) unable to propagate context in Thread subclass", e);
             }
         }
     }
 
     /**
-     * Create a type matcher which will match against any subclass of Thread, but not Thread itself
+     * Create a type matcher which will match against any subclass of Thread, but not Thread itself as well as subclasses
+     * under java.lang.ref since they are used by the jvm for garbage collection related tasks.
      * @return a type matcher per the above
      */
     static ElementMatcher.Junction<? super TypeDescription> createThreadSubclassTypeMatcher() {
         return hasSuperType(named("java.lang.Thread"))
-            .and(not(named("java.lang.Thread")));
+            .and(not(named("java.lang.Thread").or(nameStartsWith("java.lang.ref"))));
     }
 
     /**

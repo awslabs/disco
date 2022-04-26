@@ -15,7 +15,10 @@
 
 package software.amazon.disco.agent.event;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * A concrete implementation of the HttpNetworkProtocolRequestEvent to express
@@ -134,10 +137,38 @@ public class HttpServletNetworkRequestEvent extends AbstractNetworkProtocolReque
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated deprecated in favour of {@link HeaderRetrievable} which should be used wherever possible instead.
      */
+    @Deprecated
     @Override
     public String getHeaderData(String key) {
         return super.getHeaderData(key);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getFirstHeader(String key) {
+        List<String> headers = getHeaders(key);
+        return headers !=null && !headers.isEmpty() ? headers.get(0) : null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<String> getHeaders(String key) {
+        return getAllHeaders().get(key);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<String, List<String>> getAllHeaders() {
+        return getHeaderMap();
     }
 
     /**

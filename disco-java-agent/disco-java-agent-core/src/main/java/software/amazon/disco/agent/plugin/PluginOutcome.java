@@ -18,7 +18,6 @@ package software.amazon.disco.agent.plugin;
 import software.amazon.disco.agent.event.Listener;
 import software.amazon.disco.agent.interception.Installable;
 
-import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -28,7 +27,7 @@ import java.util.List;
  */
 public class PluginOutcome {
     public final String name;
-    public boolean bootstrap;
+    public ClassLoaderType classLoaderType;
     public Class<?> initClass;
     public List<Listener> listeners;
     public List<Installable> installables;

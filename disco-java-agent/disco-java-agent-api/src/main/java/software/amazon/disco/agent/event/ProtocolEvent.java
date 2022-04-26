@@ -35,7 +35,10 @@ public interface ProtocolEvent extends Event {
      * Get the value of header information tied to this event.
      * @param key the name of the header
      * @return the header value associated with the key.
+     *
+     * @deprecated deprecated in favour of {@link HeaderRetrievable} which should be used wherever possible instead.
      */
+    @Deprecated
     String getHeaderData(String key);
 
     /**

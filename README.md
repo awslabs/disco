@@ -88,8 +88,8 @@ is passed from thread to thread at the time of thread handoff (e.g. when calling
 or someExecutor.submit(), or when using a Java 8 parallel stream), by the 'forking' thread
 giving the 'forked' thread access to its Transaction Context data store.
 
-By default, upon creation, the Transaction Context always contains a randomly 
-allocated UUID as a Transaction ID. This can be overridden by plugins or 
+By default, upon creation, the Transaction Context always contains a 96 bit random number
+formatted as a hexadecimal string as a Transaction ID. This can be overridden by plugins or
 client code if desirable, and any other arbitrary data may also be added at
 any point in the lifetime of the service activity. Once the data is placed
 in the Transaction Context, it becomes available across the activity's family
@@ -180,7 +180,7 @@ Disco packages easier.
         <dependency>
             <groupId>software.amazon.disco</groupId>
             <artifactId>disco-toolkit-bom</artifactId>
-            <version>0.11.0</version>
+            <version>0.12.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -197,14 +197,14 @@ Disco packages easier.
 
 #### Using Gradle's default DSL
 ```groovy
-implementation platform('software.amazon.disco:disco-toolkit-bom:0.11.0')
+implementation platform('software.amazon.disco:disco-toolkit-bom:0.12.0')
 implementation 'software.amazon.disco:disco-java-agent-api'
 // Other disco dependencies
 ```
 
 #### Using Gradle's Kotlin DSL
 ```kotlin
-implementation(platform("software.amazon.disco:disco-toolkit-bom:0.11.0"))
+implementation(platform("software.amazon.disco:disco-toolkit-bom:0.12.0"))
 implementation("software.amazon.disco:disco-java-agent-api")
 // Other disco dependencies
 ```

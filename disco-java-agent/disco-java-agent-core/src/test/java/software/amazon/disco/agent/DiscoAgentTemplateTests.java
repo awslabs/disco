@@ -17,6 +17,8 @@ package software.amazon.disco.agent;
 
 import org.mockito.Spy;
 import software.amazon.disco.agent.concurrent.TransactionContext;
+import software.amazon.disco.agent.concurrent.decorate.DecoratedRunnable;
+import software.amazon.disco.agent.concurrent.preprocess.DiscoRunnableDecorator;
 import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.interception.InterceptionInstaller;
@@ -35,6 +37,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.lang.instrument.Instrumentation;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -65,7 +68,6 @@ public class DiscoAgentTemplateTests {
         TransactionContext.clear();
         DiscoAgentTemplate.setAgentConfigFactory(null);
     }
-
 
     @Test
     public void testRuntimeOnly() {
@@ -118,6 +120,19 @@ public class DiscoAgentTemplateTests {
         Mockito.verify(factory).get();
         Assert.assertNotNull(DiscoAgentTemplate.getAgentConfigFactory());
         Assert.assertSame(args, template.config.getArgs());
+    }
+
+    @Test
+    public void testSetDecorateFunction() {
+        DiscoRunnableDecorator.setDecorateFunction(null);
+        Runnable runnable = Mockito.mock(Runnable.class);
+
+        // ensure that the decorate function was indeed set to null since Runnable was not decorated
+        Assert.assertSame(runnable, DiscoRunnableDecorator.maybeDecorate(runnable));
+
+        install(createDiscoAgentTemplate(), Collections.emptySet());
+
+        Assert.assertTrue(DiscoRunnableDecorator.maybeDecorate(runnable) instanceof DecoratedRunnable);
     }
 
     private DiscoAgentTemplate createDiscoAgentTemplate(String... args) {

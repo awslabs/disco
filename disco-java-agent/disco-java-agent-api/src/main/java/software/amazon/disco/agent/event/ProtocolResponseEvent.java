@@ -20,7 +20,7 @@ package software.amazon.disco.agent.event;
  * before and after the actual invocation of the intercepted behavior occurs. At the protocol-level,
  * the requester can be seen as the invoker, and the response is the result of the invocation.
  */
-public interface ProtocolResponseEvent extends Event {
+public interface ProtocolResponseEvent extends ProtocolEvent {
     ProtocolRequestEvent getProtocolRequestEvent();
 
     /**

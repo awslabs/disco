@@ -20,8 +20,6 @@ import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.utility.JavaModule;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InstrumentationException;
 
 import java.util.HashMap;
@@ -33,8 +31,7 @@ import java.util.Map;
  */
 public class TransformationListener implements AgentBuilder.Listener {
     @Getter
-    private final static Map<String, InstrumentedClassState> instrumentedTypes = new HashMap<>();
-    private final static Logger log = LogManager.getLogger(TransformationListener.class);
+    private final static Map<String, InstrumentationArtifact> instrumentedTypes = new HashMap<>();
     private final String uid;
 
     /**
@@ -93,12 +90,12 @@ public class TransformationListener implements AgentBuilder.Listener {
         if (instrumentedTypes.containsKey(typeDescription.getInternalName())) {
             instrumentedTypes.get(typeDescription.getInternalName()).update(uid, dynamicType.getBytes());
         } else {
-            instrumentedTypes.put(typeDescription.getInternalName(), new InstrumentedClassState(uid, dynamicType.getBytes()));
+            instrumentedTypes.put(typeDescription.getInternalName(), new InstrumentationArtifact(uid, dynamicType.getBytes()));
         }
 
         if (!dynamicType.getAuxiliaryTypes().isEmpty()) {
             for (Map.Entry<TypeDescription, byte[]> auxiliaryEntry : dynamicType.getAuxiliaryTypes().entrySet()) {
-                instrumentedTypes.put(auxiliaryEntry.getKey().getInternalName(), new InstrumentedClassState(null, auxiliaryEntry.getValue()));
+                instrumentedTypes.put(auxiliaryEntry.getKey().getInternalName(), new InstrumentationArtifact(null, auxiliaryEntry.getValue()));
             }
         }
     }

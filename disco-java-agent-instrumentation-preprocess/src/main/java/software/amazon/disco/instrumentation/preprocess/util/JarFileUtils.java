@@ -15,7 +15,7 @@
 
 package software.amazon.disco.instrumentation.preprocess.util;
 
-import software.amazon.disco.instrumentation.preprocess.exceptions.JarEntryReadException;
+import software.amazon.disco.instrumentation.preprocess.exceptions.JarEntryCopyException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -34,7 +34,7 @@ public class JarFileUtils {
      * @param jarfile JarFile where the binary data will be read
      * @param entry   JarEntry to be read
      * @return byte[] of the entry
-     * @throws JarEntryReadException
+     * @throws JarEntryCopyException
      */
     public static byte[] readEntryFromJar(JarFile jarfile, JarEntry entry) {
         try (final InputStream entryStream = jarfile.getInputStream(entry)) {
@@ -47,7 +47,7 @@ public class JarFileUtils {
             return os.toByteArray();
 
         } catch (IOException e) {
-            throw new JarEntryReadException(entry.getName(), e);
+            throw new JarEntryCopyException(entry.getName(), e);
         }
     }
 }

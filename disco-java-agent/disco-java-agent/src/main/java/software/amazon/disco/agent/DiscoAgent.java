@@ -19,6 +19,7 @@ import software.amazon.disco.agent.concurrent.ConcurrencySupport;
 import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
+import software.amazon.disco.agent.metrics.DiscoAgentMetrics;
 import software.amazon.disco.agent.plugin.PluginOutcome;
 
 import java.lang.instrument.Instrumentation;
@@ -37,6 +38,8 @@ import java.util.List;
  * since the core concurrency treatments are inoperable otherwise. See this module's build.gradle.kts.
  */
 public class DiscoAgent {
+    private static boolean agentPresent = false;
+
     private static Logger log = LogManager.getLogger(DiscoAgent.class);
     /**
      * Entry point when agent is loaded from the command line via a "-javaagent" argument. This is also the method called when
@@ -76,6 +79,16 @@ public class DiscoAgent {
      */
     private static void impl(String agentArgs, Instrumentation instrumentation) {
         log.info("DiSCo(Agent) starting agent");
+
+        if (agentPresent) {
+            logUrgentMessage("Disco(Agent) detected that this Disco agent is already loaded. Refusing to load again to prevent potentially harmful repeated instrumentation.\n" +
+                    "Please double check the arguments passed to java, and any use of the Injector.loadAgent() methods to ensure that the agent is specified exactly once.\n" +
+                    "This instance of the Agent will now exit without side effects.");
+            return;
+        }
+        agentPresent = true;
+        DiscoAgentMetrics.setAgentStartTime();
+
         DiscoAgentTemplate agent = new DiscoAgentTemplate(agentArgs);
 
         AgentConfig config = agent.getConfig();
@@ -91,7 +104,7 @@ public class DiscoAgent {
         Collection<PluginOutcome> outcomes = agent.install(instrumentation, new HashSet<>(new ConcurrencySupport().get())/*, myIgnoreMatcher */);
         dump(outcomes);
 
-        log.info("DiSCo(Agent) agent startup complete");
+        log.info("DiSCo(Agent) agent startup complete in " + DiscoAgentMetrics.getAgentUptime());
     }
 
     /**
@@ -106,7 +119,7 @@ public class DiscoAgent {
             StringBuilder builder = new StringBuilder();
             builder.append("DiSCo(Agent) Plugin name: ").append(outcome.name).append("\n");
 
-            builder.append("\tBootstrap: ").append(outcome.bootstrap ? "yes" : "no").append("\n");
+            builder.append("\tPlugin ClassLoader: ").append(outcome.classLoaderType).append("\n");
 
             if (outcome.initClass != null) {
                 builder.append("\tInit: ").append(outcome.initClass.getName()).append("\n");
@@ -126,5 +139,16 @@ public class DiscoAgent {
 
             log.info(builder.toString());
         }
+    }
+
+    /**
+     * For urgent messages during Agent startup, we log to the normal logger, but also to STDOUT. The rationale being that
+     * in many Disco installations, no Logger will be present since it is an optional plugin. Logging to STDOUT in addition
+     * gives the best chance of that message at least going somewhere, e.g. Cloudwatch logs.
+     * @param message the message to log
+     */
+    private static void logUrgentMessage(String message) {
+        log.warn(message);
+        System.out.println(message);
     }
 }

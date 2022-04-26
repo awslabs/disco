@@ -102,4 +102,31 @@ public class AwsServiceDownstreamRequestEventImpl extends AwsServiceDownstreamRe
         this.withHeaderMap(this.sdkHttpRequest.headers());
         return this.getHeaderMap() != null;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getFirstHeader(String key) {
+        List<String> headers = getHeaders(key);
+        return headers !=null && !headers.isEmpty() ? headers.get(0) : null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<String> getHeaders(String key) {
+        return getAllHeaders().get(key);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<String, List<String>> getAllHeaders() {
+        @SuppressWarnings("unchecked")
+        Map<String, List<String>> headerMap = (Map<String, List<String>>) getData(HEADER_MAP.name());
+        return headerMap;
+    }
 }

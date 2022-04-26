@@ -22,7 +22,8 @@ plugins {
 tasks.shadowJar  {
     manifest {
         attributes(mapOf(
-            "Disco-Installable-Classes" to "software.amazon.disco.agent.AWSSupport"
+            "Disco-Installable-Classes" to "software.amazon.disco.agent.AWSSupport",
+            "Disco-Classloader" to "bootstrap"
         ))
     }
 }

@@ -19,7 +19,7 @@ package software.amazon.disco.agent.event;
  * An event that occurs prior to serving a http, network request. This
  * event holds pertinent http data that identifies a specific request.
  */
-public interface HttpNetworkProtocolRequestEvent extends NetworkProtocolRequestEvent {
+public interface HttpNetworkProtocolRequestEvent extends NetworkProtocolRequestEvent, HeaderRetrievable {
      /**
      * Common HTTP metadata: return the date entry from the header.
      * @return The date value

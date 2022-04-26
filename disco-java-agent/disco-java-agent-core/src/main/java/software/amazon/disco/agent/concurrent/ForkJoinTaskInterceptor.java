@@ -37,12 +37,9 @@ import static software.amazon.disco.agent.concurrent.decorate.DecoratedForkJoinT
  * ForkJoinPool and ForkJoinTask are a related pair of Java features for dispatching work to pools of threads
  *
  * For ForkJoinTask, although it has an API surface consisting of many public methods which request thread
- * delegation, the fork() method is the common denominator. All ForkJoinTasks must implement exec(), which is the
- * method called to actually perform the work, and the method which may therefore be in a different thread than that
- * in which fork() was invoked.
+ * delegation, the fork() method is the common denominator.
  *
- * We hook the fork() method, to populate the DiSCo metadata fields, and the exec() method to consider them
- * for propagation into the new thread context.
+ * We hook the fork() method, to populate the DiSCo metadata fields.
  */
 class ForkJoinTaskInterceptor implements Installable {
     public static Logger log = LogManager.getLogger(ForkJoinTaskInterceptor.class);
@@ -74,12 +71,6 @@ class ForkJoinTaskInterceptor implements Installable {
 
                         .method(createForkMethodMatcher())
                         .intercept(Advice.to(ForkAdvice.class))
-                )
-
-                .type(createForkJoinTaskSubclassTypeMatcher())
-                .transform((builder, typeDescription, classLoader, module) -> builder
-                        .method(createExecMethodMatcher())
-                            .intercept(Advice.to(ExecAdvice.class))
                 );
     }
 
@@ -105,58 +96,7 @@ class ForkJoinTaskInterceptor implements Installable {
                 DecoratedForkJoinTask.Accessor accessor = (DecoratedForkJoinTask.Accessor)task;
                 accessor.setDiscoDecoration(DecoratedForkJoinTask.create());
             } catch (Exception e) {
-                //swallow
-            }
-        }
-    }
-
-    /**
-     * A ByteBuddy Advice class to hook the exec() method of any subclass of ForkJoinTask
-     */
-    public static class ExecAdvice {
-        /**
-         * Advice OnMethodEnter for the exec() method
-         * @param thiz the 'this' pointer of the ForkJoinTask
-         */
-        @Advice.OnMethodEnter
-        public static void onMethodEnter(@Advice.This Object thiz) {
-            methodEnter(thiz);
-        }
-
-        /**
-         * A trampoline method to make debugging possible from Advice. Contains the impl of copying parent
-         * thread context into the new thread.
-         * @param task the ForkJoinTask
-         */
-        public static void methodEnter(Object task) {
-            try {
-                DecoratedForkJoinTask.Accessor accessor = (DecoratedForkJoinTask.Accessor)task;
-                accessor.getDiscoDecoration().before();
-            } catch (Exception e) {
-                log.error("DiSCo(Concurrency) unable to propagate context in ForkJoinTask");
-            }
-        }
-
-        /**
-         * Advice OnMethodEnter for the exec() method
-         * @param thiz the 'this' pointer of the ForkJoinTask
-         */
-        @Advice.OnMethodExit(onThrowable = Throwable.class)
-        public static void onMethodExit(@Advice.This Object thiz) {
-                methodExit(thiz);
-        }
-
-        /**
-         * A trampoline method to make debugging possible from Advice. Clears the thread context from this thread
-         * such that it can be reused and given back to the pool
-         * @param task the ForkJoinTask
-         */
-        public static void methodExit(Object task) {
-            try {
-                DecoratedForkJoinTask.Accessor accessor = (DecoratedForkJoinTask.Accessor)task;
-                accessor.getDiscoDecoration().after();
-            } catch (Exception e) {
-                //swallow
+                log.error("DiSCo(Concurrency) unable to propagate context in ForkJoinTask", e);
             }
         }
     }
@@ -170,27 +110,10 @@ class ForkJoinTaskInterceptor implements Installable {
     }
 
     /**
-     * Creates a type matcher which matches against any subclass of ForkJoinTask
-     * @return the type matcher per the above
-     */
-    static ElementMatcher.Junction<? super TypeDescription> createForkJoinTaskSubclassTypeMatcher() {
-        return hasSuperType(named("java.util.concurrent.ForkJoinTask"));
-    }
-
-    /**
      * Creates a method matcher to match the fork() method of ForkJoinTask
      * @return the method matcher per the above
      */
     static ElementMatcher.Junction<? super MethodDescription> createForkMethodMatcher() {
         return named("fork").and(takesArguments(0));
     }
-
-    /**
-     * Creates a method matcher to match the exec() method of any concrete implementation of it, overridden from ForkJoinTask
-     * @return the method matcher per the above
-     */
-    static ElementMatcher.Junction<? super MethodDescription> createExecMethodMatcher() {
-        return named("exec").and(isOverriddenFrom(named("java.util.concurrent.ForkJoinTask"))).and(not(isAbstract()));
-    }
-
 }

@@ -25,7 +25,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.config.AgentConfigParser;
-
 import java.lang.instrument.Instrumentation;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -39,7 +38,7 @@ public class InterceptionInstallerTests {
         //random selections from each of the sun, com.sun and jdk namespaces
         //ForName is used to prevent warnings such as "warning: such-and-such-class is internal proprietary API and may be removed in a future release", or deprecation warnings.
         Assert.assertTrue(classMatches(Class.forName("sun.misc.Unsafe")));
-        Assert.assertTrue(classMatches(Class.forName("com.sun.awt.SecurityWarning")));
+        Assert.assertTrue(classMatches(Class.forName("com.sun.java.accessibility.util.EventID")));
         Assert.assertTrue(classMatches(Class.forName("jdk.nashorn.api.scripting.AbstractJSObject")));
     }
 

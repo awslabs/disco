@@ -21,8 +21,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-
 
 /**
  * Everything in disco.agent.reflect basically works the same way - attempting to reflectively invoke methods,
@@ -34,8 +35,12 @@ import java.util.stream.Collectors;
  */
 public class ReflectiveCall<T> {
     private static final String DISCO_AGENT_PACKAGE_ROOT = "software.amazon.disco.agent";
-    private static Class templateClass = null;
-    private String className;
+    private static final String AGENT_TEMPLATE_CLASS_NAME = DISCO_AGENT_PACKAGE_ROOT + ".DiscoAgentTemplate";
+    private static final Map<String, Class> CACHED_TYPES = new ConcurrentHashMap<>();
+
+    private static Boolean discoTemplateClassFound;
+
+    private String fullClassName;
     private String methodName;
     private Object thiz;
     private Class returnType;
@@ -46,6 +51,7 @@ public class ReflectiveCall<T> {
 
     /**
      * Private access. Use factory methods instead.
+     *
      * @param returnType the return type of the method being called`
      */
     private ReflectiveCall(Class returnType) {
@@ -54,6 +60,7 @@ public class ReflectiveCall<T> {
 
     /**
      * Factory method to create a new ReflectiveCall which is on a void method
+     *
      * @return a new ReflectiveCall to continue building/calling
      */
     public static ReflectiveCall returningVoid() {
@@ -62,8 +69,9 @@ public class ReflectiveCall<T> {
 
     /**
      * Factory method to create a new ReflectiveCall which is on a method returning the given type
+     *
      * @param clazz the class of the method's return type
-     * @param <T> the class of the method's return type
+     * @param <T>   the class of the method's return type
      * @return a new ReflectiveCall to continue building/calling
      */
     public static <T> ReflectiveCall<T> returning(Class<T> clazz) {
@@ -73,6 +81,7 @@ public class ReflectiveCall<T> {
     /**
      * Set the default value to return in case no DiSCo agent is present. If none is provided, then null it
      * returns null.
+     *
      * @param defaultValue The default value
      * @return the ReflectiveCall to continue building/calling
      */
@@ -84,16 +93,18 @@ public class ReflectiveCall<T> {
     /**
      * Set the partial class name which declares the method to be called as it appears after software.amazon.disco.agent
      * e.g. '.config.Config' including the prefixing '.'
-     * @param className the class name which declares the method
+     *
+     * @param className the partial class name which declares the method
      * @return the ReflectiveCall to continue building/calling
      */
     public ReflectiveCall<T> ofClass(String className) {
-        this.className = className;
+        fullClassName = DISCO_AGENT_PACKAGE_ROOT + className;
         return this;
     }
 
     /**
      * Set the name of the method to be called
+     *
      * @param methodName the name of the method to be called
      * @return the ReflectiveCall to continue building/calling
      */
@@ -104,6 +115,7 @@ public class ReflectiveCall<T> {
 
     /**
      * For non-static methods, set the instance object on which to invoke the method
+     *
      * @param thiz the instance object on which to invoke the method
      * @return the ReflectiveCall to continue building/calling
      */
@@ -114,6 +126,7 @@ public class ReflectiveCall<T> {
 
     /**
      * Declare the expected method signature by its arguments
+     *
      * @param argTypes array of types for method lookup
      * @return the ReflectiveCall to continue building/calling
      */
@@ -124,6 +137,7 @@ public class ReflectiveCall<T> {
 
     /**
      * Test if the method about to be called exists or not
+     *
      * @return true if the method configured exists
      */
     public boolean methodFound() {
@@ -137,13 +151,12 @@ public class ReflectiveCall<T> {
      * Invoke the given method with the given args. If a DiSCo agent is present the call
      * will proceed. In the case that building the method was not possible, due to the agent being
      * absent, this method will have no side effects.
+     *
      * @param args any arguments to pass to the method invocation.
      * @return any value which the method returns, or null if the call could not be made
      */
     public T call(Object... args) {
-        String fullClassName = DISCO_AGENT_PACKAGE_ROOT + className;
         try {
-
             if (method == null) {
                 createMethod();
             }
@@ -152,37 +165,36 @@ public class ReflectiveCall<T> {
                 return defaultValue;
             }
 
-            return (T)method.invoke(thiz, args);
+            return (T) method.invoke(thiz, args);
         } catch (IllegalAccessException e) {
             Logger.warn("IllegalAccessException when trying to call " + fullClassName + ":" + methodName);
         } catch (InvocationTargetException e) {
             //the reflected method actually threw a Throwable, so pass it to the calling code if an UncaughtExceptionHandler
             //is installed
             dispatchException(e.getCause(), args);
-
         }
 
         return null;
     }
 
     /**
-     * Test if a DiSCo agent is present
+     * Test if a DiSCo agent is present.
+     *
      * @return true if a DiSCo agent is present
      */
     public static boolean isAgentPresent() {
-        try {
-            if (templateClass == null) {
-                templateClass = Class.forName(DISCO_AGENT_PACKAGE_ROOT + ".DiscoAgentTemplate");
-            }
-            return true;
-        } catch(ClassNotFoundException e) {
-            return false;
+        if (discoTemplateClassFound == null) {
+            // perform a reflective call only if 'discoTemplateClassFound' is null.
+            // the value of 'discoTemplateClassFound' will be cached and returned until the 'resetCache()' method is invoked.
+            discoTemplateClassFound = retrieveCachedType(AGENT_TEMPLATE_CLASS_NAME) != null;
         }
+        return discoTemplateClassFound;
     }
 
     /**
      * Install an UncaughtExceptionHandler, to receive a notification whe any exception is thrown by any method in the
      * DiSCo reflect APIs. Without such a handler installed, all exceptions - even unchecked ones - will be suppressed
+     *
      * @param handler a callback to receive any unhandled exceptions in client code
      */
     public static void installUncaughtExceptionHandler(UncaughtExceptionHandler handler) {
@@ -192,7 +204,8 @@ public class ReflectiveCall<T> {
     /**
      * Tries to dispatch an exception to the installed UncaughtExceptionHandler. Does nothing if no such handler is
      * installed
-     * @param t the throwable to notify the calling code, via any installed UncaughtExceptionHandler
+     *
+     * @param t    the throwable to notify the calling code, via any installed UncaughtExceptionHandler
      * @param args any arguments to notify the UncaughtExceptionHandler of
      */
     public void dispatchException(Throwable t, Object... args) {
@@ -207,8 +220,8 @@ public class ReflectiveCall<T> {
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
-        builder.append(returnType.getName()+" "+ DISCO_AGENT_PACKAGE_ROOT +className+"::"+methodName+"(");
-        List<String> argTypeNames = Arrays.stream(argTypes).map((x)->x.getName()).collect(Collectors.toList());
+        builder.append(returnType.getName() + " " + fullClassName + "::" + methodName + "(");
+        List<String> argTypeNames = Arrays.stream(argTypes).map((x) -> x.getName()).collect(Collectors.toList());
         builder.append(String.join(", ", argTypeNames));
         builder.append(")");
         return builder.toString();
@@ -216,14 +229,16 @@ public class ReflectiveCall<T> {
 
     /**
      * Get the class name specified in this ReflectiveCall
+     *
      * @return the class name
      */
     public String getClassName() {
-        return DISCO_AGENT_PACKAGE_ROOT + className;
+        return fullClassName;
     }
 
     /**
      * Get the class return type of the method specified in this ReflectiveCall
+     *
      * @return the return type of this method
      */
     public Class getReturnType() {
@@ -232,6 +247,7 @@ public class ReflectiveCall<T> {
 
     /**
      * Get the name of the method specified in this ReflectiveCall
+     *
      * @return the name of this method
      */
     public String getMethodName() {
@@ -240,6 +256,7 @@ public class ReflectiveCall<T> {
 
     /**
      * Get the array of argument types specified in this ReflectiveCall
+     *
      * @return the argument types of this method
      */
     public Class[] getArgTypes() {
@@ -247,15 +264,81 @@ public class ReflectiveCall<T> {
     }
 
     /**
+     * Reset the type cache and the value of isAgentPresent.
+     */
+    public static void resetCache() {
+        CACHED_TYPES.clear();
+        discoTemplateClassFound = null;
+    }
+
+    /**
+     * Getter for all types loaded via Reflection and cached.
+     * <p>
+     * Package private for testing.
+     *
+     * @return map of all cached types with fully qualified class name as key and class definition as value.
+     */
+    static Map<String, Class> getCachedTypes() {
+        return CACHED_TYPES;
+    }
+
+    /**
+     * Set the value for 'discoTemplateClassFound' for testing purposes.
+     * <p>
+     * Package private for testing
+     *
+     * @param classFound boolean value to be set for the field in question.
+     */
+    static void setDiscoTemplateClassFound(final boolean classFound) {
+        discoTemplateClassFound = classFound;
+    }
+
+    /**
+     * Get the value for 'discoTemplateClassFound' for testing purposes.
+     * <p>
+     * Package private for testing
+     *
+     * @return Boolean value of discoTemplateClassFound if set, null otherwise
+     */
+    static Boolean getDiscoTemplateClassFound() {
+        return discoTemplateClassFound;
+    }
+
+    /**
      * Using the supplied class, method name and argument types information, create a callable Method.
      */
     private void createMethod() {
-        String fullClassName = DISCO_AGENT_PACKAGE_ROOT + className;
         try {
-            Class clazz = Class.forName(fullClassName);
-            method = clazz.getDeclaredMethod(methodName, argTypes);
+            // prevent further reflective operations to be made when the agent is absent.
+            if (isAgentPresent()) {
+                final Class clazz = retrieveCachedType(fullClassName);
+
+                if (clazz != null) {
+                    method = clazz.getDeclaredMethod(methodName, argTypes);
+                }
+            }
         } catch (Throwable t) {
             //do nothing
         }
+    }
+
+    /**
+     * Attempt to retrieve the class type using the supplied fully qualified class name. If successful, the type will be returned and cached, otherwise null will be returned.
+     * <p>
+     * Package private for testing.
+     *
+     * @param fullClassName fully qualified class name of the type
+     * @return type of the supplied class name if can be resolved, null otherwise.
+     */
+    static Class retrieveCachedType(final String fullClassName) {
+        if (CACHED_TYPES.get(fullClassName) == null) {
+            try {
+                CACHED_TYPES.put(fullClassName, Class.forName(fullClassName));
+            } catch (ClassNotFoundException e) {
+                return null;
+            }
+        }
+
+        return CACHED_TYPES.get(fullClassName);
     }
 }

@@ -22,7 +22,6 @@ import software.amazon.disco.agent.event.TransactionEndEvent;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.Map;
@@ -43,9 +42,9 @@ public class TransactionContext {
     static final String TRANSACTION_ID_KEY = "$amazon.discoTransactionId";
     public static final String TRANSACTION_OWNING_THREAD_KEY = "$amazon.discoTransactionOwningThreadId";
     public static final String UNINITIALIZED_TRANSACTION_CONTEXT_VALUE = "disco_null_id";
-
     private static final String REFERENCE_COUNTER_KEY = "$amazon.discoRefCounterKey";
-    private static final ThreadLocal<ConcurrentMap<String, MetadataItem>> transactionContext = ThreadLocal.withInitial(new TransactionContextFactory());
+    private static final TransactionContextFactory TRANSACTION_CONTEXT_FACTORY = new TransactionContextFactory();
+    private static final ThreadLocal<ConcurrentMap<String, MetadataItem>> transactionContext = ThreadLocal.withInitial(TRANSACTION_CONTEXT_FACTORY);
 
     /**
      * This class was created to solve a null pointer exception when deploying a service using a statically instrumented JDK. The TransactionContext
@@ -94,7 +93,7 @@ public class TransactionContext {
         // create a new Transaction Context.
         if (getReferenceCounter() == null || getReferenceCounter().get() <= 0) {
             clear();
-            set(UUID.randomUUID().toString());
+            set(TransactionIdentifier.generate());
             putMetadata(TRANSACTION_OWNING_THREAD_KEY, Long.valueOf(Thread.currentThread().getId()));
             transactionContext.get().put(REFERENCE_COUNTER_KEY, new MetadataItem(new AtomicInteger(0)));
             EventBus.publish(new TransactionBeginEvent("Core"));
@@ -171,11 +170,12 @@ public class TransactionContext {
             throw new IllegalArgumentException(TRANSACTION_ID_KEY + " may not be used as a metadata key");
         }
 
-        if (transactionContext.get().get(key) == null) {
+        MetadataItem metadataItem = transactionContext.get().get(key);
+        if (metadataItem == null) {
             return null;
         }
 
-        return transactionContext.get().get(key).get();
+        return metadataItem.get();
     }
 
     /**
@@ -196,11 +196,11 @@ public class TransactionContext {
      * @param tag a String that will be added to label/tag the data.
      */
     public static void setMetadataTag(String key, String tag) {
-        MetadataItem metadata = transactionContext.get().get(key);
-        if (metadata == null) {
+        MetadataItem metadataItem = transactionContext.get().get(key);
+        if (metadataItem == null) {
             throw new IllegalArgumentException(key + " no metadata object exists for this key");
         } else {
-            transactionContext.get().get(key).setTag(tag);
+            metadataItem.setTag(tag);
         }
     }
 
@@ -210,10 +210,11 @@ public class TransactionContext {
      * @param tag a String representing the label/tag that will be cleared.
      */
     public static void clearMetadataTag(String key, String tag) {
-        if (transactionContext.get().get(key) == null) {
+        MetadataItem metadataItem = transactionContext.get().get(key);
+        if (metadataItem == null) {
             throw new IllegalArgumentException(key + " no metadata object exists for this key");
         } else {
-            transactionContext.get().get(key).clearTag(tag);
+            metadataItem.clearTag(tag);
         }
     }
 
@@ -226,17 +227,26 @@ public class TransactionContext {
      * @throws IllegalArgumentException if no such metadata exists
      */
     public static boolean hasMetadataTag(String key, String tag) {
-        if (transactionContext.get().get(key) == null) {
+        MetadataItem metadataItem = transactionContext.get().get(key);
+        if (metadataItem == null) {
             throw new IllegalArgumentException(key + " no metadata object exists for this key");
         } else {
-           return transactionContext.get().get(key).hasTag(tag);
+           return metadataItem.hasTag(tag);
         }
     }
 
     /**
-     * Clears the value of the TransactionContext for this thread, and restores it to its initial value
+     * Clears the value of the TransactionContext for this thread, and restores it to an empty state
      */
     public static void clear() {
+        transactionContext.set(TRANSACTION_CONTEXT_FACTORY.get());
+    }
+
+    /**
+     * Actually remove the TransactionContext for this thread, causing the ThreadLocal variable to be expunged by the
+     * JVM which can be expensive.
+     */
+    public static void remove() {
         transactionContext.remove();
     }
 
@@ -276,6 +286,15 @@ public class TransactionContext {
      */
     public static ConcurrentMap<String, MetadataItem> getPrivateMetadata() {
         return transactionContext.get();
+    }
+    /**
+     * For internal use. Get the ThreadLocal that holds the private metadata.
+     * Needs to be public for accessibility from Advice methods.
+     *
+     * @return the threadlocal object.
+     */
+    public static ThreadLocal<ConcurrentMap<String, MetadataItem>> getPrivateMetadataThreadLocal() {
+        return transactionContext;
     }
 
     /**

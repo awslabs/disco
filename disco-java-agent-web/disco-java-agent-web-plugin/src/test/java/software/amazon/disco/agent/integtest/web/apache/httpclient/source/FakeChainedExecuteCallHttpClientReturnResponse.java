@@ -17,18 +17,20 @@ package software.amazon.disco.agent.integtest.web.apache.httpclient.source;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.ProtocolVersion;
+import org.apache.http.entity.BasicHttpEntity;
 import org.apache.http.message.BasicHttpResponse;
-
-import java.io.IOException;
 
 public class FakeChainedExecuteCallHttpClientReturnResponse extends FakeChainedExecuteCallHttpClientBase {
     public HttpResponse fakeResponse = new BasicHttpResponse(new ProtocolVersion("protocol", 1, 1), 200, "");
 
+    public FakeChainedExecuteCallHttpClientReturnResponse() {
+        fakeResponse.setEntity(new BasicHttpEntity());
+    }
     /**
      * {@inheritDoc}
      */
     @Override
-    HttpResponse actualExecute() throws IOException {
+    HttpResponse actualExecute() {
         return fakeResponse;
     }
 }

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License").
+ *   You may not use this file except in compliance with the License.
+ *   A copy of the License is located at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   or in the "license" file accompanying this file. This file is distributed
+ *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ *   express or implied. See the License for the specific language governing
+ *   permissions and limitations under the License.
+ */
+
 package software.amazon.disco.agent.sql;
 
 import net.bytebuddy.agent.builder.AgentBuilder;
@@ -15,7 +30,6 @@ import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -58,13 +72,13 @@ public class JdbcExecuteInterceptor implements Installable {
      *
      * Must be public for use in Advice methods https://github.com/raphw/byte-buddy/issues/761
      *
-     * @param args parameters passed to execute method, potentially including the query string
+     * @param queryString the first parameter of the method, in the case where it is the queryString
      * @param origin Identifier of the intercepted method, for debugging/logging
      * @param stmt concrete statement class being used to make the query
      * @return a ServiceDownstreamRequestEvent with fields populated on a best effort basis
      */
     @Advice.OnMethodEnter
-    public static ServiceRequestEvent enter(@Advice.AllArguments final Object[] args,
+    public static ServiceRequestEvent enter(@Advice.Argument(value = 0, optional = true) String queryString,
                                             @Advice.Origin final String origin,
                                             @Advice.This final Statement stmt) {
         if (LogManager.isDebugEnabled()) {
@@ -74,7 +88,10 @@ public class JdbcExecuteInterceptor implements Installable {
         String query = null;
         String db = null;
         try {
-            query = parseQueryFromStatement(stmt, args);
+            // we pass in the classes PreparedStatement and Statement. These classes are visible from here at the interception site, but
+            // the parseQueryFromStatement method is loaded into a different classloader. Since it needs to perform instanceof checks on these
+            // classes, instead we pass them in so that the helper method may use the dynamic variants of instanceof instead, isInstance(), and isAssignableFrom().
+            query = parseQueryFromStatement(PreparedStatement.class, Statement.class, stmt, queryString);
         } catch (Exception e) {
             log.warn("Disco(Sql) failed to retrieve query string for SQL Downstream Service event", e);
         }
@@ -133,6 +150,7 @@ public class JdbcExecuteInterceptor implements Installable {
         return agentBuilder
                 .type(buildClassMatcher())
                 .transform(new AgentBuilder.Transformer.ForAdvice()
+                    .include(this.getClass().getClassLoader())
                     .advice(buildMethodMatcher(), JdbcExecuteInterceptor.class.getName()));
     }
 
@@ -148,16 +166,17 @@ public class JdbcExecuteInterceptor implements Installable {
      *
      * Must be public for use in Advice methods https://github.com/raphw/byte-buddy/issues/761
      *
+     * @param preparedStatementClass must be literally 'PreparedStatement.class'. Necessary because this method is called from somewhere this class may not be available, so it must be passed in
+     * @param statementClass must be literally 'Statement.class'. Necessary for the same reason as preparedStatementClass
      * @param stmt the JDBC Statement object being used to make the query
-     * @param params the parameters passed for the execution of the SQL query. If they exist, they must contain the
-     *               SQL query string.
+     * @param queryString if the first param of the intercepted method was a queryString, this is not-null.
      * @return the query string used in this SQL query if readable, or {@code null} otherwise
      */
-    public static String parseQueryFromStatement(Statement stmt, Object[] params) throws NoSuchMethodException {
+    public static String parseQueryFromStatement(Class<?> preparedStatementClass, Class<?> statementClass, Statement stmt, String queryString) throws NoSuchMethodException {
         String query = null;
-        if (params != null && params.length > 0 && params[0] instanceof String) {
-            query = (String) params[0];
-        } else if (stmt instanceof PreparedStatement && Statement.class.isAssignableFrom(stmt.getClass().getMethod("toString").getDeclaringClass())) {
+        if (queryString != null && queryString.length() > 0) {
+            query = queryString;
+        } else if (preparedStatementClass.isInstance(stmt) && statementClass.isAssignableFrom(stmt.getClass().getMethod("toString").getDeclaringClass())) {
             query = stmt.toString();
         }
 
@@ -199,7 +218,7 @@ public class JdbcExecuteInterceptor implements Installable {
         ElementMatcher.Junction<MethodDescription> executeMatcher = named("execute").and(returns(boolean.class));
         ElementMatcher.Junction<MethodDescription> executeUpdateMatcher = named("executeUpdate").and(returns(int.class));
         ElementMatcher.Junction<MethodDescription> executeLargeUpdateMatcher = named("executeLargeUpdate").and(returns(long.class));
-        ElementMatcher.Junction<MethodDescription> executeQueryMatcher = named("executeQuery").and(returns(ResultSet.class));
+        ElementMatcher.Junction<MethodDescription> executeQueryMatcher = named("executeQuery").and(returns(named("java.sql.ResultSet")));
 
         ElementMatcher.Junction<MethodDescription> methodNameMatches = executeMatcher.or(executeUpdateMatcher).or(executeQueryMatcher).or(executeLargeUpdateMatcher);
         ElementMatcher.Junction<MethodDescription> argumentTypesCorrect = takesNoArgsMatcher.or(takesSqlArgMatcher);

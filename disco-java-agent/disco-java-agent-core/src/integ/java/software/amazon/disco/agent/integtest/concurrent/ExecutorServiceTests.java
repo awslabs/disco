@@ -15,24 +15,44 @@
 
 package software.amazon.disco.agent.integtest.concurrent;
 
-import software.amazon.disco.agent.integtest.concurrent.source.*;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import software.amazon.disco.agent.integtest.concurrent.source.ConcurrencyCanBeRetriedException;
+import software.amazon.disco.agent.integtest.concurrent.source.ExecutorServiceFactory;
+import software.amazon.disco.agent.integtest.concurrent.source.FixedThreadPoolExecutorServiceFactory;
+import software.amazon.disco.agent.integtest.concurrent.source.ForceConcurrency;
+import software.amazon.disco.agent.integtest.concurrent.source.ScheduledThreadPoolExecutorFactory;
+import software.amazon.disco.agent.integtest.concurrent.source.TestCallableFactory;
+import software.amazon.disco.agent.integtest.concurrent.source.TestRunnableFactory;
+import software.amazon.disco.agent.integtest.concurrent.source.TestableConcurrencyObject;
+import software.amazon.disco.agent.integtest.concurrent.source.TestableConcurrencyObjectImpl;
+import software.amazon.disco.agent.integtest.concurrent.source.UserDecoratedExecutorFactory;
 import software.amazon.disco.agent.reflect.concurrent.TransactionContext;
 
-import java.lang.reflect.Method;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.AbstractQueue;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
  * Test that our Runnable/Callable strategy works for Java Executors, a common concurrency mechanism.
  */
+@RunWith(Enclosed.class)
 public class ExecutorServiceTests {
 
     private static final List<ExecutorServiceFactory> executorServiceFactories = Arrays.asList(
@@ -48,13 +68,11 @@ public class ExecutorServiceTests {
         @Before
         public void before() throws Exception {
             TestableConcurrencyObjectImpl.before();
-            testMethodInterceptionCounter();
         }
 
         @After
         public void after() throws Exception {
             TestableConcurrencyObjectImpl.after();
-            testMethodInterceptionCounter();
         }
 
         protected void testBeforeInvocation(TestableConcurrencyObject testable) {
@@ -302,8 +320,6 @@ public class ExecutorServiceTests {
 
     @Test
     public void testSubmitRunnableToUserDecoratedExecutorFactoryWhenExecuteExitsNormally() throws Exception {
-        testMethodInterceptionCounter();
-
         Runnable r = ()->{};
         ExecutorService executorService = new UserDecoratedExecutorFactory.UserDecoratedExecutor();
 
@@ -311,14 +327,10 @@ public class ExecutorServiceTests {
         executorService.shutdown();
         executorService.awaitTermination(1, TimeUnit.DAYS);
         f.get();
-
-        testMethodInterceptionCounter();
     }
 
     @Test
     public void testSubmitRunnableToUserDecoratedExecutorFactoryWhenExecuteThrows() throws Exception {
-        testMethodInterceptionCounter();
-
         Runnable r = ()->{};
         ExecutorService executorService = new UserDecoratedExecutorFactory.UserDecoratedExecutor(new RuntimeException());
 
@@ -330,16 +342,5 @@ public class ExecutorServiceTests {
         } catch (RuntimeException e) {
             //do nothing
         }
-
-        testMethodInterceptionCounter();
-    }
-
-    private static void testMethodInterceptionCounter() throws Exception {
-        //invasive reflection not ideal here, but we need to check that the exit advice was called, ensuring that
-        //reentrancy counter was left at zero
-        Object interceptionCounter = Class.forName("software.amazon.disco.agent.concurrent.ExecutorInterceptor$ExecuteAdvice").getDeclaredField("interceptionCounter").get(null);
-        Method hasIntercepted = Class.forName("software.amazon.disco.agent.interception.MethodInterceptionCounter").getDeclaredMethod("hasIntercepted");
-        boolean result = (boolean)hasIntercepted.invoke(interceptionCounter);
-        Assert.assertFalse(result);
     }
 }
