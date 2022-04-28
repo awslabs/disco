@@ -52,6 +52,13 @@ public class ThreadPoolInterceptorTests {
     }
 
     @Test
+    public void testThatRemoveMethodMatches() throws NoSuchMethodException {
+        Method m = ThreadPoolExecutor.class.getDeclaredMethod("remove", Runnable.class);
+        Assert.assertTrue(ThreadPoolInterceptor.createRemoveMethodMatcher()
+                .matches(new MethodDescription.ForLoadedMethod(m)));
+    }
+
+    @Test
     public void testThatAdviceRemovesDecoration() {
         Runnable decoratedRunnable = DecoratedRunnable.maybeCreate(new CustomRunnable());
         Assert.assertTrue(ThreadPoolInterceptor.unDecorate(decoratedRunnable) instanceof CustomRunnable);

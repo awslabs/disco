@@ -21,7 +21,9 @@ import org.junit.Test;
 import software.amazon.disco.agent.reflect.concurrent.TransactionContext;
 
 import java.util.AbstractQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -31,6 +33,10 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 
 public class ThreadPoolExecutorTests {
+    private static final long TERMINATION_TIMEOUT = 1L;
+    private static final TimeUnit TERMINATION_TIMEOUT_UNIT = TimeUnit.HOURS;
+    private static final long KEEP_ALIVE = 5L;
+    private static final TimeUnit KEEP_ALIVE_UNIT = TimeUnit.SECONDS;
 
     @Before
     public void before() {
@@ -44,16 +50,14 @@ public class ThreadPoolExecutorTests {
     }
 
     @Test
-    public void testThreadPoolExecutor() throws Exception {
-        // This pool has only 1 thread and space for only 1 task on the internal queue
-        // This provides reliable control over which task will get rejected, triggering the 'Caller Runs' handler
+    public void testContextStaysAfterRejectedTaskRuns() throws Exception {
+        // Having only one worker thread provides control over which task will get rejected
         ExecutorService e = new ThreadPoolExecutor(
-                1, // 1 Thread, so we can ensure there is
-                1,
-                5,
-                TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(1),
-                new ThreadPoolExecutor.CallerRunsPolicy() // Root of the issue
+            1, // One worker thread, to ensure at most one task runs at a time
+            1,
+            KEEP_ALIVE, KEEP_ALIVE_UNIT,
+            new LinkedBlockingQueue<>(1),
+            new ThreadPoolExecutor.CallerRunsPolicy() // Run rejected tasks in the thread that submitted it
         );
         AbstractQueue<Future> futures = new ConcurrentLinkedQueue<>();
 
@@ -78,7 +82,51 @@ public class ThreadPoolExecutorTests {
 
         Future f;
         while ((f = futures.poll()) != null) {
-            f.get(1, TimeUnit.DAYS);
+            f.get(TERMINATION_TIMEOUT, TERMINATION_TIMEOUT_UNIT);
         }
+    }
+    @Test
+    public void testRemovalOfTaskBeforeItRuns() throws Exception {
+        ThreadPoolExecutor e = new ThreadPoolExecutor(
+            1, // One worker thread, to ensure at most one task runs at a time
+            1,
+            KEEP_ALIVE, KEEP_ALIVE_UNIT,
+            new LinkedBlockingQueue<>(1)
+        );
+
+        // We'll use this variable to prove beyond doubt that the removed task didn't run
+        AtomicBoolean trigger = new AtomicBoolean(false);
+        // We'll use this latch to keep a task in mid-execution, thus holding the single worker thread occupied
+        CountDownLatch occupyWorkerLatch = new CountDownLatch(1);
+        Runnable triggerTask = new Runnable() {
+            @Override
+            public void run() {
+                trigger.set(true);
+            }
+        };
+        Runnable occupyWorkerTask = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    occupyWorkerLatch.await();
+                }
+                catch (InterruptedException exception) {
+                }
+            }
+        };
+
+        // Occupy the worker thread so that we can remove triggerTask before it runs
+        e.execute(occupyWorkerTask);
+        // triggerTask won't run yet because the single worker thread is occupied
+        e.execute(triggerTask);
+        // Remove triggerTask before it can run; remove() should return true to indicate success
+        assertEquals(true, e.remove(triggerTask));
+        // Unblock the active task to allow it to complete
+        occupyWorkerLatch.countDown();
+        // Make sure any incomplete pending tasks get a chance to run (there shouldn't be any)
+        e.shutdown();
+        e.awaitTermination(TERMINATION_TIMEOUT, TERMINATION_TIMEOUT_UNIT);
+        // Double-check that triggerTask didn't run
+        assertEquals(false, trigger.get());
     }
 }
