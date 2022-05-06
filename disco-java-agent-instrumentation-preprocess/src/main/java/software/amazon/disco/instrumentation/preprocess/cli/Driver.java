@@ -15,16 +15,15 @@
 
 package software.amazon.disco.instrumentation.preprocess.cli;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.LoggerContext;
 import software.amazon.disco.agent.inject.Injector;
+import software.amazon.disco.agent.logging.LogManager;
+import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.StaticInstrumentationTransformer;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.DiscoAgentLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.DirectoryLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JarLoader;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
+import software.amazon.disco.instrumentation.preprocess.util.PreprocessLoggerFactory;
 
 import java.io.File;
 
@@ -49,7 +48,8 @@ public class Driver {
             // types imported from libraries such as ByteBuddy shaded in the agent JAR
             Injector.addToBootstrapClasspath(Injector.createInstrumentation(), new File(config.getAgentPath()));
 
-            configureLogLevel(config.getLogLevel());
+            // set up the preprocessor log
+            configureLog(config.getLogLevel());
 
             StaticInstrumentationTransformer.builder()
                 .agentLoader(new DiscoAgentLoader())
@@ -89,17 +89,12 @@ public class Driver {
     }
 
     /**
-     * Sets the log level of the Preprocessor
+     * Sets the preprocessor log
      *
      * @param level target log level
      */
-    public static void configureLogLevel(final Level level) {
-        final LoggerContext context = (LoggerContext) LogManager.getContext(Driver.class.getClassLoader(), false);
-
-        context.getConfiguration()
-            .getLoggerConfig(LogManager.ROOT_LOGGER_NAME)
-            .setLevel(level);
-
-        context.updateLoggers();
+    public static void configureLog(final Logger.Level level) {
+        LogManager.setMinimumLevel(level);
+        LogManager.installLoggerFactory(new PreprocessLoggerFactory());
     }
 }

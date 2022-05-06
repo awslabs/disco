@@ -15,11 +15,11 @@
 
 package software.amazon.disco.instrumentation.preprocess.cli;
 
-import org.apache.logging.log4j.Level;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.TestUtils;
 import software.amazon.disco.instrumentation.preprocess.exceptions.ArgumentParserException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
@@ -84,9 +84,9 @@ public class PreprocessConfigParserTest {
         PreprocessConfig verboseConfig = preprocessConfigParser.parseCommandLine(new String[]{"--verbose"});
         PreprocessConfig extraverboseConfig = preprocessConfigParser.parseCommandLine(new String[]{"--extraverbose"});
 
-        assertEquals(Level.OFF, silentConfig.getLogLevel());
-        assertEquals(Level.DEBUG, verboseConfig.getLogLevel());
-        assertEquals(Level.ALL, extraverboseConfig.getLogLevel());
+        assertEquals(Logger.Level.FATAL, silentConfig.getLogLevel());
+        assertEquals(Logger.Level.DEBUG, verboseConfig.getLogLevel());
+        assertEquals(Logger.Level.TRACE, extraverboseConfig.getLogLevel());
     }
 
     @Test
@@ -98,7 +98,7 @@ public class PreprocessConfigParserTest {
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
 
         assertFalse(config.isFailOnUnresolvableDependency());
-        assertEquals(Level.INFO, config.getLogLevel());
+        assertEquals(Logger.Level.INFO, config.getLogLevel());
         assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/d3")), config.getSourcePaths().get(""));
     }
 

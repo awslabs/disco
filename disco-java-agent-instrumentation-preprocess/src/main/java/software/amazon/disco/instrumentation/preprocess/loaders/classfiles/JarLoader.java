@@ -15,9 +15,9 @@
 
 package software.amazon.disco.instrumentation.preprocess.loaders.classfiles;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import software.amazon.disco.agent.inject.Injector;
+import software.amazon.disco.agent.logging.LogManager;
+import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.export.JarExportStrategy;

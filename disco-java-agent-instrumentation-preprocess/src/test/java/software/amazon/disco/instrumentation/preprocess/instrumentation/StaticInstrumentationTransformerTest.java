@@ -15,8 +15,6 @@
 
 package software.amazon.disco.instrumentation.preprocess.instrumentation;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -100,26 +98,6 @@ public class StaticInstrumentationTransformerTest {
             .config(null)
             .build()
             .transform();
-    }
-
-    @Test
-    public void testTransformWorksWithVerboseLogLevel() {
-        config = PreprocessConfig.builder()
-            .logLevel(Level.TRACE)
-            .build();
-
-        configureStaticInstrumentationTransformer().transform();
-
-        assertEquals(Level.TRACE, LogManager.getLogger().getLevel());
-    }
-
-    @Test
-    public void testTransformWorksWithDefaultLogLevel() {
-        StaticInstrumentationTransformer transformer = configureStaticInstrumentationTransformer();
-
-        transformer.transform();
-
-        assertEquals(LogManager.getLogger().getLevel(), Level.INFO);
     }
 
     @Test

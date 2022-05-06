@@ -21,10 +21,9 @@ plugins {
 }
 
 dependencies {
-    compileOnly(project(":disco-java-agent:disco-java-agent-core"))
     compileOnly(project(":disco-java-agent:disco-java-agent-api"))
+    implementation(project(":disco-java-agent:disco-java-agent-core"))
     implementation(project(":disco-java-agent:disco-java-agent-inject-api"))
-    implementation("org.apache.logging.log4j", "log4j-core", "2.17.2")
 
     testImplementation(project(":disco-java-agent:disco-java-agent-core"))
     testImplementation(project(":disco-java-agent:disco-java-agent-api"))
