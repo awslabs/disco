@@ -19,11 +19,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Singular;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.config.Configurator;
 import software.amazon.disco.agent.inject.Injector;
+import software.amazon.disco.agent.logging.LogManager;
+import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.AgentLoaderNotProvidedException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InstrumentationException;
@@ -79,8 +77,6 @@ public class StaticInstrumentationTransformer {
         if (config == null) {
             throw new InvalidConfigEntryException("No configuration provided", null);
         }
-        // setting the level again here in case the lib is imported as a dependency and the arg parser is never used
-        Configurator.setRootLevel(config.getLogLevel());
 
         if (agentLoader == null) {
             throw new AgentLoaderNotProvidedException();
@@ -145,27 +141,21 @@ public class StaticInstrumentationTransformer {
      * Log Build-Time Instrumentation summary
      */
     protected void logInstrumentationSummary() {
-        final boolean isVerbose = log.getLevel().isLessSpecificThan(Level.DEBUG);
-
         log.info(PreprocessConstants.MESSAGE_PREFIX + "Build-Time Instrumentation summary:");
         log.info(PreprocessConstants.MESSAGE_PREFIX + "Sources processed: " + allOutcomes.size());
         log.info(PreprocessConstants.MESSAGE_PREFIX + "Sources instrumented: " + sourcesInstrumented.size());
 
-        if (isVerbose) {
-            for (InstrumentationOutcome outcome : sourcesInstrumented) {
-                log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
-            }
+        for (InstrumentationOutcome outcome : sourcesInstrumented) {
+            log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
         }
 
         log.info(PreprocessConstants.MESSAGE_PREFIX + "Sources containing classes with unresolvable dependencies: " + sourcesFailedToBeInstrumented.size());
 
         for (InstrumentationOutcome outcome : sourcesFailedToBeInstrumented) {
             log.debug(PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
-            if (isVerbose) {
-                outcome.getFailedClasses().forEach(
+            outcome.getFailedClasses().forEach(
                     clazz -> log.debug(PreprocessConstants.MESSAGE_PREFIX + "\t+ " + clazz)
-                );
-            }
+            );
         }
     }
 }

@@ -18,7 +18,7 @@ package software.amazon.disco.instrumentation.preprocess.cli;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.apache.logging.log4j.Level;
+import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.exceptions.ArgumentParserException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
 
@@ -192,16 +192,17 @@ public class PreprocessConfigParser {
     protected void processFlagWithNoArg(String flag, PreprocessConfig.PreprocessConfigBuilder builder) {
         switch (flag.toLowerCase()) {
             case "--help":
-                // ignore this flag since its not supplied as the first arg.
+                // ignore this flag since it's not supplied as the first arg.
                 break;
             case "--verbose":
-                builder.logLevel(Level.DEBUG);
+                builder.logLevel(Logger.Level.DEBUG);
                 break;
             case "--extraverbose":
-                builder.logLevel(Level.ALL);
+                builder.logLevel(Logger.Level.TRACE);
                 break;
             case "--silent":
-                builder.logLevel(Level.OFF);
+                // In silent mode, only log fatal errors
+                builder.logLevel(Logger.Level.FATAL);
                 break;
             case "--failonunresolvabledependency":
                 builder.failOnUnresolvableDependency(true);

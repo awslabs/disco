@@ -16,8 +16,8 @@
 package software.amazon.disco.instrumentation.preprocess.instrumentation;
 
 import lombok.AllArgsConstructor;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import software.amazon.disco.agent.logging.LogManager;
+import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.agent.plugin.ResourcesClassInjector;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InstrumentationException;

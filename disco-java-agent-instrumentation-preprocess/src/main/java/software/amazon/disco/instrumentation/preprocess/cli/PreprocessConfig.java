@@ -18,7 +18,7 @@ package software.amazon.disco.instrumentation.preprocess.cli;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Singular;
-import org.apache.logging.log4j.Level;
+import software.amazon.disco.agent.logging.Logger;
 
 import java.util.Map;
 import java.util.Set;
@@ -39,16 +39,16 @@ public class PreprocessConfig {
     private final String outputDir;
     private final String agentPath;
     private final String suffix;
-    private final Level logLevel;
+    private final Logger.Level logLevel;
     private final String serializationJarPath;
     private final String javaVersion;
     private final String agentArg;
     private final String jdkPath;
     private final boolean failOnUnresolvableDependency;
 
-    public Level getLogLevel() {
+    public Logger.Level getLogLevel() {
         if(logLevel == null){
-            return Level.INFO;
+            return Logger.Level.INFO;
         }
         return logLevel;
     }
