@@ -44,6 +44,11 @@ public class AgentConfig {
     }
 
     /**
+     * Construct a new AgentConfig
+     */
+    public AgentConfig() {}
+
+    /**
      * A default, 'identity', AgentBuilderTransformer, that just returns the inputted AgentBuilder
      */
     private static class NoOpAgentBuilderTransformer implements BiFunction<AgentBuilder, Installable, AgentBuilder> {
@@ -134,6 +139,14 @@ public class AgentConfig {
      */
     protected void setPluginPath(String pluginPath) {
         this.pluginPath = pluginPath;
+    }
+
+    /**
+     * Set the list of arguments which were given to the command line e.g. ["key1=value1", "key2=value2,value3", "value4"]
+     * @param args command line arguments
+     */
+    protected void setArgs(final List<String> args) {
+        this.args = args;
     }
 
     /**
