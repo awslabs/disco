@@ -32,29 +32,29 @@ dependencies {
     testCompileOnly(project(preprocessProject, "shadow"))
 }
 
-// this agent Jar resides in a dir which doesn't contain the agent config override file
-val agentInDirWithNoConfigOverride = project(discoAgentProject).buildDir.absolutePath + "/libs/disco-java-agent-${project.version}.jar"
-
 val discoDir = "${buildDir}/disco"
-var discoAgentPath = "${discoDir}/disco-java-agent-${project.version}.jar"
+var discoAgentPath = project(discoAgentProject).buildDir.absolutePath + "/libs/disco-java-agent-${project.version}.jar"
 val pluginDir = project(preprocessTestPluginProject).buildDir.absolutePath + "/libs"
 val outDir = "${discoDir}/static-instrumentation"
+val pluginDirWithConfigFile = "${discoDir}/plugins"
 
-// create a 'disco' dir where the Disco agent and the config override file will reside in
-val createDiscoDir = task<Copy>("createDiscoDir"){
-    from(agentInDirWithNoConfigOverride)
-    into(discoDir)
+// create a 'disco' dir where Disco plugins and the config override file will reside in
+val setupPluginsDir = task<Copy>("setupPluginsDir"){
+    from(pluginDir)
+    into(pluginDirWithConfigFile)
 
-    dependsOn("${discoAgentProject}:build")
+    dependsOn("${preprocessTestPluginProject}:build")
 }
 
-// create config file
-val configFilePath = "${discoDir}/disco.properties"
-val createConfigFile = task<WriteProperties>("CreateConfigFile"){
-    outputFile = file(configFilePath)
-    encoding = "UTF-8"
-    property("runtimeonly", "true")
-    dependsOn(createDiscoDir)
+// create the config file under the same path supplied to the agent via the 'pluginsPath' arg.
+val configFilePath = "${pluginDirWithConfigFile}/disco.config"
+val createConfigFile = task("CreateConfigFile"){
+    doLast{
+        var file = file(configFilePath)
+        file.writeText("runtimeonly=true")
+    }
+
+    dependsOn(setupPluginsDir)
 }
 
 // statically instrument the integ-test source package using the integ-test plugin and save the result to a temp folder
@@ -74,9 +74,10 @@ val testDependenciesPreprocess = tasks.register<JavaExec>("testDependenciesPrepr
 
     //we need the agent and plugins to be built first
     dependsOn("$discoCoreProject:build")
+    dependsOn("${discoAgentProject}:build")
     dependsOn("$preprocessTestInstrumentationTargetProject:build")
     dependsOn("$preprocessTestPluginProject:build")
-    dependsOn(createDiscoDir)
+    dependsOn(setupPluginsDir)
 }
 
 // invoke the tests with the 'runtimeonly' agent arg which will set the agent to a 'dependency provider' only state to avoid duplicate instrumentations of statically instrumented classes
@@ -86,24 +87,23 @@ tasks.test {
         .plus(layout.files("$outDir/disco-java-agent-instrumentation-preprocess-test-target-${project.version}.jar"))
 
     // attach the Disco agent with the "runtimeonly" arg
-    jvmArgs("-javaagent:${agentInDirWithNoConfigOverride}=pluginPath=${pluginDir}:loggerfactory=software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory:runtimeonly")
+    jvmArgs("-javaagent:${discoAgentPath}=pluginPath=${pluginDir}:loggerfactory=software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory:runtimeonly")
 
     dependsOn(testDependenciesPreprocess)
     dependsOn(createConfigFile)
 }
 
-// invoke the tests with the config override file present but not explicitly supplied as command line arg
-val dedupeViaAgentJarLocationTest = task<Test>("dedupeTestViaAgentLocation"){
-    // the 'JAVA_TOOL_OPTIONS' env variable is set to mock an agent installation script which ultimately installs Disco on all subsequent JVMs created.
-    environment("JAVA_TOOL_OPTIONS", "-javaagent:${discoAgentPath}=pluginPath=${pluginDir}:loggerfactory=software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory")
-
+// invoke the tests with the config override file present under the supplied 'pluginPath' directory. Test cases executed in this task are sensitive to excessive instrumentation
+// where a statically instrumented class being instrumented again at runtime would trigger test failures due to more than expected number of events published.
+val configFileOverrideTest = task<Test>("configFileOverrideTest"){
     // use the same classpath and tests as the 'test' target
     classpath = sourceSets["test"].runtimeClasspath
         .plus(layout.files("$outDir/disco-java-agent-instrumentation-preprocess-test-target-${project.version}.jar"))
     testClassesDirs = sourceSets["test"].output.classesDirs
 
-    // attach the Disco agent without the 'runtimeonly' nor 'configOverridePath' args.
-    jvmArgs("-javaagent:${discoAgentPath}=pluginPath=${pluginDir}:loggerfactory=software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory")
+    // attach the Disco agent WITHOUT the 'runtimeonly' flag since 'AgentConfigParser' will simply override the 'runtimeonly' flag to true after parsing the 'disco.config' file
+    // generated prior to this task.
+    jvmArgs("-javaagent:${discoAgentPath}=pluginPath=${pluginDirWithConfigFile}:loggerfactory=software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory")
 
     dependsOn(testDependenciesPreprocess)
     dependsOn(createConfigFile)
@@ -178,5 +178,5 @@ val jdkTest = task<Test>("jdkTest") {
 
 tasks.build {
     dependsOn(jdkTest)
-    dependsOn(dedupeViaAgentJarLocationTest)
+    dependsOn(configFileOverrideTest)
 }
