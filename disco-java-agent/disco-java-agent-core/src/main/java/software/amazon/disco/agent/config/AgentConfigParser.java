@@ -17,65 +17,35 @@ package software.amazon.disco.agent.config;
 
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.Arrays;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Locale;
-import java.util.Properties;
+import java.util.Map;
 
 /**
- * Parses command line arguments passed to the DiSCo agent via command line
+ * Parses command line arguments passed to the DiSCo agent via command line. The presence of a config file named {@link #CONFIG_FILE_NAME} under the plugin path supplied will be checked
+ * and used to override args parsed from the command line. See {@link #applyConfigOverride(AgentConfig)}} for more details.
  */
 public class AgentConfigParser {
-    protected static final String CONFIG_FILE_NAME = "disco.properties";
+    protected static final String CONFIG_FILE_NAME = "disco.config";
 
     /**
-     * Parses command line arguments.
+     * Parses command line arguments and applies overrides from a config file if applicable.
      *
      * @param args - the arguments passed in to premain
-     * @return an AgentConfig generated from the given args
+     * @return an 'AgentConfig' instance generated from the given args and corresponding overrides.
      */
     public AgentConfig parseCommandLine(String args) {
-        final AgentConfig result = new AgentConfig();
+        final AgentConfig result = new AgentConfig(new ArrayList<>());
 
         if (args != null && !args.isEmpty()) {
-            //TODO these regexes look overwrought.
-
-            //split by colon so that e.g. "arg=value1:arg2=value2" becomes ["arg1=value1", "arg2=value2"]
-            String[] individualArgs = args.split("(?<!\\\\):");
-            result.setArgs(Arrays.asList(individualArgs));
-
-            //for each arg=value pair, split by "="
-            for (String arg : individualArgs) {
-                String[] pair = arg.split("(?<!\\\\)=");
-                String value = pair.length > 1
-                    ? pair[1]
-                    .replaceAll("\\\\:", ":")
-                    .replaceAll("\\\\=", "=")
-                    : "";
-
-                switch (pair[0].toLowerCase(Locale.ROOT)) {
-                    case "runtimeonly":
-                        result.setRuntimeOnly(true);
-                        break;
-                    case "pluginpath":
-                        result.setPluginPath(value);
-                        break;
-                    case "verbose":
-                        result.setVerbose(true);
-                        break;
-                    case "extraverbose":
-                        result.setExtraverbose(true);
-                        break;
-                    case "loggerfactory":
-                        result.setLoggerFactoryClass(value);
-                        break;
-                    default:
-                        //not an error, do nothing. individual interceptors might receive this arg instead
-                        break;
-                }
+            // iterate over the map entries in the order where entries were inserted.
+            final LinkedHashMap<String, String> argsMap = parseArgsStringToMap(args);
+            for (Map.Entry<String, String> argPair : argsMap.entrySet()) {
+                applyArgToConfig(result, argPair.getKey(), argPair.getValue());
             }
         }
 
@@ -84,70 +54,126 @@ public class AgentConfigParser {
     }
 
     /**
-     * Apply overrides to the passed in 'AgentConfig' instance if the config override file is present. If the 'configOverridePath' field of the
-     * passed in 'AgentConfig' instance is set, that path will be searched. Otherwise, the path to the directory containing the config override
-     * will be determined by the locating of the Disco agent Jar file.
+     * Parse the Disco agent args represented as a single string into a LinkedHashMap to preserve order.
+     * Arg keys are inserted into the resulting TreeMap in a case-insensitive fashion.
      *
-     * @param config AgentConfig instance that may have some of its fields overridden
+     * @param argStr args retrieved from the command line or a config file presented as ':' delimited list of args
+     * @return a 'LinkedHashMap' instance representing Disco agent arg pairs, empty if no args were supplied.
+     */
+    protected LinkedHashMap<String, String> parseArgsStringToMap(final String argStr) {
+        final LinkedHashMap<String, String> argsMap = new LinkedHashMap<>();
+
+        if (argStr == null || argStr.isEmpty()) {
+            return argsMap;
+        }
+
+        //TODO these regexes look overwrought.
+        String[] individualArgs = argStr.split("(?<!\\\\):");
+
+        //for each arg=value pair, split by "="
+        for (String arg : individualArgs) {
+            String[] pair = arg.split("(?<!\\\\)=");
+            String value = pair.length > 1
+                ? pair[1]
+                .replaceAll("\\\\:", ":")
+                .replaceAll("\\\\=", "=")
+                : "";
+
+            argsMap.put(pair[0], value);
+        }
+
+        return argsMap;
+    }
+
+    /**
+     * Apply an arg key/value pair to the 'AgentConfig' instance passed in.
+     * The key will be compared in a switch statement in a case-insensitive fashion, whereas the value casing will be kept intact.
+     *
+     * @param config   'AgentConfig' instance where the arg key/value pair will be applied to
+     * @param argKey   arg key to be parsed in a case-insensitive fashion
+     * @param argValue arg value to be applied to the 'AgentConfig' instance
+     */
+    private void applyArgToConfig(final AgentConfig config, final String argKey, final String argValue) {
+        switch (argKey.toLowerCase(Locale.ROOT)) {
+            case "runtimeonly":
+                if (argValue.isEmpty() || argValue.equalsIgnoreCase("true")) {
+                    config.setRuntimeOnly(true);
+                } else if (argValue.equalsIgnoreCase("false")) {
+                    config.setRuntimeOnly(false);
+                }
+                break;
+            case "pluginpath":
+                config.setPluginPath(argValue);
+                break;
+            case "verbose":
+                config.setVerbose(true);
+                break;
+            case "extraverbose":
+                config.setExtraverbose(true);
+                break;
+            case "loggerfactory":
+                config.setLoggerFactoryClass(argValue);
+                break;
+            default:
+                //not an error, do nothing. individual interceptors might receive this arg instead
+                break;
+        }
+
+        final String argPair = argKey + (argValue == null || argValue.isEmpty() ? "" : "=" + argValue);
+        config.getArgs().add(argPair);
+    }
+
+    /**
+     * Apply overrides to the passed in 'AgentConfig' instance if the config override file is present. Args will be treated the same way as if they were passed in via the
+     * command line with the only exception of 'pluginpath' which can't have its value overwritten by the config file. Since the config file is retrieved from the very same
+     * plugin path supplied via the command line arg, allowing the config file to override this plugin path would be counter-intuitive.
+     * <p>
+     * In addition, the absence of an arg in the config file, e.g. runtimeonly, does not indicate that the existing field in the 'AgentConfig' instance should be reverted to
+     * its default value. In other words, args expressed in the config file are only additive.
+     *
+     * @param config AgentConfig instance that may have some of its fields overwritten.
      */
     protected void applyConfigOverride(final AgentConfig config) {
-        final File configOverrideFile = getDiscoConfigOverrideFileFromAgentPath(ClassLoader.getSystemClassLoader());
+        final String argsStringFromConfigFile = readConfigFileFromPluginPath(config.getPluginPath());
+        final LinkedHashMap<String, String> argsMap = parseArgsStringToMap(argsStringFromConfigFile);
 
-        if (configOverrideFile != null) {
-            final Properties prop = readPropertiesFile(configOverrideFile);
-            if (prop != null && prop.getProperty("runtimeonly") != null) {
-                // values such as 'null', empty string, random string other than 'true' (case-insensitive) will all be considered as 'false'
-                config.setRuntimeOnly(Boolean.parseBoolean(prop.getProperty("runtimeonly")));
+        // iterate over the map entries in the order of insertion.
+        for (Map.Entry<String, String> argPair : argsMap.entrySet()) {
+            if (argPair.getKey().equalsIgnoreCase("pluginpath")) {
+                // overriding the plugin path is not supported
+                System.out.println("Disco(Agent) overwriting the 'pluginPath' agent argument is not supported. Value supplied will be ignored.");
+                continue;
+            } else {
+                applyArgToConfig(config, argPair.getKey(), argPair.getValue());
             }
         }
     }
 
     /**
-     * Read a .properties file which contains 'AgentConfig' overrides such as 'runtimeonly'.
+     * Read a config file which contains 'AgentConfig' overrides such as 'runtimeonly'.
      *
-     * @param file file to be read
-     * @return an instance of 'Properties' containing the config overrides
+     * @param pluginPath plugin path supplied via the command line args
+     * @return the string content of the config file if present, null if file doesn't exist
      */
-    protected Properties readPropertiesFile(final File file) {
-        try (InputStream input = new FileInputStream(file)) {
-            final Properties prop = new Properties();
-            prop.load(input);
-            return prop;
+    protected String readConfigFileFromPluginPath(final String pluginPath) {
+        // return immediately since it's not possible to determine the location of the config file.
+        if (pluginPath == null) {
+            return null;
+        }
+
+        // check for the presence of the config file
+        final File configFile = new File(pluginPath, CONFIG_FILE_NAME);
+        if (!configFile.exists() || !configFile.isFile()) {
+            return null;
+        }
+
+        try {
+            final String configFileArgStr = new String(Files.readAllBytes(configFile.toPath()), StandardCharsets.UTF_8);
+            return configFileArgStr;
         } catch (IOException | IllegalArgumentException e) {
-            // log to STDOUT if failed to read properties file since 'LoggerFactory' hasn't been configured yet.
+            // log to STDOUT if failed to read config file since 'LoggerFactory' hasn't been configured yet.
             System.out.println("Disco(Agent) failed to load config override file: " + e.getMessage());
             return null;
         }
-    }
-
-    /**
-     * Retrieves the path to the 'disco/config' dir on a deployment environment from the path to the Disco agent itself.
-     * This method makes the assumption that the {@link AgentConfigParser} class is loaded from a physical Jar file which is placed at the
-     * root of the 'disco' directory.
-     *
-     * @return path to the 'disco/config' dir on a deployed environment
-     */
-    protected File getDiscoConfigOverrideFileFromAgentPath(final ClassLoader classLoader) {
-        // get the resource url of this class which should be a Jar entry.
-        final URL classLocation = classLoader.getResource(AgentConfigParser.class.getName().replace('.', '/') + ".class");
-
-        // this variable may be 'null' if the agent was installed using the 'Inject' api where 'DiscoJavaAgent-1.0.jar' is appended to the
-        // bootstrap classloader, making non-class file resources within the Jar undiscoverable.
-        if (classLocation != null) {
-            final String[] pathSegments = classLocation.getFile().split("!");
-
-            // only move forward with parsing if class was loaded from a Jar.
-            if (pathSegments.length == 2) {
-                // get the path by parsing the Jar file url in the form of 'file:path_to_disco.jar!/software/amazon/disco/agent/config/AgentConfigParser.class'
-                final File discoAgent = new File(pathSegments[0].split(":")[1]);
-                final File discoDir = discoAgent.getParentFile();
-                final File configOverrideFile = new File(discoDir.getAbsolutePath(), CONFIG_FILE_NAME);
-
-                if (configOverrideFile.exists() && configOverrideFile.isFile()) {
-                    return configOverrideFile;
-                }
-            }
-        }
-        return null;
     }
 }

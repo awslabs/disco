@@ -15,7 +15,6 @@
 
 package software.amazon.disco.agent.config;
 
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -27,11 +26,11 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.Properties;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -39,70 +38,85 @@ import static org.junit.Assert.assertTrue;
 
 public class AgentConfigParserTest {
     private AgentConfigParser parser;
-    private Properties prop;
+    private LinkedHashMap<String, String> argsMap;
     private File overrideFile;
     private AgentConfig config;
-    private ClassLoader classloader;
 
     static File configOverrideFile;
-    static File fakeAgent;
+    static File pluginPath;
+    static File discoDir;
+    static String args = "verbose:runtimeonly:pluginpath=some_location";
 
     @ClassRule
     public static TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @BeforeClass
     public static void beforeAll() throws IOException {
-        File discoDir = temporaryFolder.newFolder("disco");
-        fakeAgent = new File(discoDir, "disco-java-agent-1.0.jar");
-        configOverrideFile = Paths.get(discoDir.getAbsolutePath(), AgentConfigParser.CONFIG_FILE_NAME).toFile();
+        discoDir = temporaryFolder.newFolder("disco");
+        pluginPath = new File(discoDir, "plugin");
+        pluginPath.mkdirs();
+
+        configOverrideFile = Paths.get(pluginPath.getAbsolutePath(), AgentConfigParser.CONFIG_FILE_NAME).toFile();
+        configOverrideFile.createNewFile();
+
+        try (FileOutputStream outputStream = new FileOutputStream(configOverrideFile)) {
+            outputStream.write(args.getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     @Before
     public void before() throws MalformedURLException {
         parser = Mockito.spy(new AgentConfigParser());
-        config = new AgentConfig(null);
+        config = new AgentConfig(new ArrayList<>());
+        config.setPluginPath("somePath");
 
         overrideFile = Mockito.mock(File.class);
         Mockito.doReturn(true).when(overrideFile).isFile();
         Mockito.doReturn(true).when(overrideFile).exists();
-        Mockito.doReturn(overrideFile).when(parser).getDiscoConfigOverrideFileFromAgentPath(Mockito.any(ClassLoader.class));
 
-        prop = Mockito.mock(Properties.class);
-        Mockito.doReturn(prop).when(parser).readPropertiesFile(Mockito.any(File.class));
+        argsMap = new LinkedHashMap<>();
 
-        classloader = Mockito.mock(ClassLoader.class);
-
-        URL url = Paths.get("file:" + fakeAgent.getAbsolutePath() + "!/software/amazon/disco/agent/config/AgentConfigParser.class").toUri().toURL();
-        Mockito.doReturn(url).when(classloader).getResource(AgentConfigParser.class.getName().replace('.', '/') + ".class");
-    }
-
-    @After
-    public void after() {
-        if (configOverrideFile.exists()) {
-            configOverrideFile.delete();
-        }
+        Mockito.doReturn(argsMap).when(parser).parseArgsStringToMap(Mockito.anyString());
+        Mockito.doReturn(args).when(parser).readConfigFileFromPluginPath(Mockito.anyString());
     }
 
     @Test
     public void testArgumentParsing() {
-        final String argLine = "verbose:runtimeonly:pluginpath=path/to/plugins";
         Mockito.doNothing().when(parser).applyConfigOverride(Mockito.any(AgentConfig.class));
+        Mockito.doCallRealMethod().when(parser).parseArgsStringToMap(Mockito.anyString());
 
-        AgentConfig config = parser.parseCommandLine(argLine);
+        AgentConfig config = parser.parseCommandLine(args);
+
         assertTrue(config.isRuntimeOnly());
         assertTrue(config.isVerbose());
         assertFalse(config.isExtraverbose());
-        assertEquals("path/to/plugins", config.getPluginPath());
+        assertEquals("some_location", config.getPluginPath());
         Mockito.verify(parser).applyConfigOverride(config);
     }
 
     @Test
-    public void testApplyConfigOverride_whenOverridePropertyIsDefinedAndValueIsTrue() {
+    public void testApplyConfigOverride() {
+        config.setRuntimeOnly(false);
+        config.setVerbose(false);
+        config.setLoggerFactoryClass(null);
+
+        argsMap.put("runtimeonly", "");
+        argsMap.put("verbose", "");
+        argsMap.put("loggerfactory", "Factory");
+
+        parser.applyConfigOverride(config);
+
+        Assert.assertTrue(config.isRuntimeOnly());
+        Assert.assertTrue(config.isVerbose());
+        Assert.assertEquals("Factory", config.getLoggerFactoryClass());
+    }
+
+    @Test
+    public void testApplyConfigOverrideChangeRuntimeOnlyToTrue_whenOverridePropertyIsDefinedAndValueIsEmptyString() {
         config.setRuntimeOnly(false);
         Assert.assertFalse(config.isRuntimeOnly());
 
-        Mockito.doReturn(true).when(prop).containsKey("runtimeonly");
-        Mockito.doReturn("true").when(prop).getProperty("runtimeonly");
+        argsMap.put("runtimeonly", "");
 
         parser.applyConfigOverride(config);
 
@@ -110,23 +124,22 @@ public class AgentConfigParserTest {
     }
 
     @Test
-    public void testApplyConfigOverride_whenOverridePropertyIsDefinedAndValueIsFalse() {
+    public void testApplyConfigOverrideMaintainsRuntimeOnlyValue_whenOverridePropertyIsDefinedAndValueIsRandomString() {
         config.setRuntimeOnly(true);
         Assert.assertTrue(config.isRuntimeOnly());
 
-        Mockito.doReturn("false").when(prop).getProperty("runtimeonly");
+        argsMap.put("runtimeonly", "random string");
 
         parser.applyConfigOverride(config);
 
-        Assert.assertFalse(config.isRuntimeOnly());
+        Assert.assertTrue(config.isRuntimeOnly());
     }
 
     @Test
-    public void testApplyConfigOverride_whenOverridePropertyIsDefinedAndValueIsEmptyString() {
+    public void testApplyConfigOverrideChangeRuntimeOnlyToFalse_whenOverridePropertyIsDefinedAndValueIsFalse() {
         config.setRuntimeOnly(true);
         Assert.assertTrue(config.isRuntimeOnly());
-
-        Mockito.doReturn("").when(prop).getProperty("runtimeonly");
+        argsMap.put("runtimeonly", "fAlse");
 
         parser.applyConfigOverride(config);
 
@@ -134,81 +147,54 @@ public class AgentConfigParserTest {
     }
 
     @Test
-    public void testApplyConfigOverride_whenOverridePropertyIsDefinedAndValueIsRandomString() {
+    public void testApplyConfigOverrideMaintainsRuntimeOnlyValue_whenOverridePropertyIsNotDefined() {
         config.setRuntimeOnly(true);
         Assert.assertTrue(config.isRuntimeOnly());
-
-        Mockito.doReturn("random").when(prop).getProperty("runtimeonly");
+        Assert.assertTrue(argsMap.isEmpty());
 
         parser.applyConfigOverride(config);
 
-        Assert.assertFalse(config.isRuntimeOnly());
+        Assert.assertTrue(config.isRuntimeOnly());
     }
 
     @Test
-    public void testApplyConfigOverride_whenOverridePropertyIsNotDefined() {
-        config.setRuntimeOnly(false);
-        Assert.assertFalse(config.isRuntimeOnly());
-        Mockito.doReturn(null).when(prop).getProperty("runtimeonly");
+    public void testApplyConfigOverrideMaintainsRuntimeOnlyValue_whenOverrideFileNotExist() {
+        config.setRuntimeOnly(true);
+
+        Assert.assertTrue(config.isRuntimeOnly());
+        Assert.assertFalse(new File(config.getPluginPath(), "disco.config").exists());
 
         parser.applyConfigOverride(config);
 
-        Assert.assertFalse(config.isRuntimeOnly());
+        Assert.assertTrue(config.isRuntimeOnly());
     }
 
     @Test
-    public void testApplyConfigOverride_whenOverrideFileNotExist() {
-        config.setRuntimeOnly(false);
-        Assert.assertFalse(config.isRuntimeOnly());
-        Mockito.doReturn(null).when(prop).getProperty("runtimeonly");
-        Mockito.doReturn(false).when(overrideFile).exists();
+    public void testApplyConfigOverrideIgnoresArg_whenPluginPathIsSupplied() {
+        config.setPluginPath("original");
+
+        argsMap.put("pluginpath", "new path");
 
         parser.applyConfigOverride(config);
 
-        Assert.assertFalse(config.isRuntimeOnly());
+        Assert.assertEquals("original", config.getPluginPath());
     }
 
     @Test
     public void testGetDiscoConfigOverrideFileFromAgentPathReturnsNull_whenConfigFileNotExist() {
-        Mockito.doCallRealMethod().when(parser).getDiscoConfigOverrideFileFromAgentPath(classloader);
+        Mockito.doCallRealMethod().when(parser).readConfigFileFromPluginPath(Mockito.anyString());
 
-        File file = parser.getDiscoConfigOverrideFileFromAgentPath(classloader);
+        String configFileStr = parser.readConfigFileFromPluginPath(temporaryFolder.getRoot().getAbsolutePath());
 
-        Assert.assertNull(file);
+        Assert.assertNull(configFileStr);
     }
 
     @Test
-    public void testGetDiscoConfigOverrideFileFromAgentPathReturnsFile_whenConfigFileExist() throws IOException {
-        Mockito.doCallRealMethod().when(parser).getDiscoConfigOverrideFileFromAgentPath(classloader);
+    public void testGetDiscoConfigOverrideFileFromAgentPathReturnsFileContent_whenConfigFileExist() {
+        Mockito.doCallRealMethod().when(parser).readConfigFileFromPluginPath(Mockito.anyString());
 
-        configOverrideFile.createNewFile();
+        String configFileStr = parser.readConfigFileFromPluginPath(pluginPath.getAbsolutePath());
 
-        File file = parser.getDiscoConfigOverrideFileFromAgentPath(classloader);
-        Assert.assertEquals(configOverrideFile.getAbsolutePath(), file.getAbsolutePath());
-    }
-
-    @Test
-    public void testReadPropertiesFile() throws IOException {
-        Properties properties = new Properties();
-        properties.setProperty("runtimeonly", "true");
-        createPropertiesFile(configOverrideFile, properties);
-        OutputStream output = new FileOutputStream(configOverrideFile);
-        properties.store(output, null);
-        Mockito.doCallRealMethod().when(parser).readPropertiesFile(configOverrideFile);
-
-        Properties prop = parser.readPropertiesFile(configOverrideFile);
-
-        Assert.assertEquals(properties, prop);
-    }
-
-    private void createPropertiesFile(File outputFile, Properties properties) throws IOException {
-        if (!outputFile.exists()) {
-            outputFile.createNewFile();
-        }
-        try (OutputStream output = new FileOutputStream(outputFile)) {
-            properties.store(output, null);
-        } catch (IOException e) {
-            throw e;
-        }
+        Assert.assertEquals(args, configFileStr);
     }
 }
