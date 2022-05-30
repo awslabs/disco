@@ -21,7 +21,9 @@ import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.export.JarExportStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.SignedJarHandlingStrategy;
 import software.amazon.disco.instrumentation.preprocess.util.JarFileUtils;
+import software.amazon.disco.instrumentation.preprocess.util.JarSigningVerificationOutcome;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.io.File;
@@ -49,7 +51,7 @@ public class JarLoader implements ClassFileLoader {
     public SourceInfo load(final Path path, final PreprocessConfig config) {
         log.debug(PreprocessConstants.MESSAGE_PREFIX + "Loading Jar: " + path);
 
-        final SourceInfo info = loadJar(path.toFile(), new JarExportStrategy());
+        final SourceInfo info = loadJar(path.toFile(), new JarExportStrategy(), config.getSignedJarHandlingStrategy());
 
         if (info != null) {
             log.debug(PreprocessConstants.MESSAGE_PREFIX + "Jar loaded: " + path);
@@ -61,22 +63,31 @@ public class JarLoader implements ClassFileLoader {
     /**
      * Helper method to load one single Jar file
      *
-     * @param file     Jar file to be loaded
-     * @param strategy strategy used for exporting/saving the output artifact
-     * @return {@link SourceInfo object} containing package data, null if file is not a valid {@link JarFile}
+     * @param file                      Jar file to be loaded
+     * @param exportStrategy            exportStrategy used for exporting/saving the output artifact
+     * @param signedJarHandlingStrategy strategy defined to instruct the Preprocessor on how to handle signed Jars
+     * @return {@link SourceInfo} containing package data, null if file is not a valid {@link JarFile}
      */
-    protected SourceInfo loadJar(final File file, final ExportStrategy strategy) {
+    protected SourceInfo loadJar(final File file, final ExportStrategy exportStrategy, final SignedJarHandlingStrategy signedJarHandlingStrategy) {
         try (JarFile jarFile = new JarFile(file)) {
-            final Map<String, byte[]> classFileData = new HashMap<>();
-
             if (jarFile == null) {
-                log.warn(PreprocessConstants.MESSAGE_PREFIX + "Failed to load: " + file.getAbsolutePath());
+                log.warn(PreprocessConstants.MESSAGE_PREFIX + "Failed to load Jar: " + file.getAbsolutePath());
+                return null;
+            }
+
+            final JarSigningVerificationOutcome outcome = JarFileUtils.verifyJar(file);
+
+            log.debug(PreprocessConstants.MESSAGE_PREFIX + "Jar verification outcome: " + outcome.name());
+
+            if (signedJarHandlingStrategy.skipJarLoading(outcome)) {
+                log.info(PreprocessConstants.MESSAGE_PREFIX + signedJarHandlingStrategy.getClass().getName() + " determined to skip the loading of Jar: " + file.getName());
                 return null;
             }
 
             injectFileToSystemClassPath(file);
 
             log.debug(PreprocessConstants.MESSAGE_PREFIX + "Extracting class files from: " + file.getName());
+            final Map<String, byte[]> classFileData = new HashMap<>();
             for (JarEntry entry : extractEntries(jarFile)) {
                 if (entry.getName().endsWith(".class")) {
                     final String nameWithoutExtension = entry.getName().substring(0, entry.getName().lastIndexOf(".class")).replace('/', '.');
@@ -86,9 +97,9 @@ public class JarLoader implements ClassFileLoader {
             }
             log.debug(PreprocessConstants.MESSAGE_PREFIX + "Class files extracted: " + classFileData.size());
 
-            return classFileData.isEmpty() ? null : new SourceInfo(file, strategy, classFileData);
+            return classFileData.isEmpty() ? null : new SourceInfo(file, exportStrategy, classFileData, outcome);
         } catch (Throwable t) {
-            log.warn(PreprocessConstants.MESSAGE_PREFIX + "Invalid file, skipped", t);
+            log.warn(PreprocessConstants.MESSAGE_PREFIX + "Failed to load Jar: " + file.getAbsolutePath(), t);
             return null;
         }
     }

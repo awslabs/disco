@@ -19,6 +19,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Singular;
 import software.amazon.disco.agent.logging.Logger;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentSignedJarHandlingStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.SignedJarHandlingStrategy;
 
 import java.util.Map;
 import java.util.Set;
@@ -35,6 +37,7 @@ public class PreprocessConfig {
      */
     @Singular
     private final Map<String, Set<String>> sourcePaths;
+    private SignedJarHandlingStrategy signedJarHandlingStrategy;
 
     private final String outputDir;
     private final String agentPath;
@@ -46,10 +49,27 @@ public class PreprocessConfig {
     private final String jdkPath;
     private final boolean failOnUnresolvableDependency;
 
+    /**
+     * Getter for the 'logLevel' field
+     *
+     * @return configured log level, default level is 'INFO' if not set
+     */
     public Logger.Level getLogLevel() {
-        if(logLevel == null){
+        if (logLevel == null) {
             return Logger.Level.INFO;
         }
         return logLevel;
+    }
+
+    /**
+     * Getter for 'signedJarHandlingStrategy' field
+     *
+     * @return configured strategy, default strategy is 'InstrumentSignedJarHandlingStrategy' if not set
+     */
+    public SignedJarHandlingStrategy getSignedJarHandlingStrategy() {
+        if (signedJarHandlingStrategy == null) {
+            this.signedJarHandlingStrategy = new InstrumentSignedJarHandlingStrategy();
+        }
+        return signedJarHandlingStrategy;
     }
 }

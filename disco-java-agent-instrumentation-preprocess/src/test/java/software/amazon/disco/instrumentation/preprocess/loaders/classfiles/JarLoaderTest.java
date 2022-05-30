@@ -16,7 +16,8 @@
 package software.amazon.disco.instrumentation.preprocess.loaders.classfiles;
 
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
@@ -24,8 +25,13 @@ import software.amazon.disco.instrumentation.preprocess.MockEntities;
 import software.amazon.disco.instrumentation.preprocess.TestUtils;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentSignedJarHandlingStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.SignedJarHandlingStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.SkipSignedJarHandlingStrategy;
+import software.amazon.disco.instrumentation.preprocess.util.JarSigningVerificationOutcome;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,49 +43,58 @@ import java.util.jar.JarFile;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class JarLoaderTest {
+    static File dummyUnsignedJar;
+    static File dummySignedJar;
+    static SignedJarHandlingStrategy instrumentStrategy = new InstrumentSignedJarHandlingStrategy();
+    static SignedJarHandlingStrategy skipStrategy = new SkipSignedJarHandlingStrategy();
+
     JarLoader loader;
     PreprocessConfig config;
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @ClassRule
+    public static TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+    @BeforeClass
+    public static void beforeAll() throws Exception {
+        Map<String, byte[]> srcEntries = new HashMap<>();
+        srcEntries.put("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\n".getBytes(StandardCharsets.UTF_8));
+        srcEntries.put("A.class", "A.class".getBytes());
+        srcEntries.put("B.class", "B.class".getBytes());
+
+        dummyUnsignedJar = TestUtils.createJar(temporaryFolder, null, srcEntries);
+        dummySignedJar = new File(JarLoaderTest.class.getClassLoader().getResource("self-signed.jar").getFile());
+    }
 
     @Before
     public void before() {
         config = PreprocessConfig.builder().sourcePath("lib", new HashSet<>(MockEntities.makeMockPathsWithDuplicates())).build();
-        loader = new JarLoader();
+        loader = Mockito.spy(new JarLoader());
     }
 
     @Test
-    public void testLoadWorks() {
-        JarLoader packageLoader = Mockito.spy(loader);
-        SourceInfo info = new SourceInfo(new File("a"), null, Collections.emptyMap());
+    public void testLoadReturnsSourceInfoObject() {
+        SourceInfo info = new SourceInfo(new File("a"), null, Collections.emptyMap(), JarSigningVerificationOutcome.UNSIGNED);
 
         // return the same JarInfo object for all 3 jar paths defined in the config file.
-        Mockito.doReturn(info).when(packageLoader).loadJar(Mockito.any(File.class), Mockito.any(ExportStrategy.class));
+        Mockito.doReturn(info).when(loader).loadJar(Mockito.any(File.class), Mockito.any(ExportStrategy.class), Mockito.any(SignedJarHandlingStrategy.class));
 
-        packageLoader.load(Paths.get("somePath"), config);
+        loader.load(Paths.get("somePath"), config);
 
-        Mockito.verify(packageLoader).loadJar(Mockito.eq(Paths.get("somePath").toFile()), Mockito.any(ExportStrategy.class));
+        Mockito.verify(loader).loadJar(Mockito.eq(Paths.get("somePath").toFile()), Mockito.any(ExportStrategy.class), Mockito.any(SignedJarHandlingStrategy.class));
     }
 
     @Test
-    public void testLoadJarWorks() throws Exception {
-        JarLoader packageLoader = Mockito.spy(new JarLoader());
+    public void testLoadJarReturnsSourceInfoObject() {
+        SourceInfo info = loader.loadJar(dummyUnsignedJar, null, instrumentStrategy);
 
-        Map<String,byte[]> srcEntries = new HashMap<>();
-        srcEntries.put("A.class", "A.class".getBytes());
-        srcEntries.put("B.class", "B.class".getBytes());
-
-        File file = TestUtils.createJar(temporaryFolder, "jarFile", srcEntries);
-
-        SourceInfo info = packageLoader.loadJar(file, null);
-
-        Mockito.verify(packageLoader).injectFileToSystemClassPath(file);
+        Mockito.verify(loader).injectFileToSystemClassPath(dummyUnsignedJar);
         assertEquals(2, info.getClassByteCodeMap().size());
-        assertEquals(file, info.getSourceFile());
+        assertEquals(dummyUnsignedJar, info.getSourceFile());
         assertTrue(info.getClassByteCodeMap().containsKey("A"));
         assertTrue(info.getClassByteCodeMap().containsKey("B"));
         assertArrayEquals("A.class".getBytes(), info.getClassByteCodeMap().get("A"));
@@ -87,7 +102,30 @@ public class JarLoaderTest {
     }
 
     @Test
-    public void testExtractEntriesWorks() {
+    public void testLoadJarReturnsSourceInfoObject_whenJarIsSignedAndDefaultStrategyIsUsed() {
+        SourceInfo info = loader.loadJar(dummySignedJar, null, instrumentStrategy);
+
+        assertNotNull(info);
+        assertEquals(JarSigningVerificationOutcome.SIGNED, info.getJarSigningVerificationOutcome());
+
+        Mockito.verify(loader).injectFileToSystemClassPath(dummySignedJar);
+        assertEquals(2, info.getClassByteCodeMap().size());
+        assertEquals(dummySignedJar, info.getSourceFile());
+        assertTrue(info.getClassByteCodeMap().containsKey("A"));
+        assertTrue(info.getClassByteCodeMap().containsKey("B"));
+        assertArrayEquals("A.class".getBytes(), info.getClassByteCodeMap().get("A"));
+        assertArrayEquals("B.class".getBytes(), info.getClassByteCodeMap().get("B"));
+    }
+
+    @Test
+    public void testLoadJarReturnsNull_whenJarIsSignedAndIgnoreStrategyIsUsed() {
+        SourceInfo info = loader.loadJar(dummySignedJar, null, skipStrategy);
+
+        assertNull(info);
+    }
+
+    @Test
+    public void testExtractEntriesReturnsList() {
         JarFile jarFile = MockEntities.makeMockJarFile();
 
         List<JarEntry> entries = loader.extractEntries(jarFile);

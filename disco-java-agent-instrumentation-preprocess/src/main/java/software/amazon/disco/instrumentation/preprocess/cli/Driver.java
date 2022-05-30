@@ -81,6 +81,7 @@ public class Driver {
             + "\t\t --javaVersion | -jv                 <Version of java to compile the transformed classes>\n"
             + "\t\t --jdkSupport | -jdks                <Path to the JDK runtime to be instrumented. rt.jar for JDK 8, java.base.jmod for JDK 9 and higher>\n"
             + "\t\t --failOnUnresolvableDependency      Abort the Static Instrumentation process completely if flag is present, log exception as warning otherwise\n"
+            + "\t\t --signedJarHandlingStrategy         <Strategy used to handle signed Jars. Options are [instrument, skip]>\n"
             + "\t\t --verbose                           Set the log level to log everything.\n"
             + "\t\t --silent                            Disable logging to the console.\n\n"
             + "The default behavior of the library will replace the original Jar (non-jdk) scheduled for instrumentation if NO outputDir AND suffix are supplied.\n"
