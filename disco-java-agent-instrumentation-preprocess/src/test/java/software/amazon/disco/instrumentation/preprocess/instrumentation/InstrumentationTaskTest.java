@@ -71,7 +71,7 @@ public class InstrumentationTaskTest {
         byteArrayMap.put("ClassB", "ClassB".getBytes());
 
         source = tempFolder.newFile("someJar");
-        sourceInfo = new SourceInfo(source, exportStrategy, byteArrayMap);
+        sourceInfo = new SourceInfo(source, exportStrategy, byteArrayMap, null);
         config = PreprocessConfig.builder().build();
 
         task = Mockito.spy(new InstrumentationTask(jarLoader, source.toPath(), config, "lib"));

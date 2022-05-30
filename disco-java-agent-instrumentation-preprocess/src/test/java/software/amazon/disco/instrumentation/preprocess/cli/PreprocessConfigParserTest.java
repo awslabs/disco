@@ -23,6 +23,8 @@ import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.TestUtils;
 import software.amazon.disco.instrumentation.preprocess.exceptions.ArgumentParserException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentSignedJarHandlingStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.SkipSignedJarHandlingStrategy;
 
 import java.io.File;
 import java.util.Arrays;
@@ -100,6 +102,7 @@ public class PreprocessConfigParserTest {
         assertFalse(config.isFailOnUnresolvableDependency());
         assertEquals(Logger.Level.INFO, config.getLogLevel());
         assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/d3")), config.getSourcePaths().get(""));
+        assertTrue(config.getSignedJarHandlingStrategy() instanceof InstrumentSignedJarHandlingStrategy);
     }
 
     @Test
@@ -113,7 +116,8 @@ public class PreprocessConfigParserTest {
             "--javaversion", "11",
             "--agentarg", "arg",
             "--jdksupport", jdkpath,
-            "--failonunresolvabledependency"
+            "--failonunresolvabledependency",
+            "--signedjarhandlingstrategy", "skip"
         };
 
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
@@ -127,6 +131,7 @@ public class PreprocessConfigParserTest {
         assertEquals("arg", config.getAgentArg());
         assertEquals(jdkpath, config.getJdkPath());
         assertTrue(config.isFailOnUnresolvableDependency());
+        assertTrue(config.getSignedJarHandlingStrategy() instanceof SkipSignedJarHandlingStrategy);
     }
 
     @Test

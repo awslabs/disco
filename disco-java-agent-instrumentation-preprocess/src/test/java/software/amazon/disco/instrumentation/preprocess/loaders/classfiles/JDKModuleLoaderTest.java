@@ -23,6 +23,7 @@ import org.mockito.Mockito;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InstrumentationException;
 import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentSignedJarHandlingStrategy;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,7 +59,7 @@ public class JDKModuleLoaderTest {
 
         Mockito.verify(loader).getJDKBaseModule(config);
         Mockito.verify(loader).isJDK9Compatible();
-        Mockito.verify(loader).loadJar(Mockito.eq(jdk8ModuleFile), Mockito.any(ExportStrategy.class));
+        Mockito.verify(loader).loadJar(Mockito.eq(jdk8ModuleFile), Mockito.any(ExportStrategy.class), Mockito.any(InstrumentSignedJarHandlingStrategy.class));
     }
 
     @Test(expected = InstrumentationException.class)

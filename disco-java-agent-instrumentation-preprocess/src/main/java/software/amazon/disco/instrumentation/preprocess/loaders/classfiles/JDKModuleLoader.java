@@ -20,6 +20,7 @@ import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InstrumentationException;
 import software.amazon.disco.instrumentation.preprocess.export.JDKExportStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentSignedJarHandlingStrategy;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.io.File;
@@ -61,7 +62,9 @@ public class JDKModuleLoader extends JarLoader {
             }
         }
 
-        final SourceInfo info = loadJar(jdkModuleFile, new JDKExportStrategy());
+        // the signed Jar handling strategy configured for handling non-JDK library Jars is independent/irrelevant to how the JDK should be loaded and later instrumented,
+        // and thus the default strategy will be explicitly set here.
+        final SourceInfo info = loadJar(jdkModuleFile, new JDKExportStrategy(), new InstrumentSignedJarHandlingStrategy());
 
         return info;
     }

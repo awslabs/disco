@@ -18,6 +18,7 @@ package software.amazon.disco.instrumentation.preprocess.loaders.classfiles;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
+import software.amazon.disco.instrumentation.preprocess.util.JarSigningVerificationOutcome;
 
 import java.io.File;
 import java.util.Map;
@@ -32,4 +33,19 @@ public class SourceInfo {
     private final File sourceFile;
     private final ExportStrategy exportStrategy;
     private final Map<String, byte[]> classByteCodeMap;
+    private final JarSigningVerificationOutcome jarSigningVerificationOutcome;
+
+    /**
+     * Constructor
+     *
+     * @param sourceFile       source file where compiled class files were retrieved from. Can either be a folder or a Jar.
+     * @param exportStrategy   strategy to be used to export static instrumentation artifacts.
+     * @param classByteCodeMap a map containing the byte code of discovered class files mapped to their relative paths.
+     */
+    public SourceInfo(File sourceFile, ExportStrategy exportStrategy, Map<String, byte[]> classByteCodeMap) {
+        this.sourceFile = sourceFile;
+        this.exportStrategy = exportStrategy;
+        this.classByteCodeMap = classByteCodeMap;
+        this.jarSigningVerificationOutcome = null;
+    }
 }

@@ -21,6 +21,9 @@ import lombok.RequiredArgsConstructor;
 import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.exceptions.ArgumentParserException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentSignedJarHandlingStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.SignedJarHandlingStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.SkipSignedJarHandlingStrategy;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -30,6 +33,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -118,6 +122,7 @@ public class PreprocessConfigParser {
         ACCEPTED_FLAGS.put("--javaversion", new OptionToMatch("--javaversion", true));
         ACCEPTED_FLAGS.put("--agentarg", new OptionToMatch("--agentarg", true));
         ACCEPTED_FLAGS.put("--jdksupport", new OptionToMatch("--jdksupport", true));
+        ACCEPTED_FLAGS.put("--signedjarhandlingstrategy", new OptionToMatch("--signedjarhandlingstrategy", true));
 
         ACCEPTED_FLAGS.put("-out", new OptionToMatch("-out", true));
         ACCEPTED_FLAGS.put("-sps", new OptionToMatch("-sps", true));
@@ -175,6 +180,9 @@ public class PreprocessConfigParser {
             case "-jdks":
             case "--jdksupport":
                 builder.jdkPath(argument);
+                break;
+            case "--signedjarhandlingstrategy":
+                builder.signedJarHandlingStrategy(parseSignedJarHandlingStrategyArg(argument));
                 break;
             default:
                 // will never be invoked since flags are already validated.
@@ -252,6 +260,24 @@ public class PreprocessConfigParser {
             existingSources.get(key).addAll(Arrays.asList(sources));
         } else {
             builder.sourcePath(key, new HashSet<>(Arrays.asList(sources)));
+        }
+    }
+
+    /**
+     * Helper method to parse the value supplied for the 'signedjarhandlingstrategy` argument.
+     *
+     * @param strategy value supplied for the 'signedjarhandlingstrategy' argument
+     * @return an implementation of {@link SignedJarHandlingStrategy} determined by the argument value
+     */
+    private SignedJarHandlingStrategy parseSignedJarHandlingStrategyArg(final String strategy) {
+        switch (strategy.toLowerCase(Locale.ROOT)) {
+            case "skip":
+                return new SkipSignedJarHandlingStrategy();
+            case "instrument":
+                return new InstrumentSignedJarHandlingStrategy();
+            default:
+                // TODO: 2022-05-27 resign strategy to be implemented once we have enough data on how to re-sign Jars securely during build
+                throw new InvalidConfigEntryException("Invalid value provided for signedjarhandlingstrategy");
         }
     }
 

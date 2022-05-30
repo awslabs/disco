@@ -16,33 +16,49 @@
 package software.amazon.disco.instrumentation.preprocess.util;
 
 import org.junit.Assert;
-import org.junit.Rule;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import software.amazon.disco.instrumentation.preprocess.TestUtils;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+import static org.junit.Assert.assertEquals;
+
 public class JarfileUtilsTest {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    static File dummyUnsignedJar;
+    static File dummySignedJar;
+    static Map<String, byte[]> jarEntries;
+
+    @BeforeClass
+    public static void beforeAll() throws Exception {
+        jarEntries = new HashMap<>();
+        jarEntries.put("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\n".getBytes(StandardCharsets.UTF_8));
+        jarEntries.put("A.class", "A.class".getBytes());
+        jarEntries.put("B.class", "B.class".getBytes());
+
+        dummyUnsignedJar = TestUtils.createJar(temporaryFolder, null, jarEntries);
+
+        // this signed jar has the identical content as the 'fakeUnsignedJar' and was signed used a self-signed certificate with an
+        // expiration duration of 36,000 days starting from June 6th 2022
+        dummySignedJar = new File(JarfileUtilsTest.class.getClassLoader().getResource("self-signed.jar").getFile());
+    }
+
+    @ClassRule
+    public static TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
     public void testReadEntryFromJarWorks() throws Exception {
-        Map<String, byte[]> srcEntries = new HashMap<>();
-        srcEntries.put("ClassAAAAAAAAAAAAA.class","ClassAAAAAAAAAAAAA.class".getBytes());
-        srcEntries.put("ClassBBBBBBBBBBBB.class","ClassBBBBBBBBBBBB.class".getBytes());
-        srcEntries.put("/CCCC","/CCCC".getBytes());
-
-        File testFile = TestUtils.createJar(temporaryFolder, "Test.jar", srcEntries);
-
         Map<String, byte[]> entriesRead = new HashMap<>();
-        try (JarFile jarFile = new JarFile(testFile)) {
+        try (JarFile jarFile = new JarFile(dummyUnsignedJar)) {
             Enumeration<JarEntry> jarEntries = jarFile.entries();
 
             while (jarEntries.hasMoreElements()) {
@@ -51,10 +67,33 @@ public class JarfileUtilsTest {
             }
         }
 
-        Assert.assertEquals(3, entriesRead.size());
-        for(Map.Entry<String, byte[]> entry: srcEntries.entrySet()){
+        assertEquals(3, entriesRead.size());
+        for (Map.Entry<String, byte[]> entry : jarEntries.entrySet()) {
             Assert.assertTrue(entriesRead.containsKey(entry.getKey()));
             Assert.assertArrayEquals(entry.getValue(), entriesRead.get(entry.getKey()));
         }
+    }
+
+    @Test
+    public void testCheckIsJarSignedReturnsUNSIGNED() {
+        JarSigningVerificationOutcome outcome = JarFileUtils.verifyJar(dummyUnsignedJar);
+
+        assertEquals(JarSigningVerificationOutcome.UNSIGNED, outcome);
+    }
+
+    @Test
+    public void testCheckIsJarSignedReturnsSIGNED() {
+        JarSigningVerificationOutcome outcome = JarFileUtils.verifyJar(dummySignedJar);
+
+        assertEquals(JarSigningVerificationOutcome.SIGNED, outcome);
+    }
+
+    @Test
+    public void testCheckIsJarSignedReturnsINVALID() throws IOException {
+        File invalidFile = temporaryFolder.newFile();
+
+        JarSigningVerificationOutcome outcome = JarFileUtils.verifyJar(invalidFile);
+
+        assertEquals(JarSigningVerificationOutcome.INVALID, outcome);
     }
 }
