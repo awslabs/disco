@@ -75,7 +75,8 @@ public class JarFileUtils {
      * - The 'jarsigner' tool successfully verified the Jar and validated that it was not tampered with after being signed.
      * INVALID
      * - An error occurred during the verification process. Potential failure points are: invalid signing state, keystore loading error, IO related exceptions and so on...
-     * See {@link sun.security.tools.jarsigner.Main} for more detail.
+     * <p>
+     * See 'sun.security.tools.jarsigner.Main' for more detail.
      *
      * @param file Jar file to be verified
      * @return the enum value denoting the outcome of the verification process.
