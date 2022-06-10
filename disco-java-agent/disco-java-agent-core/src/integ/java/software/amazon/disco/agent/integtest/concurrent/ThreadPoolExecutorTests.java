@@ -16,6 +16,7 @@
 package software.amazon.disco.agent.integtest.concurrent;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import software.amazon.disco.agent.reflect.concurrent.TransactionContext;
@@ -37,6 +38,12 @@ public class ThreadPoolExecutorTests {
     private static final TimeUnit TERMINATION_TIMEOUT_UNIT = TimeUnit.HOURS;
     private static final long KEEP_ALIVE = 5L;
     private static final TimeUnit KEEP_ALIVE_UNIT = TimeUnit.SECONDS;
+
+    private static class CustomRunnable implements Runnable {
+        @Override
+        public void run() {
+        }
+    }
 
     @Before
     public void before() {
@@ -104,16 +111,7 @@ public class ThreadPoolExecutorTests {
                 trigger.set(true);
             }
         };
-        Runnable occupyWorkerTask = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    occupyWorkerLatch.await();
-                }
-                catch (InterruptedException exception) {
-                }
-            }
-        };
+        Runnable occupyWorkerTask = createOccupyWorkerTask(occupyWorkerLatch);
 
         // Occupy the worker thread so that we can remove triggerTask before it runs
         e.execute(occupyWorkerTask);
@@ -128,5 +126,47 @@ public class ThreadPoolExecutorTests {
         e.awaitTermination(TERMINATION_TIMEOUT, TERMINATION_TIMEOUT_UNIT);
         // Double-check that triggerTask didn't run
         assertEquals(false, trigger.get());
+    }
+
+    @Test
+    public void testShutdownNowReturnsUndecoratedRunnable() throws Exception{
+        ThreadPoolExecutor e = new ThreadPoolExecutor(
+                1, // One worker thread, to ensure at most one task runs at a time
+                1,
+                KEEP_ALIVE, KEEP_ALIVE_UNIT,
+                new LinkedBlockingQueue<>(2)
+        );
+
+        // We'll use this latch to keep a task in mid-execution, thus newly added task will be awaiting execution
+        CountDownLatch occupyWorkerLatch = new CountDownLatch(1);
+        Runnable occupyWorkerTask = createOccupyWorkerTask(occupyWorkerLatch);
+        CustomRunnable unstartedTask1 = new CustomRunnable();
+        CustomRunnable unstartedTask2 = new CustomRunnable();
+
+        e.execute(occupyWorkerTask);
+        // unstarted tasks won't run because the single worker thread is occupied
+        e.execute(unstartedTask1);
+        e.execute(unstartedTask2);
+        // List of tasks returned by shutdownNow method should be unwrapped CustomRunnable
+        e.shutdownNow().forEach(r -> Assert.assertTrue(r instanceof CustomRunnable));
+        // shutdownNow will cancel occupyWorkerTask, still unblock it to be safer
+        occupyWorkerLatch.countDown();
+        e.awaitTermination(TERMINATION_TIMEOUT, TERMINATION_TIMEOUT_UNIT);
+    }
+
+    /**
+     * Helper method to create occupy worker task.
+     *
+     * @param occupyWorkerLatch CountDownLatch will be used to keep a task in mid-execution.
+     */
+    private static Runnable createOccupyWorkerTask(CountDownLatch occupyWorkerLatch) {
+        Runnable occupyWorkerTask = () -> {
+            try {
+                occupyWorkerLatch.await();
+            }
+            catch (InterruptedException exception) {
+            }
+        };
+        return occupyWorkerTask;
     }
 }

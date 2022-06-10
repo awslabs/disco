@@ -25,6 +25,7 @@ import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 
+import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
@@ -53,6 +54,8 @@ public class ThreadPoolInterceptor implements Installable {
                     .on(createAfterExecuteMethodMatcher()))
                 .visit(Advice.to(RemoveAdvice.class)
                     .on(createRemoveMethodMatcher()))
+                .visit(Advice.to(ShutdownNowAdvice.class)
+                    .on(createShutdownNowMethodMatcher()))
             );
     }
 
@@ -98,6 +101,17 @@ public class ThreadPoolInterceptor implements Installable {
                 .and(not(isAbstract()));
     }
 
+    /**
+     * Create a method matcher to match the shutdownNow method.
+     *
+     * @return a method matcher
+     */
+    static ElementMatcher.Junction<? super MethodDescription> createShutdownNowMethodMatcher() {
+        return named("shutdownNow")
+                .and(isOverriddenFrom(ThreadPoolExecutor.class))
+                .and(not(isAbstract()));
+    }
+
     public static class BeforeExecuteAdvice {
         /**
          * Advice method un-decorate any DecoratedRunnable on entry to beforeExecute method.
@@ -131,6 +145,20 @@ public class ThreadPoolInterceptor implements Installable {
         @Advice.OnMethodEnter
         public static void onMethodEnter(@Advice.Argument(value = 0, readOnly = false) Runnable r) {
             r = DecoratedRunnable.maybeCreate(r);
+        }
+    }
+
+    public static class ShutdownNowAdvice {
+        /**
+         * Advice method un-decorate any DecoratedRunnable on exit to shutdownNow method.
+         *
+         * @param rs the list of runnable that were awaiting execution by the ThreadPoolExecutor.
+         */
+        @Advice.OnMethodExit
+        public static void OnMethodExit(@Advice.Return(readOnly = false) List<Runnable> rs) {
+            for (int i = 0; i < rs.size(); i++) {
+                rs.set(i, unDecorate(rs.get(i)));
+            }
         }
     }
 
