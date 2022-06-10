@@ -59,6 +59,13 @@ public class ThreadPoolInterceptorTests {
     }
 
     @Test
+    public void testThatShutdownNowMethodMatches() throws NoSuchMethodException {
+        Method m = ThreadPoolExecutor.class.getDeclaredMethod("shutdownNow");
+        Assert.assertTrue(ThreadPoolInterceptor.createShutdownNowMethodMatcher()
+                .matches(new MethodDescription.ForLoadedMethod(m)));
+    }
+
+    @Test
     public void testThatAdviceRemovesDecoration() {
         Runnable decoratedRunnable = DecoratedRunnable.maybeCreate(new CustomRunnable());
         Assert.assertTrue(ThreadPoolInterceptor.unDecorate(decoratedRunnable) instanceof CustomRunnable);
