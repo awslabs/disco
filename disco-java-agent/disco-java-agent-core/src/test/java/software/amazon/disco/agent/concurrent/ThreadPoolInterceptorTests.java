@@ -52,13 +52,6 @@ public class ThreadPoolInterceptorTests {
     }
 
     @Test
-    public void testThatRemoveMethodMatches() throws NoSuchMethodException {
-        Method m = ThreadPoolExecutor.class.getDeclaredMethod("remove", Runnable.class);
-        Assert.assertTrue(ThreadPoolInterceptor.createRemoveMethodMatcher()
-                .matches(new MethodDescription.ForLoadedMethod(m)));
-    }
-
-    @Test
     public void testThatShutdownNowMethodMatches() throws NoSuchMethodException {
         Method m = ThreadPoolExecutor.class.getDeclaredMethod("shutdownNow");
         Assert.assertTrue(ThreadPoolInterceptor.createShutdownNowMethodMatcher()

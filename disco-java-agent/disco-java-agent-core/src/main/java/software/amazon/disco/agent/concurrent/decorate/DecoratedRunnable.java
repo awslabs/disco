@@ -80,17 +80,6 @@ public class DecoratedRunnable extends Decorated implements Runnable {
     }
 
     /**
-     * Compare equal to another DecoratedRunnable if the target compares equal.
-     * <p>
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean equals(Object other) {
-        return (other instanceof DecoratedRunnable) &&
-                (target.equals(((DecoratedRunnable) other).target));
-    }
-
-    /**
      * When the DecoratedRunnable is executed, perform DiSCo TransactionContext propagation, as necessary
      * <p>
      * {@inheritDoc}

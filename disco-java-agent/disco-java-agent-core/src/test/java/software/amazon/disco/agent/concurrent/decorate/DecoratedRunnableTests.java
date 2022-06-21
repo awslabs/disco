@@ -174,26 +174,6 @@ public class DecoratedRunnableTests {
         Assert.assertTrue(holder.uncaught instanceof Error);
     }
 
-    @Test
-    public void testEquals() throws Exception {
-        Runnable r = () -> {
-            throw new Error();
-        };
-        Runnable q = () -> {};
-        DecoratedRunnable dr1 = DecoratedRunnable.maybeCreate(r);
-        DecoratedRunnable dr2 = DecoratedRunnable.maybeCreate(r);
-        Assert.assertTrue("DecoratedRunnable instances pointing to same target are equal",
-                dr1.equals(dr2));
-
-        DecoratedRunnable dq = DecoratedRunnable.maybeCreate(q);
-        Assert.assertFalse("DecoratedRunnable instances pointing to different targets are not equal",
-                dq.equals(dr1));
-        Assert.assertFalse("DecoratedRunnable instance is never equal to null",
-                dq.equals(null));
-        Assert.assertFalse("DecoratedRunnable instance is not equal to its target",
-                dq.equals(q));
-    }
-
     static class TestListener implements Listener {
         Event threadEnter = null;
         Event threadExit = null;
