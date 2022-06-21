@@ -52,8 +52,6 @@ public class ThreadPoolInterceptor implements Installable {
                     .on(createBeforeExecuteMethodMatcher()))
                 .visit(Advice.to(AfterExecuteAdvice.class)
                     .on(createAfterExecuteMethodMatcher()))
-                .visit(Advice.to(RemoveAdvice.class)
-                    .on(createRemoveMethodMatcher()))
                 .visit(Advice.to(ShutdownNowAdvice.class)
                     .on(createShutdownNowMethodMatcher()))
             );
@@ -91,17 +89,6 @@ public class ThreadPoolInterceptor implements Installable {
     }
 
     /**
-     * Create a method matcher to match the remove method.
-     *
-     * @return a method matcher
-     */
-    static ElementMatcher.Junction<? super MethodDescription> createRemoveMethodMatcher() {
-        return named("remove")
-                .and(isOverriddenFrom(ThreadPoolExecutor.class))
-                .and(not(isAbstract()));
-    }
-
-    /**
      * Create a method matcher to match the shutdownNow method.
      *
      * @return a method matcher
@@ -114,7 +101,7 @@ public class ThreadPoolInterceptor implements Installable {
 
     public static class BeforeExecuteAdvice {
         /**
-         * Advice method un-decorate any DecoratedRunnable on entry to beforeExecute method.
+         * Advice method un-decorate any DecoratedRunnable on entry to BeforeExecute.
          *
          * @param r the runnable that is about to be executed by the ThreadPoolExecutor.
          */
@@ -126,25 +113,13 @@ public class ThreadPoolInterceptor implements Installable {
 
     public static class AfterExecuteAdvice {
         /**
-         * Advice method un-decorate any DecoratedRunnable on entry to afterExecute method.
+         * Advice method un-decorate any DecoratedRunnable on entry to AfterExecute.
          *
          * @param r the runnable that was executed by the ThreadPoolExecutor.
          */
         @Advice.OnMethodEnter
         public static void onMethodEnter(@Advice.Argument(value = 0, readOnly = false) Runnable r) {
             r = unDecorate(r);
-        }
-    }
-
-    public static class RemoveAdvice {
-        /**
-         * Advice method decorate any Runnable on entry to remove method.
-         *
-         * @param r the runnable that should be removed from the ThreadPoolExecutor's queue.
-         */
-        @Advice.OnMethodEnter
-        public static void onMethodEnter(@Advice.Argument(value = 0, readOnly = false) Runnable r) {
-            r = DecoratedRunnable.maybeCreate(r);
         }
     }
 

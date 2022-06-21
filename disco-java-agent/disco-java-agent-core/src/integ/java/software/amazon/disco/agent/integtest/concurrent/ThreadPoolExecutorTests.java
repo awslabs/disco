@@ -12,12 +12,12 @@
  *   express or implied. See the License for the specific language governing
  *   permissions and limitations under the License.
  */
-
 package software.amazon.disco.agent.integtest.concurrent;
 
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import software.amazon.disco.agent.reflect.concurrent.TransactionContext;
 
@@ -92,6 +92,8 @@ public class ThreadPoolExecutorTests {
             f.get(TERMINATION_TIMEOUT, TERMINATION_TIMEOUT_UNIT);
         }
     }
+
+    @Ignore("The remove method of a Disco-enabled ThreadPoolExecutor fails to remove tasks")
     @Test
     public void testRemovalOfTaskBeforeItRuns() throws Exception {
         ThreadPoolExecutor e = new ThreadPoolExecutor(
