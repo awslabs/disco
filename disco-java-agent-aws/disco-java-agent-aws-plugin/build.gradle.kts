@@ -56,6 +56,8 @@ dependencies {
     safetyTestImplementation("junit:junit:4.12")
 }
 
+val standardOutputLoggerFactoryFQN: String by rootProject.extra
+
 // This task adds the Disco Java Agent and AWS SDK plugin like a normal integ test,
 // then runs the test(s) in the safetyTest/ source directory
 // Adapted from: https://docs.gradle.org/current/userguide/java_testing.html#sec:configuring_java_integration_tests
@@ -66,7 +68,7 @@ val safetyTestTask = task<Test>("safetyTest") {
     testClassesDirs = sourceSets["safetyTest"].output.classesDirs
     classpath = sourceSets["safetyTest"].runtimeClasspath
 
-    jvmArgs("-javaagent:../../disco-java-agent/disco-java-agent/build/libs/disco-java-agent-${project.version}.jar=pluginPath=./build/libs")
+    jvmArgs("-javaagent:../../disco-java-agent/disco-java-agent/build/libs/disco-java-agent-${project.version}.jar=pluginPath=./build/libs:verbose:loggerfactory=${standardOutputLoggerFactoryFQN}")
 
     dependsOn(":disco-java-agent:disco-java-agent:build")
     dependsOn(":disco-java-agent-aws:disco-java-agent-aws-plugin:assemble")

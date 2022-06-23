@@ -21,6 +21,8 @@ plugins {
     id("com.github.johnrengelman.shadow") version "5.2.0" apply false
 }
 
+val standardOutputLoggerFactoryFQN by extra("software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory")
+
 subprojects {
     version = "0.12.0"
 
@@ -148,7 +150,7 @@ subprojects {
                     "-sps", testJarDependencies.joinToString(":") + "@testJars",
                     "-sps", "${originalTestDir}@test",
                     "-out", outputDir,
-                    "-arg", "verbose:loggerfactory=software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory:pluginPath=${pluginsDir}",
+                    "-arg", "verbose:loggerfactory=${standardOutputLoggerFactoryFQN}:pluginPath=${pluginsDir}",
                 )
 
                 dependsOn("$preprocessProjName:build")
@@ -182,7 +184,7 @@ subprojects {
                 jvmArgs("-agentlib:jdwp=transport=dt_socket,address=localhost:1337,server=y,suspend=n")
 
                 // attach the Disco agent in 'runtimeonly' mode
-                jvmArgs("-javaagent:${agentJarPath}=pluginPath=${pluginsDir}:runtimeonly")
+                jvmArgs("-javaagent:${agentJarPath}=pluginPath=${pluginsDir}:runtimeonly:verbose:loggerfactory=${standardOutputLoggerFactoryFQN}")
 
                 if (JavaVersion.current().isJava9Compatible) {
                     // configure module patching and create read link from java.base to all unnamed modules
