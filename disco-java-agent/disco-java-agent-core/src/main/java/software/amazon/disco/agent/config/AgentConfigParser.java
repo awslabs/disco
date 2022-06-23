@@ -18,16 +18,17 @@ package software.amazon.disco.agent.config;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Scanner;
 
 /**
- * Parses command line arguments passed to the DiSCo agent via command line. The presence of a config file named {@link #CONFIG_FILE_NAME} under the plugin path supplied will be checked
- * and used to override args parsed from the command line. See {@link #applyConfigOverride(AgentConfig)}} for more details.
+ * Parses command line arguments passed to the DiSCo agent via command line.
+ * The presence of a config file named {@link #CONFIG_FILE_NAME} under the plugin path supplied will be checked and used to override args parsed from the command line.
+ * See {@link #applyConfigOverride(AgentConfig)}} for more details.
  */
 public class AgentConfigParser {
     protected static final String CONFIG_FILE_NAME = "disco.config";
@@ -70,10 +71,22 @@ public class AgentConfigParser {
         //TODO these regexes look overwrought.
         String[] individualArgs = argStr.split("(?<!\\\\):");
 
-        //for each arg=value pair, split by "="
+        insertArgsToMap(individualArgs, argsMap);
+
+        return argsMap;
+    }
+
+    /**
+     * Split each element of the passed-in args array into key value pairs and insert them to the map.
+     *
+     * @param individualArgs args to be inserted into the map. A single element of the array would take the form of "key=value" or "key"
+     * @param argsMap        map in which args will be inserted to
+     */
+    private void insertArgsToMap(final String[] individualArgs, final Map<String, String> argsMap) {
         for (String arg : individualArgs) {
-            String[] pair = arg.split("(?<!\\\\)=");
-            String value = pair.length > 1
+            //for each arg=value pair, split by "="
+            final String[] pair = arg.split("(?<!\\\\)=");
+            final String value = pair.length > 1
                 ? pair[1]
                 .replaceAll("\\\\:", ":")
                 .replaceAll("\\\\=", "=")
@@ -81,8 +94,6 @@ public class AgentConfigParser {
 
             argsMap.put(pair[0], value);
         }
-
-        return argsMap;
     }
 
     /**
@@ -124,24 +135,35 @@ public class AgentConfigParser {
     }
 
     /**
-     * Apply overrides to the passed in 'AgentConfig' instance if the config override file is present. Args will be treated the same way as if they were passed in via the
-     * command line with the only exception of 'pluginpath' which can't have its value overwritten by the config file. Since the config file is retrieved from the very same
+     * Apply overrides to the passed in 'AgentConfig' instance if the config override file is present.
+     *
+     * Args expressed in the config file must follow the format where each key value pair occupies a separate line. For instance, the content of a particular config file containing
+     * more than 1 arg may look like this:'runtimeonly\nverbose\nloggerfactory=com.amazon.SomeLogger'. These args are parsed one at a time in order. Duplicated entries will result in
+     * the existing value being overridden by the most recently discovered value.
+     *
+     * On the other hand, 'pluginpath' is an exception argument which can't have its value overwritten by the config file. Since the config file is retrieved from the very same
      * plugin path supplied via the command line arg, allowing the config file to override this plugin path would be counter-intuitive.
      * <p>
-     * In addition, the absence of an arg in the config file, e.g. runtimeonly, does not indicate that the existing field in the 'AgentConfig' instance should be reverted to
+     * In addition, the absence of an arg in the config file, e.g. 'runtimeonly', does not indicate that the existing field in the 'AgentConfig' instance should be reverted to
      * its default value. In other words, args expressed in the config file are only additive.
      *
      * @param config AgentConfig instance that may have some of its fields overwritten.
      */
     protected void applyConfigOverride(final AgentConfig config) {
-        final String argsStringFromConfigFile = readConfigFileFromPluginPath(config.getPluginPath());
-        final LinkedHashMap<String, String> argsMap = parseArgsStringToMap(argsStringFromConfigFile);
+        final List<String> argsListFromConfigFile = readConfigFileFromPluginPath(config.getPluginPath());
+
+        if (argsListFromConfigFile == null || argsListFromConfigFile.isEmpty()) {
+            return;
+        }
+
+        final LinkedHashMap<String, String> argsMap = new LinkedHashMap<>();
+        insertArgsToMap(argsListFromConfigFile.toArray(new String[1]), argsMap);
 
         // iterate over the map entries in the order of insertion.
         for (Map.Entry<String, String> argPair : argsMap.entrySet()) {
             if (argPair.getKey().equalsIgnoreCase("pluginpath")) {
                 // overriding the plugin path is not supported
-                System.out.println("Disco(Agent) overwriting the 'pluginPath' agent argument is not supported. Value supplied will be ignored.");
+                System.err.println("Disco(Agent) overwriting the 'pluginPath' agent argument is not supported. Value supplied will be ignored.");
                 continue;
             } else {
                 applyArgToConfig(config, argPair.getKey(), argPair.getValue());
@@ -150,12 +172,13 @@ public class AgentConfigParser {
     }
 
     /**
-     * Read a config file which contains 'AgentConfig' overrides such as 'runtimeonly'.
+     * Read a config file which contains 'AgentConfig' overrides such as 'runtimeonly'. Each line is trimmed before being appended to the
+     * returning list.
      *
      * @param pluginPath plugin path supplied via the command line args
-     * @return the string content of the config file if present, null if file doesn't exist
+     * @return the list of args read from the config file if present, null if file doesn't exist
      */
-    protected String readConfigFileFromPluginPath(final String pluginPath) {
+    protected List<String> readConfigFileFromPluginPath(final String pluginPath) {
         // return immediately since it's not possible to determine the location of the config file.
         if (pluginPath == null) {
             return null;
@@ -167,12 +190,20 @@ public class AgentConfigParser {
             return null;
         }
 
-        try {
-            final String configFileArgStr = new String(Files.readAllBytes(configFile.toPath()), StandardCharsets.UTF_8);
-            return configFileArgStr;
+        try (Scanner scanner = new Scanner(configFile)) {
+            final List<String> argsRead = new ArrayList<>();
+
+            while (scanner.hasNextLine()) {
+                final String arg = scanner.nextLine().trim();
+                if (!arg.isEmpty()) {
+                    argsRead.add(arg);
+                }
+            }
+
+            return argsRead;
         } catch (IOException | IllegalArgumentException e) {
             // log to STDOUT if failed to read config file since 'LoggerFactory' hasn't been configured yet.
-            System.out.println("Disco(Agent) failed to load config override file: " + e.getMessage());
+            System.err.println("Disco(Agent) failed to load config override file: " + e.getMessage());
             return null;
         }
     }
