@@ -30,10 +30,13 @@ import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class AgentConfigParserTest {
@@ -46,6 +49,7 @@ public class AgentConfigParserTest {
     static File pluginPath;
     static File discoDir;
     static String args = "verbose:runtimeonly:pluginpath=some_location";
+    static List<String> argsList = Arrays.asList("verbose", "runtimeonly", "loggerfactory=com.amazon.SomeFactory");
 
     @ClassRule
     public static TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -60,7 +64,7 @@ public class AgentConfigParserTest {
         configOverrideFile.createNewFile();
 
         try (FileOutputStream outputStream = new FileOutputStream(configOverrideFile)) {
-            outputStream.write(args.getBytes(StandardCharsets.UTF_8));
+            outputStream.write("verbose\nruntimeonly\n".getBytes(StandardCharsets.UTF_8));
         }
     }
 
@@ -77,7 +81,7 @@ public class AgentConfigParserTest {
         argsMap = new LinkedHashMap<>();
 
         Mockito.doReturn(argsMap).when(parser).parseArgsStringToMap(Mockito.anyString());
-        Mockito.doReturn(args).when(parser).readConfigFileFromPluginPath(Mockito.anyString());
+        Mockito.doReturn(argsList).when(parser).readConfigFileFromPluginPath(Mockito.anyString());
     }
 
     @Test
@@ -100,15 +104,11 @@ public class AgentConfigParserTest {
         config.setVerbose(false);
         config.setLoggerFactoryClass(null);
 
-        argsMap.put("runtimeonly", "");
-        argsMap.put("verbose", "");
-        argsMap.put("loggerfactory", "Factory");
-
         parser.applyConfigOverride(config);
 
         Assert.assertTrue(config.isRuntimeOnly());
         Assert.assertTrue(config.isVerbose());
-        Assert.assertEquals("Factory", config.getLoggerFactoryClass());
+        Assert.assertEquals("com.amazon.SomeFactory", config.getLoggerFactoryClass());
     }
 
     @Test
@@ -139,7 +139,7 @@ public class AgentConfigParserTest {
     public void testApplyConfigOverrideChangeRuntimeOnlyToFalse_whenOverridePropertyIsDefinedAndValueIsFalse() {
         config.setRuntimeOnly(true);
         Assert.assertTrue(config.isRuntimeOnly());
-        argsMap.put("runtimeonly", "fAlse");
+        Mockito.doReturn(Arrays.asList("runtimeonly=false")).when(parser).readConfigFileFromPluginPath(Mockito.anyString());
 
         parser.applyConfigOverride(config);
 
@@ -181,20 +181,67 @@ public class AgentConfigParserTest {
     }
 
     @Test
-    public void testGetDiscoConfigOverrideFileFromAgentPathReturnsNull_whenConfigFileNotExist() {
+    public void testReadConfigFileFromPluginPathReturnsArgs() throws IOException {
         Mockito.doCallRealMethod().when(parser).readConfigFileFromPluginPath(Mockito.anyString());
+        File fakePluginDir = temporaryFolder.newFolder();
+        generateTestConfigFile(" \nruntimeonly\nverbose\n\n loggerFactory=com.amazon.SomeFactory ", fakePluginDir);
 
-        String configFileStr = parser.readConfigFileFromPluginPath(temporaryFolder.getRoot().getAbsolutePath());
+        List<String> args = parser.readConfigFileFromPluginPath(fakePluginDir.getAbsolutePath());
 
-        Assert.assertNull(configFileStr);
+        Assert.assertEquals(3, args.size());
+        assertTrue(args.contains("runtimeonly"));
+        assertTrue(args.contains("verbose"));
+        assertTrue(args.contains("loggerFactory=com.amazon.SomeFactory"));
     }
 
     @Test
-    public void testGetDiscoConfigOverrideFileFromAgentPathReturnsFileContent_whenConfigFileExist() {
+    public void testReadConfigFileFromPluginPathReturnsEmptyList_whenFileIsEmpty() throws IOException {
+        Mockito.doCallRealMethod().when(parser).readConfigFileFromPluginPath(Mockito.anyString());
+        File fakePluginDir = temporaryFolder.newFolder();
+        File emptyConfigFile = new File(fakePluginDir, "disco.config");
+        emptyConfigFile.createNewFile();
+
+        List<String> args = parser.readConfigFileFromPluginPath(fakePluginDir.getAbsolutePath());
+
+        assertTrue(args.isEmpty());
+    }
+
+    @Test
+    public void testReadConfigFileFromPluginPathReturnsNull_whenFileNotExist() throws IOException {
         Mockito.doCallRealMethod().when(parser).readConfigFileFromPluginPath(Mockito.anyString());
 
-        String configFileStr = parser.readConfigFileFromPluginPath(pluginPath.getAbsolutePath());
+        List<String> args = parser.readConfigFileFromPluginPath(temporaryFolder.newFolder().getAbsolutePath());
 
-        Assert.assertEquals(args, configFileStr);
+        assertNull(args);
+    }
+
+    @Test
+    public void testReadConfigFileFromPluginPathReturnsArgs_whenConfigFileHasOneEntryAndEndsWithNewLine() throws IOException {
+        Mockito.doCallRealMethod().when(parser).readConfigFileFromPluginPath(Mockito.anyString());
+        File fakePluginDir = temporaryFolder.newFolder();
+        generateTestConfigFile("runtimeonly\n", fakePluginDir);
+
+        List<String> args = parser.readConfigFileFromPluginPath(fakePluginDir.getAbsolutePath());
+
+        assertEquals(1, args.size());
+        assertEquals("runtimeonly", args.get(0));
+    }
+
+    @Test
+    public void testReadConfigFileFromPluginPathReturnsNull_whenPluginPathNotExist() {
+        Mockito.doCallRealMethod().when(parser).readConfigFileFromPluginPath(Mockito.anyString());
+
+        List<String> args = parser.readConfigFileFromPluginPath("invalid_path");
+
+        assertNull(args);
+    }
+
+    private void generateTestConfigFile(String content, File pluginPath) throws IOException {
+        File configFile = new File(pluginPath, "disco.config");
+        configFile.createNewFile();
+
+        try (FileOutputStream fileOutputStream = new FileOutputStream(configFile)) {
+            fileOutputStream.write(content.getBytes(StandardCharsets.UTF_8));
+        }
     }
 }
