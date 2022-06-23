@@ -83,6 +83,7 @@ dependencies {
 }
 
 val ver = project.version
+val standardOutputLoggerFactoryFQN: String by rootProject.extra
 
 val integtest = task<Test>("integtest") {
     testClassesDirs = sourceSets["integ"].output.classesDirs
@@ -98,7 +99,7 @@ val integtest = task<Test>("integtest") {
     }
 
     //apply the canonical agent which installs core interceptors
-    jvmArgs = listOf("-agentlib:jdwp=transport=dt_socket,address=localhost:1337,server=y,suspend=n", "-javaagent:../disco-java-agent/build/libs/disco-java-agent-"+ver+".jar")
+    jvmArgs = listOf("-agentlib:jdwp=transport=dt_socket,address=localhost:1337,server=y,suspend=n", "-javaagent:../disco-java-agent/build/libs/disco-java-agent-"+ver+".jar"+"=verbose:loggerfactory=${standardOutputLoggerFactoryFQN}")
 
     //try and coerce the runtime into giving the tests some parallelism to work with. The tests have a retry
     //policy to encourage them to work, but the runtime sometimes provides no threads in the thread pool

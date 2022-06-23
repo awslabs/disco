@@ -37,6 +37,7 @@ var discoAgentPath = project(discoAgentProject).buildDir.absolutePath + "/libs/d
 val pluginDir = project(preprocessTestPluginProject).buildDir.absolutePath + "/libs"
 val outDir = "${discoDir}/static-instrumentation"
 val pluginDirWithConfigFile = "${discoDir}/plugins"
+val standardOutputLoggerFactoryFQN: String by rootProject.extra
 
 // create a 'disco' dir where Disco plugins and the config override file will reside in
 val setupPluginsDir = task<Copy>("setupPluginsDir"){
@@ -68,7 +69,7 @@ val testDependenciesPreprocess = tasks.register<JavaExec>("testDependenciesPrepr
         "-ap", discoAgentPath,
         "-sps", preprocessTestInstrumentationTargetPath,
         "-out", outDir,
-        "-arg", "verbose:loggerfactory=software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory:pluginPath=$pluginDir",
+        "-arg", "verbose:loggerfactory=${standardOutputLoggerFactoryFQN}:pluginPath=$pluginDir",
         "--verbose"
     )
 
@@ -87,7 +88,7 @@ tasks.test {
         .plus(layout.files("$outDir/disco-java-agent-instrumentation-preprocess-test-target-${project.version}.jar"))
 
     // attach the Disco agent with the "runtimeonly" arg
-    jvmArgs("-javaagent:${discoAgentPath}=pluginPath=${pluginDir}:loggerfactory=software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory:runtimeonly")
+    jvmArgs("-javaagent:${discoAgentPath}=pluginPath=${pluginDir}:verbose:loggerfactory=${standardOutputLoggerFactoryFQN}:runtimeonly")
 
     dependsOn(testDependenciesPreprocess)
     dependsOn(createConfigFile)
@@ -103,7 +104,7 @@ val configFileOverrideTest = task<Test>("configFileOverrideTest"){
 
     // attach the Disco agent WITHOUT the 'runtimeonly' flag since 'AgentConfigParser' will simply override the 'runtimeonly' flag to true after parsing the 'disco.config' file
     // generated prior to this task.
-    jvmArgs("-javaagent:${discoAgentPath}=pluginPath=${pluginDirWithConfigFile}:loggerfactory=software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory")
+    jvmArgs("-javaagent:${discoAgentPath}=pluginPath=${pluginDirWithConfigFile}:verbose:loggerfactory=${standardOutputLoggerFactoryFQN}")
 
     dependsOn(testDependenciesPreprocess)
     dependsOn(createConfigFile)
@@ -140,7 +141,7 @@ val preprocess = tasks.register<JavaExec>("preprocess") {
         "-jdks", System.getProperty("java.home"),
         "-sps", project(discoCoreProject).buildDir.absolutePath + "/tmp/discoCoreIntegTests.jar",
         "-out", outputDir,
-        "-arg", "verbose:loggerfactory=software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory:pluginPath=$pluginDir",
+        "-arg", "verbose:loggerfactory=$standardOutputLoggerFactoryFQN:pluginPath=$pluginDir",
         "--verbose"
     )
 
@@ -161,7 +162,7 @@ val jdkTest = task<Test>("jdkTest") {
         .plus(layout.files(outputDir + "/discoCoreIntegTests.jar"))
 
     // attach the Disco agent in 'runtimeonly' mode
-    jvmArgs("-javaagent:${discoAgentPath}=pluginPath=${pluginDir}:runtimeonly")
+    jvmArgs("-javaagent:${discoAgentPath}=pluginPath=${pluginDir}:runtimeonly:verbose:loggerfactory=${standardOutputLoggerFactoryFQN}")
 
     if (JavaVersion.current().isJava9Compatible) {
         // configure module patching and create read link from java.base to all unnamed modules
