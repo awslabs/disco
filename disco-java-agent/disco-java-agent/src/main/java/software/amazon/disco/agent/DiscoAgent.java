@@ -22,7 +22,13 @@ import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.agent.metrics.DiscoAgentMetrics;
 import software.amazon.disco.agent.plugin.PluginOutcome;
 
+import java.io.File;
 import java.lang.instrument.Instrumentation;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -38,6 +44,7 @@ import java.util.List;
  * since the core concurrency treatments are inoperable otherwise. See this module's build.gradle.kts.
  */
 public class DiscoAgent {
+    private static final String KILLSWITCH_FILENAME = "/disco.kill";
     private static boolean agentPresent = false;
 
     private static Logger log = LogManager.getLogger(DiscoAgent.class);
@@ -96,6 +103,21 @@ public class DiscoAgent {
             log.warn("DiSCo(Agent) no pluginPath configured, agent is effectively inert. Are you sure that's what you intended?");
         }
 
+        String attemptedLocation = "unknown";
+        try {
+            URL agentClassUrl = ClassLoader.getSystemClassLoader().getResource("software/amazon/disco/agent/DiscoAgent.class");
+            Path agentJarPath = Paths.get(agentClassUrl.getPath().replaceFirst("!.*", ""));
+            Path agentFolderPath = agentJarPath.subpath(0, agentJarPath.getNameCount() - 1);
+            File killswitchFile = new File(new URI(agentFolderPath + KILLSWITCH_FILENAME));
+            attemptedLocation = killswitchFile.getAbsolutePath();
+            if (killswitchFile.exists()) {
+                logUrgentMessage("DiSCo(Agent) killswitch from " + attemptedLocation + " applied. This instance of the Agent will now exit without side effects.");
+                return;
+            }
+        } catch (Exception e) {
+            log.error("DiSCo(Agent) could not search for killswitch file - looked in the agent JAR location at " + attemptedLocation);
+        }
+
         //if forking this canonical agent to build a site specific variant, you may wish to provide a custom ignore-matcher
         //to the install() method, if you have commonly used internal software which benefits from being 'avoided' by the
         //installed interceptions. e.g.:
@@ -149,6 +171,6 @@ public class DiscoAgent {
      */
     private static void logUrgentMessage(String message) {
         log.warn(message);
-        System.out.println(message);
+        System.err.println(message);
     }
 }
