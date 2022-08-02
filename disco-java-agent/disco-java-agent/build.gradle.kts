@@ -56,4 +56,47 @@ tasks.named<Test>("test") {
             agentArg,
             "-DdiscoAgentPath=$agentPath"
     )
+    dependsOn(tasks["shadowJar"])
 }
+
+sourceSets {
+    create("killswitchtest") {
+        java {
+            srcDir("src/killswitchtest/java")
+        }
+    }
+}
+
+val killswitchtestImplementation: Configuration by configurations.getting {}
+dependencies {
+    killswitchtestImplementation("junit", "junit", "4.12")
+    killswitchtestImplementation(project(":disco-java-agent:disco-java-agent-api"))
+}
+val ver = project.version
+val standardOutputLoggerFactoryFQN: String by rootProject.extra
+val killswitchtest = task<Test>("killswitchtest") {
+    testClassesDirs = sourceSets["killswitchtest"].output.classesDirs
+    classpath = sourceSets["killswitchtest"].runtimeClasspath
+    jvmArgs = listOf("-agentlib:jdwp=transport=dt_socket,address=localhost:1337,server=y,suspend=n",
+        "-javaagent:../disco-java-agent/build/libs/disco-java-agent-"+ver+".jar=verbose:loggerfactory=${standardOutputLoggerFactoryFQN}")
+
+    doFirst {
+        var killswitchFile = File(project.buildDir.absolutePath + "/libs/disco.kill")
+        killswitchFile.createNewFile()
+    }
+
+    dependsOn(tasks["shadowJar"])
+}
+
+val deletekillswitch = task("deletekillswitch") {
+    doFirst {
+        File( project.buildDir.absolutePath + "/libs/disco.kill").delete()
+    }
+    mustRunAfter(killswitchtest)
+}
+
+tasks.build {
+    dependsOn(killswitchtest)
+    dependsOn(deletekillswitch)
+}
+
