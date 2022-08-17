@@ -27,7 +27,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class DecoratedRunnableScheduledFuture<V> extends Decorated implements RunnableScheduledFuture<V> {
 
-    private final RunnableScheduledFuture<V> target;
+    final RunnableScheduledFuture<V> target;
 
     /**
      * Create a new DecoratedRunnableScheduledFuture. Private, use factory to create.
@@ -80,6 +80,9 @@ public class DecoratedRunnableScheduledFuture<V> extends Decorated implements Ru
      */
     @Override
     public int compareTo(Delayed o) {
+        if (o instanceof DecoratedRunnableScheduledFuture) {
+            return target.compareTo(((DecoratedRunnableScheduledFuture) o).target);
+        }
         return target.compareTo(o);
     }
 
