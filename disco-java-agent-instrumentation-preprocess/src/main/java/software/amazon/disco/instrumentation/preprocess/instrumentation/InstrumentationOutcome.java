@@ -15,6 +15,8 @@
 
 package software.amazon.disco.instrumentation.preprocess.instrumentation;
 
+import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.SourceInfo;
+
 import lombok.Builder;
 import lombok.Getter;
 
@@ -38,6 +40,8 @@ public class InstrumentationOutcome {
 
     private Status status;
     private String source;
+    private SourceInfo sourceInfo;
+
     private List<String> failedClasses;
 
     public boolean hasFailed() {

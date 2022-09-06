@@ -34,6 +34,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -81,7 +82,7 @@ public class JarLoader implements ClassFileLoader {
 
             if (signedJarHandlingStrategy.skipJarLoading(outcome)) {
                 log.info(PreprocessConstants.MESSAGE_PREFIX + signedJarHandlingStrategy.getClass().getName() + " determined to skip the loading of Jar: " + file.getName());
-                return null;
+                return new SourceInfo(file, exportStrategy, Collections.emptyMap(), outcome); //Empty classByteCodeMap
             }
 
             injectFileToSystemClassPath(file);

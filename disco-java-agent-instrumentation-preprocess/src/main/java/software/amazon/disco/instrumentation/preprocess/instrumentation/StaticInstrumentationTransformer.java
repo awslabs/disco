@@ -33,6 +33,7 @@ import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.Class
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.DirectoryLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JDKModuleLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JarLoader;
+import software.amazon.disco.instrumentation.preprocess.util.JarSigningVerificationOutcome;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.nio.file.Files;
@@ -59,6 +60,9 @@ public class StaticInstrumentationTransformer {
     private final PreprocessConfig config;
     private final List<InstrumentationOutcome> sourcesFailedToBeInstrumented = new ArrayList<>();
     private final List<InstrumentationOutcome> sourcesInstrumented = new ArrayList<>();
+    private final List<InstrumentationOutcome> signedJarsInstrumented = new ArrayList<>();
+    private final List<InstrumentationOutcome> signedJarsDiscovered = new ArrayList<>();
+
     private final AgentLoader agentLoader;
 
     @Singular
@@ -125,6 +129,10 @@ public class StaticInstrumentationTransformer {
             final InstrumentationOutcome outcome = task.applyInstrumentation();
             allOutcomes.add(outcome);
 
+            if (outcome.getSourceInfo() != null && outcome.getSourceInfo().isJarSigned()) {
+                signedJarsDiscovered.add(outcome);
+            }
+
             if (outcome.getStatus().equals(Status.NO_OP)) {
                 continue;
             }
@@ -133,6 +141,9 @@ public class StaticInstrumentationTransformer {
                 sourcesFailedToBeInstrumented.add(outcome);
             } else {
                 sourcesInstrumented.add(outcome);
+                if (outcome.getSourceInfo().isJarSigned()) {
+                    signedJarsInstrumented.add(outcome);
+                }
             }
         }
     }
@@ -146,6 +157,18 @@ public class StaticInstrumentationTransformer {
         log.info(PreprocessConstants.MESSAGE_PREFIX + "Sources instrumented: " + sourcesInstrumented.size());
 
         for (InstrumentationOutcome outcome : sourcesInstrumented) {
+            log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
+        }
+
+        log.info(PreprocessConstants.MESSAGE_PREFIX + "Signed jars discovered: " + signedJarsDiscovered.size());
+
+        for (InstrumentationOutcome outcome : signedJarsDiscovered) {
+            log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
+        }
+
+        log.info(PreprocessConstants.MESSAGE_PREFIX + "Signed jars instrumented: " + signedJarsInstrumented.size());
+
+        for (InstrumentationOutcome outcome : signedJarsInstrumented) {
             log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
         }
 
