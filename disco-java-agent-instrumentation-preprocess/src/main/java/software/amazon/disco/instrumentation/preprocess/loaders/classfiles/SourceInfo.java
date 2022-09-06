@@ -48,4 +48,8 @@ public class SourceInfo {
         this.classByteCodeMap = classByteCodeMap;
         this.jarSigningVerificationOutcome = null;
     }
+
+    public boolean isJarSigned() {
+        return jarSigningVerificationOutcome != null && jarSigningVerificationOutcome.equals(JarSigningVerificationOutcome.SIGNED);
+    }
 }

@@ -26,6 +26,7 @@ import software.amazon.disco.instrumentation.preprocess.instrumentation.Instrume
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.TransformerExtractor;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.ClassFileLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.SourceInfo;
+import software.amazon.disco.instrumentation.preprocess.util.JarSigningVerificationOutcome;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.lang.instrument.ClassFileTransformer;
@@ -62,7 +63,7 @@ public class InstrumentationTask {
     protected InstrumentationOutcome applyInstrumentation() {
         final SourceInfo sourceInfo = loader.load(sourcePath, config);
 
-        if (sourceInfo != null) {
+        if (sourceInfo != null && !sourceInfo.getClassByteCodeMap().isEmpty()) {
             log.debug(PreprocessConstants.MESSAGE_PREFIX + "Applying transformation on: " + sourceInfo.getSourceFile().getAbsolutePath());
             log.debug(PreprocessConstants.MESSAGE_PREFIX + "Classes found: " + sourceInfo.getClassByteCodeMap().size());
 
@@ -72,6 +73,14 @@ public class InstrumentationTask {
 
             log.debug(PreprocessConstants.MESSAGE_PREFIX + getInstrumentationArtifacts().size() + " classes transformed");
 
+            if (!getInstrumentationArtifacts().isEmpty() && sourceInfo.getJarSigningVerificationOutcome() != null) {
+                if (sourceInfo.getJarSigningVerificationOutcome().equals(JarSigningVerificationOutcome.SIGNED)) {
+                    log.debug(PreprocessConstants.MESSAGE_PREFIX + "Signed jar " + sourceInfo.getSourceFile().getName() + " instrumented");
+                } else if (sourceInfo.getJarSigningVerificationOutcome().equals(JarSigningVerificationOutcome.INVALID)) {
+                    log.warn(PreprocessConstants.MESSAGE_PREFIX + "Invalidly signed jar " + sourceInfo.getSourceFile().getName() + " instrumented");
+                }
+            }
+
             // invoke the configured export strategy to save transformed classes to a file
             sourceInfo.getExportStrategy().export(sourceInfo, getInstrumentationArtifacts(), config, relativeOutputPath);
         }
@@ -80,9 +89,11 @@ public class InstrumentationTask {
 
         // return the instrumentation outcome to be logged as summary
         if (!warnings.isEmpty()) {
-            builder.status(InstrumentationOutcome.Status.WARNING_OCCURRED).failedClasses(warnings);
+            builder.status(InstrumentationOutcome.Status.WARNING_OCCURRED).failedClasses(warnings)
+                    .sourceInfo(sourceInfo);
         } else {
-            builder.status(getInstrumentationArtifacts().isEmpty() ? InstrumentationOutcome.Status.NO_OP : InstrumentationOutcome.Status.COMPLETED);
+            builder.status(getInstrumentationArtifacts().isEmpty() ? InstrumentationOutcome.Status.NO_OP : InstrumentationOutcome.Status.COMPLETED)
+                    .sourceInfo(sourceInfo);
         }
 
         clearInstrumentationArtifacts();

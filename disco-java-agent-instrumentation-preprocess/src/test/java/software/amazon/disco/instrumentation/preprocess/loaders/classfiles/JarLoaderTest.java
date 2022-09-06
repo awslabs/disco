@@ -118,10 +118,12 @@ public class JarLoaderTest {
     }
 
     @Test
-    public void testLoadJarReturnsNull_whenJarIsSignedAndIgnoreStrategyIsUsed() {
+    public void testLoadJarReturnsEmptySourceInfoObject_whenJarIsSignedAndIgnoreStrategyIsUsed() {
         SourceInfo info = loader.loadJar(dummySignedJar, null, skipStrategy);
 
-        assertNull(info);
+        assertNotNull(info);
+        assertEquals(JarSigningVerificationOutcome.SIGNED, info.getJarSigningVerificationOutcome());
+        assertTrue(info.getClassByteCodeMap().isEmpty());
     }
 
     @Test
