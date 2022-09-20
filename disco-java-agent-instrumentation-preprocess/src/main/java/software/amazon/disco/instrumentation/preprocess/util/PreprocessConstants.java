@@ -27,6 +27,5 @@ public class PreprocessConstants {
     public static final String SUMMARY_ITEM_SIGNED_JARS_DISCOVERED = "Signed jars discovered: ";
     public static final String SUMMARY_ITEM_SIGNED_JARS_INSTRUMENTED = "Signed jars instrumented: ";
     public static final String SUMMARY_ITEM_SOURCES_WITH_UNRESOLVABLE_DEPENDENCIES = "Sources containing classes with unresolvable dependencies: ";
-    public static final String PREPROCESSOR_ARGS_TEMP_FOLDER = "tmp-worker-args";
-
+    public static final String PREPROCESSOR_ARGS_TEMP_FOLDER = "tmp/worker_args";
 }

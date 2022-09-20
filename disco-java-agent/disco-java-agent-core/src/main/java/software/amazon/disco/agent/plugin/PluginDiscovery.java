@@ -25,6 +25,7 @@ import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.util.Collection;
 import java.util.HashMap;
@@ -215,17 +216,9 @@ public class PluginDiscovery {
      * @throws Exception class reflection or file i/o errors may occur
      */
     static void processJarFile(Instrumentation instrumentation, File jarFile, boolean runtimeOnly) throws Exception {
-        JarFile jar = new JarFile(jarFile);
-        Manifest manifest = jar.getManifest();
-        jar.close();
-        if (manifest == null) {
-            log.info("DiSCo(Core) JAR file without manifest found on plugin path, skipping this file");
-            return;
-        }
-
-        Attributes attributes = manifest.getMainAttributes();
-        if (attributes == null || attributes.isEmpty()) {
-            log.info("DiSCo(Core) JAR file found with manifest without any main attributes, skipping this file");
+        final Attributes attributes = validateDiscoPlugin(jarFile);
+        if (attributes == null) {
+            log.info("DiSCo(Core) JAR file is not a valid Disco plugin, skipping this file");
             return;
         }
 
@@ -235,19 +228,6 @@ public class PluginDiscovery {
         String listenerClassNames = attributes.getValue("Disco-Listener-Classes");
         String bootstrapClassloaderAttribute = attributes.getValue("Disco-Bootstrap-Classloader");
         String classLoaderAttribute = attributes.getValue("Disco-Classloader");
-
-        //check that at least one of the attributes is present
-        boolean isPlugin =
-                (initClassName != null)
-              || installableClassNames != null
-              || listenerClassNames != null
-              || bootstrapClassloaderAttribute != null
-              || classLoaderAttribute != null;
-
-        if (!isPlugin) {
-            log.info("DiSCo(Core) JAR file manifest contains no Disco attributes, skipping this file");
-            return;
-        }
 
         //process the plugin based on the Manifest
         String pluginName = jarFile.getName();
@@ -262,6 +242,38 @@ public class PluginDiscovery {
         processInitClass(pluginName, initClassName, classLoader, classLoaderType);
         processInstallableClasses(pluginName, installableClassNames, classLoader, runtimeOnly, classLoaderType);
         processListenerClasses(pluginName, listenerClassNames, classLoader, classLoaderType);
+    }
+
+    /**
+     * Verify whether the provided file is a Disco plugin Jar by inspecting its manifest if applicable.
+     *
+     * @param file Jar file to be verified
+     * @return Attributes extracted from the Disco plugin Jar if Disco plugin, null otherwise
+     * @throws IOException exception thrown while parsing the Jar file.
+     */
+    public static Attributes validateDiscoPlugin(final File file) throws Exception {
+        final JarFile jar = new JarFile(file);
+        final Manifest manifest = jar.getManifest();
+        jar.close();
+        if (manifest == null) {
+            log.info("DiSCo(Core) JAR file without manifest found on plugin path, skipping this file");
+            return null;
+        }
+
+        Attributes attributes = manifest.getMainAttributes();
+        if (attributes == null || attributes.isEmpty()) {
+            log.info("DiSCo(Core) JAR file found with manifest without any main attributes, skipping this file");
+            return null;
+        }
+
+        //check that at least one of the attributes is present
+        final boolean isPlugin = attributes.getValue("Disco-Init-Class") != null
+            || attributes.getValue("Disco-Installable-Classes") != null
+            || attributes.getValue("Disco-Listener-Classes") != null
+            || attributes.getValue("Disco-Bootstrap-Classloader") != null
+            || attributes.getValue("Disco-Classloader") != null;
+
+        return isPlugin ? attributes : null;
     }
 
     /**

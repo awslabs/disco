@@ -22,7 +22,7 @@ import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.export.JarExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.SignedJarHandlingStrategy;
-import software.amazon.disco.instrumentation.preprocess.util.JarFileUtils;
+import software.amazon.disco.instrumentation.preprocess.util.FileUtils;
 import software.amazon.disco.instrumentation.preprocess.util.JarSigningVerificationOutcome;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
@@ -76,7 +76,7 @@ public class JarLoader implements ClassFileLoader {
                 return null;
             }
 
-            final JarSigningVerificationOutcome outcome = JarFileUtils.verifyJar(file);
+            final JarSigningVerificationOutcome outcome = FileUtils.verifyJar(file);
 
             log.debug(PreprocessConstants.MESSAGE_PREFIX + "Jar verification outcome: " + outcome.name());
 
@@ -93,12 +93,12 @@ public class JarLoader implements ClassFileLoader {
                 if (entry.getName().endsWith(".class")) {
                     final String nameWithoutExtension = entry.getName().substring(0, entry.getName().lastIndexOf(".class")).replace('/', '.');
 
-                    classFileData.put(nameWithoutExtension, JarFileUtils.readEntryFromJar(jarFile, entry));
+                    classFileData.put(nameWithoutExtension, FileUtils.readEntryFromJar(jarFile, entry));
                 }
             }
             log.debug(PreprocessConstants.MESSAGE_PREFIX + "Class files extracted: " + classFileData.size());
 
-            return classFileData.isEmpty() ? null : new SourceInfo(file, exportStrategy, classFileData, outcome);
+            return new SourceInfo(file, exportStrategy, classFileData, outcome);
         } catch (Throwable t) {
             log.warn(PreprocessConstants.MESSAGE_PREFIX + "Failed to load Jar: " + file.getAbsolutePath(), t);
             return null;

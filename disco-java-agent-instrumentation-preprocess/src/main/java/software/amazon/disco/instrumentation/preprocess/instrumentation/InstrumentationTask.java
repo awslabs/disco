@@ -21,6 +21,7 @@ import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.agent.plugin.ResourcesClassInjector;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InstrumentationException;
+import software.amazon.disco.instrumentation.preprocess.exceptions.PreprocessCacheException;
 import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentationOutcome.InstrumentationOutcomeBuilder;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.TransformerExtractor;
@@ -29,6 +30,7 @@ import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.Sourc
 import software.amazon.disco.instrumentation.preprocess.util.JarSigningVerificationOutcome;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
+import java.io.File;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.nio.file.Path;
@@ -58,10 +60,12 @@ public class InstrumentationTask {
      * all ClassFileTransformers extracted via a {@link TransformerExtractor} and saves the transformed byte code according to the provided {@link ExportStrategy export strategy}
      * on a local file.
      *
-     * @return outcome of the task. See {@link InstrumentationOutcome.Status}.
+     * @return outcome of the task. See {@link InstrumentationOutcome.Status}
+     * @throws PreprocessCacheException errors occurred while attempting to cache a source that has been processed successfully.
      */
-    protected InstrumentationOutcome applyInstrumentation() {
+    protected InstrumentationOutcome applyInstrumentation() throws PreprocessCacheException {
         final SourceInfo sourceInfo = loader.load(sourcePath, config);
+        final InstrumentationOutcomeBuilder builder = InstrumentationOutcome.builder().sourcePath(sourcePath.toString());
 
         if (sourceInfo != null && !sourceInfo.getClassByteCodeMap().isEmpty()) {
             log.debug(PreprocessConstants.MESSAGE_PREFIX + "Applying transformation on: " + sourceInfo.getSourceFile().getAbsolutePath());
@@ -82,18 +86,26 @@ public class InstrumentationTask {
             }
 
             // invoke the configured export strategy to save transformed classes to a file
-            sourceInfo.getExportStrategy().export(sourceInfo, getInstrumentationArtifacts(), config, relativeOutputPath);
+            final File artifact = sourceInfo.getExportStrategy().export(sourceInfo, getInstrumentationArtifacts(), config, relativeOutputPath);
+
+            builder.artifactPath(artifact == null ? "" : artifact.getAbsolutePath());
         }
 
-        final InstrumentationOutcomeBuilder builder = InstrumentationOutcome.builder().source(sourcePath.toString());
+        builder.sourceInfo(sourceInfo);
 
         // return the instrumentation outcome to be logged as summary
         if (!warnings.isEmpty()) {
-            builder.status(InstrumentationOutcome.Status.WARNING_OCCURRED).failedClasses(warnings)
-                    .sourceInfo(sourceInfo);
+            builder.status(InstrumentationOutcome.Status.WARNING_OCCURRED).failedClasses(warnings);
+            log.warn(PreprocessConstants.MESSAGE_PREFIX + "Skipped caching due to unexpected errors/warnings taking place.");
         } else {
-            builder.status(getInstrumentationArtifacts().isEmpty() ? InstrumentationOutcome.Status.NO_OP : InstrumentationOutcome.Status.COMPLETED)
-                    .sourceInfo(sourceInfo);
+            builder.status(getInstrumentationArtifacts().isEmpty() ? InstrumentationOutcome.Status.NO_OP : InstrumentationOutcome.Status.COMPLETED);
+
+            // only cache if no errors/warnings occurred while processing the source
+            if (sourceInfo != null && sourceInfo.getSourceFile().exists()) {
+                config.getCacheStrategy().cacheSource(sourceInfo.getSourceFile().toPath());
+            } else {
+                log.warn(PreprocessConstants.MESSAGE_PREFIX + "Skipped caching due to unexpected errors/warnings taking place.");
+            }
         }
 
         clearInstrumentationArtifacts();
@@ -112,6 +124,7 @@ public class InstrumentationTask {
             // checking if a class has been transformed by another Installable already.
             final String nameWithoutPrefix = classFileName.startsWith("classes.") ? classFileName.substring(8) : classFileName;
             final String internalName = nameWithoutPrefix.replace('.', '/');
+            log.trace(PreprocessConstants.MESSAGE_PREFIX + "Applying transformation on class: " + internalName);
 
             for (ClassFileTransformer transformer : TransformerExtractor.getTransformers()) {
                 final byte[] bytecodeToTransform = getInstrumentationArtifacts().containsKey(internalName) ?
@@ -121,7 +134,7 @@ public class InstrumentationTask {
             }
         } catch (IllegalClassFormatException e) {
             throw new InstrumentationException("Failed to instrument : " + classFileName, e);
-        } catch (InstrumentationException e) {
+        } catch (Exception e) {
             // log this particular exception and skip to the next class when ByteBuddy fails to resolve certain dependency class during static instrumentation
             // if the "--failOnUnresolvableDependency" flag was not specified.
             if (e.getCause() != null && e.getCause() instanceof IllegalStateException && !config.isFailOnUnresolvableDependency()) {
@@ -157,6 +170,7 @@ public class InstrumentationTask {
      * preparation for transforming another package.
      */
     protected void clearInstrumentationArtifacts() {
+        log.debug(PreprocessConstants.MESSAGE_PREFIX + "Clearing build artifacts after processing: " + sourcePath);
         TransformationListener.getInstrumentedTypes().clear();
         ResourcesClassInjector.getInjectedDependencies().clear();
     }

@@ -28,10 +28,12 @@ import org.mockito.junit.MockitoJUnitRunner;
 import org.mockito.verification.VerificationMode;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InstrumentationException;
+import software.amazon.disco.instrumentation.preprocess.exceptions.PreprocessCacheException;
 import software.amazon.disco.instrumentation.preprocess.export.JarExportStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.cache.CacheStrategy;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.TransformerExtractor;
-import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.SourceInfo;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JarLoader;
+import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.SourceInfo;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,6 +41,7 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -52,8 +55,8 @@ public class InstrumentationTaskTest {
     Map<String, InstrumentationArtifact> artifactMap;
     PreprocessConfig config;
     File source;
-
     SourceInfo sourceInfo;
+    CacheStrategy strategy;
 
     @Mock
     JarExportStrategy exportStrategy;
@@ -72,7 +75,9 @@ public class InstrumentationTaskTest {
 
         source = tempFolder.newFile("someJar");
         sourceInfo = new SourceInfo(source, exportStrategy, byteArrayMap, null);
-        config = PreprocessConfig.builder().build();
+
+        strategy = Mockito.mock(CacheStrategy.class);
+        config = PreprocessConfig.builder().cacheStrategy(strategy).build();
 
         task = Mockito.spy(new InstrumentationTask(jarLoader, source.toPath(), config, "lib"));
         artifactMap = new HashMap<>();
@@ -84,12 +89,12 @@ public class InstrumentationTaskTest {
     }
 
     @After
-    public void after(){
+    public void after() {
         TransformerExtractor.getTransformers().clear();
     }
 
     @Test
-    public void testApplyInstrumentationWorksAndReturnsCompletedStatus() throws IllegalClassFormatException {
+    public void testApplyInstrumentationWorksAndReturnsCompletedStatus() throws IllegalClassFormatException, PreprocessCacheException {
         configureTransformerExtractor(null);
 
         InstrumentationOutcome outcome = task.applyInstrumentation();
@@ -101,11 +106,12 @@ public class InstrumentationTaskTest {
 
         assertNotNull(outcome);
         assertEquals(InstrumentationOutcome.Status.COMPLETED, outcome.getStatus());
-        assertEquals(source.getAbsolutePath(), outcome.getSource());
+        assertEquals(source.getAbsolutePath(), outcome.getSourcePath());
+        Mockito.verify(strategy).cacheSource(Paths.get(source.getAbsolutePath()));
     }
 
     @Test
-    public void testApplyInstrumentationWorksAndReturnsNoOPStatus_WhenNoClassInstrumented() throws IllegalClassFormatException {
+    public void testApplyInstrumentationWorksAndReturnsNoOPStatus_WhenNoClassInstrumented() throws IllegalClassFormatException, PreprocessCacheException {
         Mockito.doReturn(sourceInfo).when(jarLoader).load(Mockito.any(Path.class), Mockito.any(PreprocessConfig.class));
 
         // returns an empty map indicating no classes were instrumented
@@ -117,12 +123,13 @@ public class InstrumentationTaskTest {
 
         assertNotNull(outcome);
         assertEquals(InstrumentationOutcome.Status.NO_OP, outcome.getStatus());
-        assertEquals(source.getAbsolutePath(), outcome.getSource());
+        assertEquals(source.getAbsolutePath(), outcome.getSourcePath());
+        Mockito.verify(strategy).cacheSource(Paths.get(source.getAbsolutePath()));
     }
 
     @Test
-    public void testApplyInstrumentationWorksAndReturnsNoOPStatus_WhenNoClassExtractedFromJar() throws IllegalClassFormatException {
-        Mockito.doReturn(null).when(jarLoader).load(Mockito.any(Path.class), Mockito.any(PreprocessConfig.class));
+    public void testApplyInstrumentationWorksAndReturnsNoOPStatus_WhenNoClassExtractedFromJar() throws IllegalClassFormatException, PreprocessCacheException {
+        Mockito.doReturn(new SourceInfo(source, null, Collections.emptyMap())).when(jarLoader).load(Mockito.any(Path.class), Mockito.any(PreprocessConfig.class));
         Mockito.doReturn(Collections.emptyMap()).when(task).getInstrumentationArtifacts();
         configureTransformerExtractor(null);
 
@@ -131,11 +138,13 @@ public class InstrumentationTaskTest {
         Mockito.verify(task, Mockito.never()).applyInstrumentationOnClass(Mockito.anyString(), Mockito.any(byte[].class));
         assertNotNull(outcome);
         assertEquals(InstrumentationOutcome.Status.NO_OP, outcome.getStatus());
-        assertEquals(source.getAbsolutePath(), outcome.getSource());
+        assertEquals(source.getAbsolutePath(), outcome.getSourcePath());
+
+        Mockito.verify(strategy).cacheSource(Paths.get(source.getAbsolutePath()));
     }
 
     @Test
-    public void testApplyInstrumentationWorksAndReturnsWarningOccurredStatus() throws IllegalClassFormatException {
+    public void testApplyInstrumentationWorksAndReturnsWarningOccurredStatus() throws IllegalClassFormatException, PreprocessCacheException {
         // one of the configured transformers will throw this exception wrapped in a 'InstrumentationException' when processing 'ClassB'.
         configureTransformerExtractor(new IllegalStateException());
 
@@ -148,11 +157,23 @@ public class InstrumentationTaskTest {
 
         assertNotNull(outcome);
         assertEquals(InstrumentationOutcome.Status.WARNING_OCCURRED, outcome.getStatus());
-        assertEquals(source.getAbsolutePath(), outcome.getSource());
+        assertEquals(source.getAbsolutePath(), outcome.getSourcePath());
+
+        Mockito.verify(strategy, Mockito.never()).cacheSource(Mockito.any());
+    }
+
+    @Test(expected = PreprocessCacheException.class)
+    public void testApplyInstrumentationFails_whenCachingFails() throws IllegalClassFormatException, PreprocessCacheException {
+        Mockito.doReturn(new SourceInfo(source, null, Collections.emptyMap())).when(jarLoader).load(Mockito.any(Path.class), Mockito.any(PreprocessConfig.class));
+        Mockito.doReturn(Collections.emptyMap()).when(task).getInstrumentationArtifacts();
+        configureTransformerExtractor(null);
+
+        Mockito.doThrow(new PreprocessCacheException("ops")).when(strategy).cacheSource(Mockito.any());
+        task.applyInstrumentation();
     }
 
     @Test(expected = InstrumentationException.class)
-    public void testApplyInstrumentationFailsAndPropagatesUnCaughtException() throws IllegalClassFormatException {
+    public void testApplyInstrumentationFailsAndPropagatesUnCaughtException() throws IllegalClassFormatException, PreprocessCacheException {
         // This uncaught exception will be thrown by one of the configured transformers
         configureTransformerExtractor(new RuntimeException());
 
@@ -160,6 +181,8 @@ public class InstrumentationTaskTest {
 
         Mockito.verify(task).applyInstrumentationOnClass("ClassA", artifactMap.get("ClassA").getClassBytes());
         Mockito.verify(task).applyInstrumentationOnClass("ClassB", artifactMap.get("ClassB").getClassBytes());
+
+        Mockito.verify(strategy, Mockito.never()).cacheSource(Mockito.any());
     }
 
     @Test

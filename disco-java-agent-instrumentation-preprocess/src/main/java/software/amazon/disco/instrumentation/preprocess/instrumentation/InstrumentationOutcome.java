@@ -39,9 +39,9 @@ public class InstrumentationOutcome {
     public enum Status {COMPLETED, WARNING_OCCURRED, NO_OP;}
 
     private Status status;
-    private String source;
     private SourceInfo sourceInfo;
-
+    private String sourcePath;
+    private String artifactPath;
     private List<String> failedClasses;
 
     public boolean hasFailed() {

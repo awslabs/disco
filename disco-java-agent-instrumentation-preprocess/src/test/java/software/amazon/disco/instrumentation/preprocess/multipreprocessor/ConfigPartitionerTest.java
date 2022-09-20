@@ -18,6 +18,7 @@ package software.amazon.disco.instrumentation.preprocess.multipreprocessor;
 import org.junit.Before;
 import org.junit.Test;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.cache.ChecksumCacheStrategy;
 
 import java.util.*;
 
@@ -45,6 +46,7 @@ public class ConfigPartitionerTest {
                 .outputDir(outputDir)
                 .agentPath(agentPath)
                 .agentArg(agentArg)
+                .cacheStrategy(new ChecksumCacheStrategy())
                 .build();
     }
 
@@ -113,9 +115,10 @@ public class ConfigPartitionerTest {
             assertEquals(config.getSignedJarHandlingStrategy().getClass(), preprocessorConfig.getSignedJarHandlingStrategy().getClass());
             assertEquals(config.getLogLevel(), preprocessorConfig.getLogLevel());
             assertEquals(config.isFailOnUnresolvableDependency(), preprocessorConfig.isFailOnUnresolvableDependency());
+            assertEquals(config.getCacheStrategy().getClass(), preprocessorConfig.getCacheStrategy().getClass());
+
             //for those fields that are not populated in preprocessing config, should either not be set in preprocessor config
             assertNull(preprocessorConfig.getSuffix());
-            assertNull(preprocessorConfig.getSerializationJarPath());
             assertNull(preprocessorConfig.getJavaVersion());
             assertNull(preprocessorConfig.getJdkPath());
         }

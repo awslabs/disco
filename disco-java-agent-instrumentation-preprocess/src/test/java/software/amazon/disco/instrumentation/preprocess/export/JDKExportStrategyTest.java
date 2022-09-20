@@ -26,7 +26,7 @@ import software.amazon.disco.instrumentation.preprocess.TestUtils;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentationArtifact;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.SourceInfo;
-import software.amazon.disco.instrumentation.preprocess.util.JarFileUtils;
+import software.amazon.disco.instrumentation.preprocess.util.FileUtils;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -115,10 +115,10 @@ public class JDKExportStrategyTest {
         assertEquals(2, result.size());
 
         assertEquals(dependencies.get(0), result.get(dependencies.get(0)).getName());
-        assertArrayEquals(dependencies.get(0).getBytes(), JarFileUtils.readEntryFromJar(jarFile, result.get(dependencies.get(0))));
+        assertArrayEquals(dependencies.get(0).getBytes(), FileUtils.readEntryFromJar(jarFile, result.get(dependencies.get(0))));
 
         assertEquals(dependencies.get(1), result.get(dependencies.get(1)).getName());
-        assertArrayEquals(dependencies.get(1).getBytes(), JarFileUtils.readEntryFromJar(jarFile, result.get(dependencies.get(1))));
+        assertArrayEquals(dependencies.get(1).getBytes(), FileUtils.readEntryFromJar(jarFile, result.get(dependencies.get(1))));
     }
 
     @Test
@@ -160,7 +160,7 @@ public class JDKExportStrategyTest {
         while (entries.hasMoreElements()) {
             JarEntry entry = (JarEntry) entries.nextElement();
 
-            byte[] bytes = JarFileUtils.readEntryFromJar(outputJar, entry);
+            byte[] bytes = FileUtils.readEntryFromJar(outputJar, entry);
             assertArrayEquals(combined.get(entry.getName()), bytes);
             combined.remove(entry.getName());
         }

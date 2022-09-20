@@ -16,7 +16,8 @@
 package software.amazon.disco.instrumentation.preprocess.cli;
 
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import software.amazon.disco.agent.logging.Logger;
@@ -25,8 +26,11 @@ import software.amazon.disco.instrumentation.preprocess.exceptions.ArgumentParse
 import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentSignedJarHandlingStrategy;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.SkipSignedJarHandlingStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.cache.ChecksumCacheStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.cache.NoOpCacheStrategy;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -36,16 +40,22 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class PreprocessConfigParserTest {
-    @Rule
-    public TemporaryFolder tempFolder = new TemporaryFolder();
+    @ClassRule
+    public static TemporaryFolder tempFolder = new TemporaryFolder();
+    static String jdkpath;
 
     String outputDir = "/d";
-    String serialization = "/s";
     String agent = "/agent_path";
-    String jdkpath = "/java.base.jmod";
     String suffix = "-suffix";
 
     static PreprocessConfigParser preprocessConfigParser;
+
+    @BeforeClass
+    public static void beforeAll() throws IOException {
+        jdkpath = tempFolder.newFolder("java").getAbsolutePath();
+        File fakeJDK9ModuleFile = new File(jdkpath, "jmods/java.base.jmod");
+        fakeJDK9ModuleFile.mkdirs();
+    }
 
     @Before
     public void before() {
@@ -92,6 +102,18 @@ public class PreprocessConfigParserTest {
     }
 
     @Test
+    public void parseCommandLineWorks_whenCacheStrategyIsNone() {
+        String[] args = new String[]{
+            "--sourcepaths", "/d1:/d2:/d3",
+            "--agentPath", agent,
+            "--cacheStrategy", "none"
+        };
+        PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
+
+        assertTrue(config.getCacheStrategy() instanceof NoOpCacheStrategy);
+    }
+
+    @Test
     public void parseCommandLineWorksAndReturnsConfigWithDefaultValue() {
         String[] args = new String[]{
             "--sourcepaths", "/d1:/d2:/d3",
@@ -103,6 +125,7 @@ public class PreprocessConfigParserTest {
         assertEquals(Logger.Level.INFO, config.getLogLevel());
         assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/d3")), config.getSourcePaths().get(""));
         assertTrue(config.getSignedJarHandlingStrategy() instanceof InstrumentSignedJarHandlingStrategy);
+        assertTrue(config.getCacheStrategy() instanceof NoOpCacheStrategy);
     }
 
     @Test
@@ -110,20 +133,19 @@ public class PreprocessConfigParserTest {
         String[] args = new String[]{
             "--outputDir", outputDir,
             "--sourcepaths", "/d1:/d2:/d3@lib",
-            "--serializationpath", serialization,
             "--agentPath", agent,
             "--suffix", suffix,
             "--javaversion", "11",
             "--agentarg", "arg",
             "--jdksupport", jdkpath,
             "--failonunresolvabledependency",
-            "--signedjarhandlingstrategy", "skip"
+            "--signedjarhandlingstrategy", "skip",
+            "--cachestrategy", "checksum"
         };
 
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
 
         assertEquals(outputDir, config.getOutputDir());
-        assertEquals(serialization, config.getSerializationJarPath());
         assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/d3")), config.getSourcePaths().get("lib"));
         assertEquals(agent, config.getAgentPath());
         assertEquals(suffix, config.getSuffix());
@@ -132,6 +154,7 @@ public class PreprocessConfigParserTest {
         assertEquals(jdkpath, config.getJdkPath());
         assertTrue(config.isFailOnUnresolvableDependency());
         assertTrue(config.getSignedJarHandlingStrategy() instanceof SkipSignedJarHandlingStrategy);
+        assertTrue(config.getCacheStrategy() instanceof ChecksumCacheStrategy);
     }
 
     @Test
@@ -139,24 +162,24 @@ public class PreprocessConfigParserTest {
         String[] args = new String[]{
             "-out", outputDir,
             "-sps", "/d1:/d2:/D3@lib",
-            "-sp", serialization,
             "-ap", agent,
             "-suf", suffix,
             "-jv", "11",
             "-arg", "arg",
-            "-jdks", jdkpath
+            "-jdks", jdkpath,
+            "-cache", "checksum"
         };
 
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
 
         assertEquals(outputDir, config.getOutputDir());
-        assertEquals(serialization, config.getSerializationJarPath());
         assertEquals(new HashSet<>(Arrays.asList("/d1", "/d2", "/D3")), config.getSourcePaths().get("lib"));
         assertEquals(agent, config.getAgentPath());
         assertEquals(suffix, config.getSuffix());
         assertEquals("11", config.getJavaVersion());
         assertEquals("arg", config.getAgentArg());
         assertEquals(jdkpath, config.getJdkPath());
+        assertTrue(config.getCacheStrategy() instanceof ChecksumCacheStrategy);
     }
 
     @Test

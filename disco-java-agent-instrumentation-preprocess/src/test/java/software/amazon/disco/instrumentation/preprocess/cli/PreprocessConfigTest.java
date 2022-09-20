@@ -47,7 +47,6 @@ public class PreprocessConfigTest {
     private static final String OUTPUT_DIR = "/outputDir";
     private static final String AGENT_PATH = "/agentpath";
     private static final String SUFFIX = "suffix";
-    private static final String SERIALIZATION_JAR_PATH = "/sp";
     private static final String JAVA_VERSION = "11";
     private static final String AGENT_ARG = "arg";
     private static final boolean FAIL_ON_UNRESOLVABLE_DEPENDENCY = true;
@@ -64,14 +63,13 @@ public class PreprocessConfigTest {
                 .outputDir(OUTPUT_DIR)
                 .agentPath(AGENT_PATH)
                 .suffix(SUFFIX)
-                .serializationJarPath(SERIALIZATION_JAR_PATH)
                 .javaVersion(JAVA_VERSION)
                 .agentArg(AGENT_ARG)
                 .build();
         String[] commandlineArguments = config.toCommandlineArguments();
 
         assertArrayEquals(new String[]{"--sourcepaths", "/d1:/d2:/d3:/d4:/d5@lib1", "--sourcepaths", "/d11:/d22:/d33@lib2", "--sourcepaths", "/d111@lib3", "--outputdir", OUTPUT_DIR
-                , "--agentpath", AGENT_PATH, "--suffix", SUFFIX, "--serializationpath", SERIALIZATION_JAR_PATH, "--javaversion", JAVA_VERSION, "--agentarg", AGENT_ARG}, commandlineArguments);
+                , "--agentpath", AGENT_PATH, "--suffix", SUFFIX, "--javaversion", JAVA_VERSION, "--agentarg", AGENT_ARG}, commandlineArguments);
 
         List<String> commandlineArgumentsList =  new ArrayList<>(Arrays.asList(commandlineArguments));
         List<String> flagsForUnsetOptions = new ArrayList<>(Arrays.asList("--signedjarhandlingstrategy", "--verbose", "--extraverbose", "--silent", "--jdksupport","--failonunresolvabledependency"));

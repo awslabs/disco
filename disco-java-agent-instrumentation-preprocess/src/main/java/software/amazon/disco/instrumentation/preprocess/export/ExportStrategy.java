@@ -22,7 +22,7 @@ import software.amazon.disco.instrumentation.preprocess.exceptions.ExportExcepti
 import software.amazon.disco.instrumentation.preprocess.exceptions.JarEntryCopyException;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentationArtifact;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.SourceInfo;
-import software.amazon.disco.instrumentation.preprocess.util.JarFileUtils;
+import software.amazon.disco.instrumentation.preprocess.util.FileUtils;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.io.File;
@@ -46,8 +46,10 @@ public abstract class ExportStrategy {
      * @param artifacts          a map of instrumentation artifacts with their bytecode
      * @param config             configuration file containing instructions to instrument a module
      * @param relativeOutputPath relative output path where the preprocessing artifact will be stored.
+     * @return the transformed artifact file. In the case of a Jar, this file will be the transformed Jar. In the case of a directory of compiled classes, this file will represent the
+     * parent dir of all the transformed compiled classes.
      */
-    public abstract void export(final SourceInfo info, final Map<String, InstrumentationArtifact> artifacts, final PreprocessConfig config, final String relativeOutputPath);
+    public abstract File export(final SourceInfo info, final Map<String, InstrumentationArtifact> artifacts, final PreprocessConfig config, final String relativeOutputPath);
 
     /**
      * Creates the output file at the specified location. The resulting artifact will be saved under the root output directory extracted from the config file. The relative path
@@ -86,10 +88,10 @@ public abstract class ExportStrategy {
      */
     protected void copyJarEntry(final JarOutputStream jarOS, final JarFile file, final JarEntry entry) {
         try {
-            log.debug(PreprocessConstants.MESSAGE_PREFIX + "Copying entry: " + entry.getName());
+            log.trace(PreprocessConstants.MESSAGE_PREFIX + "Copying entry: " + entry.getName());
 
             jarOS.putNextEntry(new JarEntry(entry.getName()));
-            jarOS.write(JarFileUtils.readEntryFromJar(file, entry));
+            jarOS.write(FileUtils.readEntryFromJar(file, entry));
             jarOS.closeEntry();
 
         } catch (Throwable t) {
@@ -99,7 +101,7 @@ public abstract class ExportStrategy {
             // (used by Jar and JarJar) but not allowed in the Java Jar specification (used by the Preprocessor).
             // Since certain text files don't have file format explicitly defined, e.g. LICENSE, duplicated entries under the entire 'META-INF/' dir is ignored.
             if (t instanceof IOException && entry.getName().startsWith("META-INF/")) {
-                log.warn(PreprocessConstants.MESSAGE_PREFIX + "Duplicated entry ignored: " + entry.getName());
+                log.trace(PreprocessConstants.MESSAGE_PREFIX + "Duplicated entry ignored: " + entry.getName());
             } else {
                 throw new JarEntryCopyException(entry.getName(), t);
             }
@@ -113,11 +115,13 @@ public abstract class ExportStrategy {
      * @param artifacts a map of instrumentation artifacts with their bytecode
      */
     protected void saveInstrumentationArtifactsToJar(final JarOutputStream jarOS, final Map<String, InstrumentationArtifact> artifacts) {
-        log.info(PreprocessConstants.MESSAGE_PREFIX + "Transformed " + artifacts.size() + " classes.");
+        log.debug(PreprocessConstants.MESSAGE_PREFIX + "Transformed " + artifacts.size() + " classes.");
         for (Map.Entry<String, InstrumentationArtifact> mapEntry : artifacts.entrySet()) {
             final String classPath = mapEntry.getKey();
             final InstrumentationArtifact info = mapEntry.getValue();
             final JarEntry entry = new JarEntry(classPath + ".class");
+
+            log.trace(PreprocessConstants.MESSAGE_PREFIX + "Copying instrumented entry: " + entry.getName());
 
             try {
                 jarOS.putNextEntry(entry);

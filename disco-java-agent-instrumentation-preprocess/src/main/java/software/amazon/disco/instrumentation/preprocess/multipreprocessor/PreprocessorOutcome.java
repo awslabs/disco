@@ -13,7 +13,7 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.instrumentation.preprocess.pojo;
+package software.amazon.disco.instrumentation.preprocess.multipreprocessor;
 
 import lombok.Builder;
 import lombok.Getter;

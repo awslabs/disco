@@ -25,6 +25,7 @@ import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.nio.file.Paths;
 import java.util.Map;
 
 /**
@@ -37,16 +38,22 @@ public class DirectoryExportStrategy extends ExportStrategy {
      * {@inheritDoc}
      */
     @Override
-    public void export(final SourceInfo info, final Map<String, InstrumentationArtifact> artifacts, final PreprocessConfig config, final String relativePath) {
+    public File export(final SourceInfo info, final Map<String, InstrumentationArtifact> artifacts, final PreprocessConfig config, final String relativePath) {
         if (artifacts == null || artifacts.isEmpty()) {
             log.debug(PreprocessConstants.MESSAGE_PREFIX + "Nothing to export, skipping");
+            return null;
         } else {
             log.debug(PreprocessConstants.MESSAGE_PREFIX + "Exporting " + artifacts.size() + " artifacts from source: " + info.getSourceFile().getPath());
+
+            final File parentDir = Paths.get(config.getOutputDir(), relativePath).toFile();
+            parentDir.mkdirs();
 
             for (Map.Entry<String, InstrumentationArtifact> entry : artifacts.entrySet()) {
                 saveArtifactToDisk(entry, config, relativePath);
             }
             log.debug(PreprocessConstants.MESSAGE_PREFIX + "Exporting completed");
+
+            return parentDir;
         }
     }
 

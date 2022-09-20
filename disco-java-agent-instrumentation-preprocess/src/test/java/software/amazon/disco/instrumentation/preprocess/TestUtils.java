@@ -19,6 +19,8 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
@@ -26,7 +28,13 @@ import java.util.zip.ZipEntry;
 public class TestUtils {
     public static File createJar(TemporaryFolder temporaryFolder, String fileName, Map<String, byte[]> entries) throws Exception {
         File file = fileName == null ? temporaryFolder.newFile() : temporaryFolder.newFile(fileName);
+        return createJar(file, entries);
+    }
 
+    public static File createJar(File file, Map<String, byte[]> entries) throws Exception {
+        if (!file.exists()) {
+            file.createNewFile();
+        }
         try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
             try (JarOutputStream jarOutputStream = new JarOutputStream(fileOutputStream)) {
                 for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
@@ -37,6 +45,19 @@ public class TestUtils {
             }
         }
         return file;
+    }
+
+    public static File createDummyPlugin(File file, String... additionalEntries) throws Exception {
+        Map<String, byte[]> entries = new HashMap<>();
+
+        if (additionalEntries != null) {
+            for (String entry : additionalEntries) {
+                entries.put(entry, entry.getBytes(StandardCharsets.UTF_8));
+            }
+        }
+        entries.put("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\nDisco-Bootstrap-Classloader: true\nDisco-Installable-Classes: ClassA\n".getBytes(StandardCharsets.UTF_8));
+
+        return createJar(file, entries);
     }
 
     public static File createFile(File parent, String fileName, byte[] content) throws Exception {
