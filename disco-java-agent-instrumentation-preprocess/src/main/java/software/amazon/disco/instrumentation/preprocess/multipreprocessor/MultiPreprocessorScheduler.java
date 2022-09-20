@@ -20,7 +20,6 @@ import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.ProcessInstrumentationAbortedException;
-import software.amazon.disco.instrumentation.preprocess.pojo.PreprocessorOutcome;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.io.BufferedReader;

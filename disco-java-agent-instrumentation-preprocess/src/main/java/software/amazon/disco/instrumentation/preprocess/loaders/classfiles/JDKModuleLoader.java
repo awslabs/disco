@@ -47,7 +47,7 @@ public class JDKModuleLoader extends JarLoader {
             throw new InstrumentationException("No output dir provided to store instrumented JDK runtime, unable to perform JDK instrumentation", null);
         }
 
-        final File jdkModuleFile = getJDKBaseModule(config);
+        final File jdkModuleFile = getJDKBaseModule(path.toString());
 
         // check JVM compatibility
         if (isJDK9Compatible()) {
@@ -72,26 +72,25 @@ public class JDKModuleLoader extends JarLoader {
     /**
      * Retrieves the Java base module file from the java home directory.
      *
-     * @param config a PreprocessConfig containing information to perform preprocessing
+     * @param javaHome path to the Java home.
      * @return file object of the Java base module
      */
-    protected File getJDKBaseModule(final PreprocessConfig config) {
-        final File javaHome = new File(config.getJdkPath());
-
-        if (javaHome.exists()) {
-            final File jdk9Plus = Paths.get(javaHome.getAbsolutePath(), "jmods", "java.base.jmod").toFile();
-            final File jdk8Lower = Paths.get(javaHome.getAbsolutePath(), "lib", "rt.jar").toFile();
+    public File getJDKBaseModule(final String javaHome) {
+        final File javaHomeFile =  new File(javaHome);
+        if (javaHomeFile.exists()) {
+            final File jdk9Plus = Paths.get(javaHomeFile.getAbsolutePath(), "jmods", "java.base.jmod").toFile();
+            final File jdk8Lower = Paths.get(javaHomeFile.getAbsolutePath(), "lib", "rt.jar").toFile();
 
             if (jdk9Plus.exists()) {
-                log.info(PreprocessConstants.MESSAGE_PREFIX + "Java base module for JDK9+ found.");
+                log.debug(PreprocessConstants.MESSAGE_PREFIX + "Java base module for JDK9+ found.");
                 return jdk9Plus;
             } else if (jdk8Lower.exists()) {
-                log.info(PreprocessConstants.MESSAGE_PREFIX + "Java base module for JDK8 and lower found.");
+                log.debug(PreprocessConstants.MESSAGE_PREFIX + "Java base module for JDK8 and lower found.");
                 return jdk8Lower;
             }
         }
 
-        throw new InstrumentationException("Enable to retrieve JDK base module from provided path: " + config.getJdkPath(), null);
+        throw new InstrumentationException("Unable to retrieve JDK base module from provided path: " + javaHome, null);
     }
 
     /**

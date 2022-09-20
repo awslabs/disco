@@ -28,6 +28,7 @@ import software.amazon.disco.instrumentation.preprocess.MockEntities;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InstrumentationException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
+import software.amazon.disco.instrumentation.preprocess.exceptions.PreprocessCacheException;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.DiscoAgentLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.TransformerExtractor;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.ClassFileLoader;
@@ -80,6 +81,7 @@ public class StaticInstrumentationTransformerTest {
             .agentPath("a path")
             .sourcePath("lib", new HashSet<>(Arrays.asList(fakeJar.getAbsolutePath(), temporaryFolder.getRoot().getAbsolutePath())))
             .failOnUnresolvableDependency(false)
+            .outputDir("build/private/disco/static-instrumentation")
             .build();
 
         loaders = new HashMap<>();
@@ -93,7 +95,7 @@ public class StaticInstrumentationTransformerTest {
     }
 
     @Test(expected = InvalidConfigEntryException.class)
-    public void testTransformFailsWithNullConfig() {
+    public void testTransformFailsWithNullConfig() throws PreprocessCacheException {
         StaticInstrumentationTransformer.builder()
             .config(null)
             .build()
@@ -101,7 +103,7 @@ public class StaticInstrumentationTransformerTest {
     }
 
     @Test
-    public void testTransformWorksAndInvokesHelperMethods() {
+    public void testTransformWorksAndInvokesHelperMethods() throws PreprocessCacheException {
         StaticInstrumentationTransformer transformer = configureStaticInstrumentationTransformer();
 
         transformer.transform();
@@ -115,7 +117,7 @@ public class StaticInstrumentationTransformerTest {
     }
 
     @Test
-    public void testProcessAllSourcesWorksAndPopulatesInstrumentationOutcome() {
+    public void testProcessAllSourcesWorksAndPopulatesInstrumentationOutcome() throws PreprocessCacheException {
         StaticInstrumentationTransformer transformer = configureStaticInstrumentationTransformer();
 
         transformer.processAllSources();
@@ -126,7 +128,7 @@ public class StaticInstrumentationTransformerTest {
     }
 
     @Test
-    public void testProcessAllSourcesWorksAndPopulatesInstrumentationOutcomeWithSourceLoadingError() throws IllegalClassFormatException {
+    public void testProcessAllSourcesWorksAndPopulatesInstrumentationOutcomeWithSourceLoadingError() throws IllegalClassFormatException, PreprocessCacheException {
         StaticInstrumentationTransformer transformer = configureStaticInstrumentationTransformer();
 
         TransformerExtractor.getTransformers().clear();

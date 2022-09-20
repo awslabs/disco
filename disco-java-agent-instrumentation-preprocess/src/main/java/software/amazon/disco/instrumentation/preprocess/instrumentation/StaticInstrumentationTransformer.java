@@ -26,6 +26,7 @@ import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.exceptions.AgentLoaderNotProvidedException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InstrumentationException;
 import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfigEntryException;
+import software.amazon.disco.instrumentation.preprocess.exceptions.PreprocessCacheException;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentationOutcome.Status;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.AgentLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.agents.TransformerExtractor;
@@ -35,7 +36,6 @@ import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JDKMo
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JarLoader;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -71,11 +71,10 @@ public class StaticInstrumentationTransformer {
     private final List<InstrumentationOutcome> allOutcomes = new ArrayList<>();
 
     /**
-     * This method initiates the transformation process of all packages found under the provided paths. All Runtime exceptions
-     * thrown by the library are handled in this method. A detailed error message along with any available Cause will be logged
-     * and trigger the program to exit with status 1
+     * This method initiates the transformation process of all packages found under the provided paths. Once completed successfully,
+     * the outcome of successful instrumentations will be cached.
      */
-    public void transform() {
+    public void transform() throws PreprocessCacheException {
         log.info("Initiating build time instrumentation...");
         if (config == null) {
             throw new InvalidConfigEntryException("No configuration provided", null);
@@ -89,13 +88,15 @@ public class StaticInstrumentationTransformer {
 
         processAllSources();
 
+        config.getCacheStrategy().serializeRuntimeCacheToTempManifestFile(config);
+
         logInstrumentationSummary();
     }
 
     /**
      * Process all sources to be statically instrumented, including the JDK itself if path to java home is supplied.
      */
-    protected void processAllSources() {
+    protected void processAllSources() throws PreprocessCacheException {
         final List<InstrumentationTask> tasks = new ArrayList<>();
 
         // each map entry represents a collection of sources to be processed that share the same relative output path. For example, a collection of Jars
@@ -104,11 +105,10 @@ public class StaticInstrumentationTransformer {
             for (final String source : entry.getValue()) {
                 try {
                     final Path pathToSrc = Paths.get(source);
-                    final Path actualPathToSrc = Files.isSymbolicLink(pathToSrc) ? Files.readSymbolicLink(pathToSrc) : pathToSrc;
-                    final Class<? extends ClassFileLoader> loaderType = actualPathToSrc.toFile().isFile() ? JarLoader.class : DirectoryLoader.class;
+                    final Class<? extends ClassFileLoader> loaderType = pathToSrc.toFile().isFile() ? JarLoader.class : DirectoryLoader.class;
 
                     if (classFileLoaders.get(loaderType) != null) {
-                        tasks.add(new InstrumentationTask(classFileLoaders.get(loaderType), actualPathToSrc, config, entry.getKey()));
+                        tasks.add(new InstrumentationTask(classFileLoaders.get(loaderType), pathToSrc, config, entry.getKey()));
                     } else {
                         throw new InstrumentationException("Loader not provided: " + loaderType.getName());
                     }
@@ -152,31 +152,31 @@ public class StaticInstrumentationTransformer {
      */
     protected void logInstrumentationSummary() {
         log.info(PreprocessConstants.MESSAGE_PREFIX + "Preprocessor summary:");
-        log.info(PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SOURCES_PROCESSED + allOutcomes.size());
-        log.info(PreprocessConstants.MESSAGE_PREFIX +  PreprocessConstants.SUMMARY_ITEM_SOURCES_INSTRUMENTED + sourcesInstrumented.size());
+            log.info(PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SOURCES_PROCESSED + allOutcomes.size());
+            log.info(PreprocessConstants.MESSAGE_PREFIX +  PreprocessConstants.SUMMARY_ITEM_SOURCES_INSTRUMENTED + sourcesInstrumented.size());
 
         for (InstrumentationOutcome outcome : sourcesInstrumented) {
-            log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
+            log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSourcePath());
         }
 
         log.info(PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SIGNED_JARS_DISCOVERED + signedJarsDiscovered.size());
 
         for (InstrumentationOutcome outcome : signedJarsDiscovered) {
-            log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
+            log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSourcePath());
         }
 
         log.info(PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SIGNED_JARS_INSTRUMENTED + signedJarsInstrumented.size());
 
         for (InstrumentationOutcome outcome : signedJarsInstrumented) {
-            log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
+            log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSourcePath());
         }
 
         log.info(PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SOURCES_WITH_UNRESOLVABLE_DEPENDENCIES + sourcesFailedToBeInstrumented.size());
 
         for (InstrumentationOutcome outcome : sourcesFailedToBeInstrumented) {
-            log.debug(PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
+            log.debug(PreprocessConstants.MESSAGE_PREFIX + outcome.getSourcePath());
             outcome.getFailedClasses().forEach(
-                    clazz -> log.debug(PreprocessConstants.MESSAGE_PREFIX + "\t+ " + clazz)
+                clazz -> log.debug(PreprocessConstants.MESSAGE_PREFIX + "\t+ " + clazz)
             );
         }
     }

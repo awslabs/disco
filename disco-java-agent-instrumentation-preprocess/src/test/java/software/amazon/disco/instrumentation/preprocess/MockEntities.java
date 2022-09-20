@@ -23,7 +23,7 @@ import software.amazon.disco.instrumentation.preprocess.export.JarExportStrategy
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentationArtifact;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.SourceInfo;
 import software.amazon.disco.instrumentation.preprocess.multipreprocessor.MultiPreprocessorScheduler;
-import software.amazon.disco.instrumentation.preprocess.pojo.PreprocessorOutcome;
+import software.amazon.disco.instrumentation.preprocess.multipreprocessor.PreprocessorOutcome;
 
 import java.io.File;
 import java.io.IOException;

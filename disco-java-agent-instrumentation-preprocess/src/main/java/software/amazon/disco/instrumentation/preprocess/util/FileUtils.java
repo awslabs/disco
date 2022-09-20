@@ -17,6 +17,7 @@ package software.amazon.disco.instrumentation.preprocess.util;
 
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
+import software.amazon.disco.agent.plugin.PluginDiscovery;
 import software.amazon.disco.instrumentation.preprocess.exceptions.JarEntryCopyException;
 
 import java.io.BufferedReader;
@@ -25,7 +26,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
@@ -33,8 +39,8 @@ import java.util.stream.Collectors;
 /**
  * Utility class for performing JarFile related tasks.
  */
-public class JarFileUtils {
-    private static final Logger log = LogManager.getLogger(JarFileUtils.class);
+public class FileUtils {
+    private static final Logger logger = LogManager.getLogger(FileUtils.class);
 
     /**
      * Reads the byte[] of a JarEntry from a JarFile
@@ -82,7 +88,7 @@ public class JarFileUtils {
      * @return the enum value denoting the outcome of the verification process.
      */
     public static JarSigningVerificationOutcome verifyJar(final File file) {
-        log.debug(PreprocessConstants.MESSAGE_PREFIX + "Verifying Jar: " + file.getAbsolutePath());
+        logger.debug(PreprocessConstants.MESSAGE_PREFIX + "Verifying Jar: " + file.getAbsolutePath());
 
         // when running tests via Intellij, 'System.getProperty("java.home")' would return the path to the jre, e.g. '/Library/Java/JavaVirtualMachines/amazon-corretto-8.jdk/Contents/Home/jre',
         // whereas when running the same tests via './gradlew build', the path would be pointing to the parent home directory, e.g. '/Library/Java/JavaVirtualMachines/amazon-corretto-8.jdk/Contents/Home'
@@ -97,8 +103,8 @@ public class JarFileUtils {
             final int exitCode = process.waitFor();
             final String result = readInputStream(process.getInputStream());
 
-            log.debug(PreprocessConstants.MESSAGE_PREFIX + "Jar verification exit code is: " + exitCode);
-            log.debug(PreprocessConstants.MESSAGE_PREFIX + "Jar verification output message:\n " + result);
+            logger.trace(PreprocessConstants.MESSAGE_PREFIX + "Jar verification exit code is: " + exitCode);
+            logger.trace(PreprocessConstants.MESSAGE_PREFIX + "Jar verification output message:\n " + result);
 
             if (exitCode == 0) {
                 return result.contains("jar is unsigned.") ? JarSigningVerificationOutcome.UNSIGNED : JarSigningVerificationOutcome.SIGNED;
@@ -107,9 +113,65 @@ public class JarFileUtils {
                 return JarSigningVerificationOutcome.INVALID;
             }
         } catch (IOException | InterruptedException e) {
-            log.warn(PreprocessConstants.MESSAGE_PREFIX + "Failed to verify Jar: " + file.getAbsolutePath(), e);
+            logger.warn(PreprocessConstants.MESSAGE_PREFIX + "Failed to verify Jar: " + file.getAbsolutePath(), e);
             return JarSigningVerificationOutcome.INVALID;
         }
+    }
+
+    /**
+     * Convenience method to create a temporary file named after the output of {@link ManagementFactory#getRuntimeMXBean().getName()} to uniquely
+     * identify this file across multiple concurrent instances of preprocessors.
+     *
+     * @param temporaryManifestDir dir where the temporary manifest file will be created under
+     * @return the generated temporary file
+     * @throws IOException thrown when failed to create temporary file
+     */
+    public static File createTemporaryManifestFile(final File temporaryManifestDir) throws IOException {
+        if (!temporaryManifestDir.exists()) {
+            temporaryManifestDir.mkdirs();
+        }
+
+        // temp manifest file is named uniquely across processes in the format of '<pid>@<hostname>'.
+        final File manifest = new File(temporaryManifestDir, ManagementFactory.getRuntimeMXBean().getName());
+        manifest.createNewFile();
+
+        return manifest;
+    }
+
+    /**
+     * Scan the plugin directory supplied to discover all Disco plugins. Each discovered File is then validated with the help of 'PluginDiscovery#validateDiscoPlugin()`
+     * method in Disco core.
+     *
+     * @param agentConfig agent config meant to be supplied to the Disco agent containing args such as "pluginpath"
+     * @return a set of discovered plugin Jar files.
+     */
+    public static Set<File> scanPluginsFromAgentConfig(final String agentConfig) {
+        final Set<File> pluginsDiscovered = new HashSet<>();
+
+        // extract the arg pair "pluginpath=path_to_plugins"
+        final String pluginDirArgPair = Arrays.stream(agentConfig.split(":"))
+            .filter(arg -> arg.toLowerCase(Locale.ROOT).startsWith("pluginpath"))
+            .findFirst()
+            .get();
+
+        if (pluginDirArgPair == null) {
+            return pluginsDiscovered;
+        }
+
+        final File pluginDir = new File(pluginDirArgPair.split("=")[1]);
+        if (pluginDir.exists() && pluginDir.isDirectory()) {
+            for (File plugin : pluginDir.listFiles(file -> file.getName().endsWith(".jar"))) {
+                try {
+                    if (PluginDiscovery.validateDiscoPlugin(plugin) != null) {
+                        pluginsDiscovered.add(plugin);
+                    }
+                } catch (Exception e) {
+                    logger.warn(PreprocessConstants.MESSAGE_PREFIX + "Error occurred while validating plugin file: " + plugin.getAbsolutePath(), e);
+                }
+            }
+        }
+
+        return pluginsDiscovered;
     }
 
     /**
