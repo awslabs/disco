@@ -64,13 +64,13 @@ public class JDKExportStrategy extends ExportStrategy {
      * {@inheritDoc}
      */
     @Override
-    public void export(SourceInfo info, Map<String, InstrumentationArtifact> artifacts, PreprocessConfig config, final String relativeOutputPath) {
+    public File export(SourceInfo info, Map<String, InstrumentationArtifact> artifacts, PreprocessConfig config, final String relativeOutputPath) {
         log.info(PreprocessConstants.MESSAGE_PREFIX + "Attempting to export artifacts JDK classes");
 
         try {
-            final File tempFile = createOutputFile(config.getOutputDir(), relativeOutputPath, INSTRUMENTED_JDK_OUTPUT_NAME);
+            final File outputFile = createOutputFile(config.getOutputDir(), relativeOutputPath, INSTRUMENTED_JDK_OUTPUT_NAME);
 
-            try (JarOutputStream os = new JarOutputStream(new FileOutputStream(tempFile))) {
+            try (JarOutputStream os = new JarOutputStream(new FileOutputStream(outputFile))) {
                 saveInstrumentationArtifactsToJar(os, artifacts);
 
                 // copy required dependencies such as concurrency support from the agent jar so classes within can be resolved when instantiating the JVM at service runtime
@@ -81,6 +81,7 @@ public class JDKExportStrategy extends ExportStrategy {
             }
 
             log.info(PreprocessConstants.MESSAGE_PREFIX + "Instrumented JDK moved to destination");
+            return outputFile;
         } catch (IOException e) {
             throw new ExportException("Failed to create temp Jar file", e);
         } finally {

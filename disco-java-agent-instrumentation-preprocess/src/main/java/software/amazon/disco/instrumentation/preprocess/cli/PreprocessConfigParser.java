@@ -24,6 +24,8 @@ import software.amazon.disco.instrumentation.preprocess.exceptions.InvalidConfig
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentSignedJarHandlingStrategy;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.SignedJarHandlingStrategy;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.SkipSignedJarHandlingStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.cache.ChecksumCacheStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.cache.NoOpCacheStrategy;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -117,21 +119,21 @@ public class PreprocessConfigParser {
         ACCEPTED_FLAGS.put("--outputdir", new OptionToMatch("--outputdir", true));
         ACCEPTED_FLAGS.put("--sourcepaths", new OptionToMatch("--sourcepaths", true));
         ACCEPTED_FLAGS.put("--agentpath", new OptionToMatch("--agentpath", true));
-        ACCEPTED_FLAGS.put("--serializationpath", new OptionToMatch("--serializationpath", true));
         ACCEPTED_FLAGS.put("--suffix", new OptionToMatch("--suffix", true));
         ACCEPTED_FLAGS.put("--javaversion", new OptionToMatch("--javaversion", true));
         ACCEPTED_FLAGS.put("--agentarg", new OptionToMatch("--agentarg", true));
         ACCEPTED_FLAGS.put("--jdksupport", new OptionToMatch("--jdksupport", true));
         ACCEPTED_FLAGS.put("--signedjarhandlingstrategy", new OptionToMatch("--signedjarhandlingstrategy", true));
+        ACCEPTED_FLAGS.put("--cachestrategy", new OptionToMatch("--cachestrategy", true));
 
         ACCEPTED_FLAGS.put("-out", new OptionToMatch("-out", true));
         ACCEPTED_FLAGS.put("-sps", new OptionToMatch("-sps", true));
         ACCEPTED_FLAGS.put("-ap", new OptionToMatch("-ap", true));
-        ACCEPTED_FLAGS.put("-sp", new OptionToMatch("-sp", true));
         ACCEPTED_FLAGS.put("-suf", new OptionToMatch("-suf", true));
         ACCEPTED_FLAGS.put("-jv", new OptionToMatch("-jv", true));
         ACCEPTED_FLAGS.put("-arg", new OptionToMatch("-arg", true));
         ACCEPTED_FLAGS.put("-jdks", new OptionToMatch("-jdks", true));
+        ACCEPTED_FLAGS.put("-cache", new OptionToMatch("-cache", true));
     }
 
     /**
@@ -147,16 +149,12 @@ public class PreprocessConfigParser {
             case "--outputdir":
                 builder.outputDir(argument);
                 break;
-            case "--serializationpath":
-            case "-sp":
-                builder.serializationJarPath(argument);
-                break;
             case "-sps":
             case "--sourcepaths":
                 final String[] segments = argument.split("@");
 
                 if (segments.length > 2) {
-                    throw new InvalidConfigEntryException("Invalid value provided for sourcePaths");
+                    throw new InvalidConfigEntryException("Invalid value provided for [sourcePaths]");
                 }
 
                 addToSourceMap(builder, segments.length == 1 ? "" : segments[1], segments[0].split(":"));
@@ -180,6 +178,19 @@ public class PreprocessConfigParser {
             case "-jdks":
             case "--jdksupport":
                 builder.jdkPath(argument);
+                break;
+            case "-cache":
+            case "--cachestrategy":
+                switch (argument.toLowerCase(Locale.ROOT)){
+                    case "checksum":
+                        builder.cacheStrategy(new ChecksumCacheStrategy());
+                        break;
+                    case "none":
+                        builder.cacheStrategy(new NoOpCacheStrategy());
+                        break;
+                    default:
+                        throw new InvalidConfigEntryException("Invalid value provided for key [cacheStrategy]");
+                }
                 break;
             case "--signedjarhandlingstrategy":
                 builder.signedJarHandlingStrategy(parseSignedJarHandlingStrategyArg(argument));

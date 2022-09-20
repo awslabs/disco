@@ -23,6 +23,8 @@ import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentSignedJarHandlingStrategy;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.SignedJarHandlingStrategy;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.SkipSignedJarHandlingStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.cache.CacheStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.cache.NoOpCacheStrategy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,11 +49,15 @@ public class PreprocessConfig {
     private final String agentPath;
     private final String suffix;
     private final Logger.Level logLevel;
-    private final String serializationJarPath;
     private final String javaVersion;
     private final String agentArg;
-    private final String jdkPath;
     private final boolean failOnUnresolvableDependency;
+
+    @Setter
+    private String jdkPath;
+
+    @Setter
+    private CacheStrategy cacheStrategy;
 
     /**
      * Getter for the 'logLevel' field
@@ -85,7 +91,7 @@ public class PreprocessConfig {
     public String[] toCommandlineArguments() {
         List<String> commandlineArguments = new ArrayList<>();
 
-        //sourcePaths
+        // sourcePaths
         for (final Map.Entry<String, Set<String>> entry : sourcePaths.entrySet()) {
             Set<String> sources = entry.getValue();
             sources.remove("");
@@ -94,13 +100,13 @@ public class PreprocessConfig {
                 commandlineArguments.add("--sourcepaths");
                 final StringBuilder builder = new StringBuilder();
                 builder.append(String.join(":", sources))
-                       .append(entry.getKey().isEmpty() ? "" : "@")
-                       .append(entry.getKey());
+                    .append(entry.getKey().isEmpty() ? "" : "@")
+                    .append(entry.getKey());
                 commandlineArguments.add(builder.toString());
             }
         }
 
-        //signedJarHandlingStrategy
+        // signedJarHandlingStrategy
         if (signedJarHandlingStrategy instanceof SkipSignedJarHandlingStrategy) {
             commandlineArguments.add("--signedjarhandlingstrategy");
             commandlineArguments.add("skip");
@@ -110,7 +116,7 @@ public class PreprocessConfig {
             commandlineArguments.add("instrument");
         }
 
-        //outputDir
+        // outputDir
         if (outputDir != null) {
             commandlineArguments.add("--outputdir");
             commandlineArguments.add(outputDir);
@@ -122,13 +128,13 @@ public class PreprocessConfig {
             commandlineArguments.add(agentPath);
         }
 
-        //suffix
+        // suffix
         if (suffix != null) {
             commandlineArguments.add("--suffix");
             commandlineArguments.add(suffix);
         }
 
-        //logLevel
+        // logLevel
         if (logLevel != null) {
             switch (logLevel) {
                 case DEBUG:
@@ -145,33 +151,62 @@ public class PreprocessConfig {
             }
         }
 
-        //serializationJarPath
-        if (serializationJarPath != null) {
-            commandlineArguments.add("--serializationpath");
-            commandlineArguments.add(serializationJarPath);
-        }
-
-        //javaVersion
+        // javaVersion
         if (javaVersion != null) {
             commandlineArguments.add("--javaversion");
             commandlineArguments.add(javaVersion);
         }
 
-        //agentArg
+        // agentArg
         if (agentArg != null) {
             commandlineArguments.add("--agentarg");
             commandlineArguments.add(agentArg);
         }
 
-        //jdkPath
+        // jdkPath
         if (jdkPath != null) {
             commandlineArguments.add("--jdksupport");
             commandlineArguments.add(jdkPath);
         }
 
-        //failOnUnresolvableDependency
-        if (failOnUnresolvableDependency) commandlineArguments.add("--failonunresolvabledependency");
+        // failOnUnresolvableDependency
+        if (failOnUnresolvableDependency) {
+            commandlineArguments.add("--failonunresolvabledependency");
+        }
+
+        // cache strategy
+        if (!(getCacheStrategy() instanceof NoOpCacheStrategy)) {
+            commandlineArguments.add("--cachestrategy");
+            commandlineArguments.add(getCacheStrategy().getSimpleName());
+        }
 
         return commandlineArguments.toArray(new String[0]);
+    }
+
+    /**
+     * Getter for the preprocessing caching strategy. Default strategy is {@link NoOpCacheStrategy} if it hasn't been provided explicitly.
+     *
+     * @return configured caching strategy
+     */
+    public CacheStrategy getCacheStrategy() {
+        return cacheStrategy == null ? new NoOpCacheStrategy() : this.cacheStrategy;
+    }
+
+    /**
+     * A toString method for capturing the content of the config that is relevant to the instrumentation context for caching purposes.
+     *
+     * @return a string representing arguments are that relevant to the instrumentation context for caching.
+     */
+    public String toStringForCaching() {
+        return "PreprocessConfig{" +
+            ", signedJarHandlingStrategy=" + getSignedJarHandlingStrategy().getClass().getName() +
+            ", outputDir='" + outputDir + '\'' +
+            ", agentPath='" + agentPath + '\'' +
+            ", suffix='" + suffix + '\'' +
+            ", javaVersion='" + javaVersion + '\'' +
+            ", agentArg='" + agentArg + '\'' +
+            ", failOnUnresolvableDependency=" + failOnUnresolvableDependency +
+            ", cacheStrategy=" + getCacheStrategy().getSimpleName() +
+            '}';
     }
 }

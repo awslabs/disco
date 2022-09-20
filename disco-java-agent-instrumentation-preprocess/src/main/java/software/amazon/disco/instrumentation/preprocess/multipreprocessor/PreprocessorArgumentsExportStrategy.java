@@ -56,15 +56,14 @@ public class PreprocessorArgumentsExportStrategy {
      * Set up work for exporting sub-preprocessors commandline arguments as txt files.
      * Clear the folder for storing arguments files if the folder already exists
      * Create a new folder for storing arguments files if the folder has not existed before
-     *
      */
     protected void setUp(File preprocessorArgsTempFolder) {
         //if the folder to store the arguments files are already there, clear the folder
-        if(preprocessorArgsTempFolder.exists()) {
-            for (File subfile : preprocessorArgsTempFolder.listFiles()) {
-                subfile.delete();
+        if (preprocessorArgsTempFolder.exists()) {
+            for (File subFile : preprocessorArgsTempFolder.listFiles()) {
+                subFile.delete();
             }
-        }else{
+        } else {
             preprocessorArgsTempFolder.mkdirs();
         }
     }
@@ -88,5 +87,4 @@ public class PreprocessorArgumentsExportStrategy {
             throw new ExportException("Failed to write command-line arguments to: " + destinationFile.getName(), e);
         }
     }
-
 }

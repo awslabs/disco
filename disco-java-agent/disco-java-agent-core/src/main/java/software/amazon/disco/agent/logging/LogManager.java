@@ -89,6 +89,15 @@ public class LogManager {
     }
 
     /**
+     * Check whether the default logger factory has been replaced.
+     *
+     * @return true if the installed logger factory is of type 'NullLoggerFactory', false otherwise.
+     */
+    public static boolean isDefaultLoggerFactoryInstalled(){
+        return installedLoggerFactory instanceof NullLoggerFactory;
+    }
+
+    /**
      * Install a LoggerFactory which will 1) be responsible for creating Loggers when new calls to getLogger are made and
      * 2) will be called once per each Logger already created/supplied via getLogger, to replace them with a Logger of its
      * own creation

@@ -53,11 +53,11 @@ public class JDKModuleLoaderTest {
     public void testLoadCallsHelperMethod() throws IOException {
         Mockito.doReturn(false).when(loader).isJDK9Compatible();
         File jdk8ModuleFile = temporaryFolder.newFile("rt.jar");
-        Mockito.doReturn(jdk8ModuleFile).when(loader).getJDKBaseModule(Mockito.eq(config));
+        Mockito.doReturn(jdk8ModuleFile).when(loader).getJDKBaseModule(Mockito.any());
 
         loader.load(Paths.get("somePath"), config);
 
-        Mockito.verify(loader).getJDKBaseModule(config);
+        Mockito.verify(loader).getJDKBaseModule("somePath");
         Mockito.verify(loader).isJDK9Compatible();
         Mockito.verify(loader).loadJar(Mockito.eq(jdk8ModuleFile), Mockito.any(ExportStrategy.class), Mockito.any(InstrumentSignedJarHandlingStrategy.class));
     }
@@ -68,11 +68,11 @@ public class JDKModuleLoaderTest {
         Mockito.doReturn(true).when(loader).isJDK9Compatible();
 
         File jdkBaseModule = temporaryFolder.newFile("rt.jar");
-        Mockito.doReturn(jdkBaseModule).when(loader).getJDKBaseModule(Mockito.eq(config));
+        Mockito.doReturn(jdkBaseModule).when(loader).getJDKBaseModule(Mockito.any());
 
         loader.load(Paths.get("somePath"), config);
 
-        Mockito.verify(loader).getJDKBaseModule(config);
+        Mockito.verify(loader).getJDKBaseModule("somePath");
         Mockito.verify(loader).isJDK9Compatible();
     }
 
@@ -82,11 +82,11 @@ public class JDKModuleLoaderTest {
         Mockito.doReturn(false).when(loader).isJDK9Compatible();
 
         File jdkBaseModule = temporaryFolder.newFile("java.base.jmod");
-        Mockito.doReturn(jdkBaseModule).when(loader).getJDKBaseModule(Mockito.eq(config));
+        Mockito.doReturn(jdkBaseModule).when(loader).getJDKBaseModule(Mockito.any());
 
         loader.load(Paths.get("somePath"), config);
 
-        Mockito.verify(loader).getJDKBaseModule(config);
+        Mockito.verify(loader).getJDKBaseModule("somePath");
         Mockito.verify(loader).isJDK9Compatible();
     }
 
@@ -96,9 +96,7 @@ public class JDKModuleLoaderTest {
         jdk8ModuleFile.getParentFile().mkdirs();
         jdk8ModuleFile.createNewFile();
 
-        config = PreprocessConfig.builder().jdkPath(javaHome.getPath()).build();
-
-        File baseModule = loader.getJDKBaseModule(config);
+        File baseModule = loader.getJDKBaseModule(javaHome.getAbsolutePath());
 
         assertNotNull(baseModule);
         assertEquals(jdk8ModuleFile, baseModule);
@@ -110,9 +108,7 @@ public class JDKModuleLoaderTest {
         jdk9ModuleFile.getParentFile().mkdirs();
         jdk9ModuleFile.createNewFile();
 
-        config = PreprocessConfig.builder().jdkPath(javaHome.getPath()).build();
-
-        File baseModule = loader.getJDKBaseModule(config);
+        File baseModule = loader.getJDKBaseModule(javaHome.getAbsolutePath());
 
         assertNotNull(baseModule);
         assertEquals(jdk9ModuleFile, baseModule);
@@ -120,8 +116,6 @@ public class JDKModuleLoaderTest {
 
     @Test(expected = InstrumentationException.class)
     public void testGetJDKBaseModuleThrowsExceptionOnInvalidJDKPath() {
-        config = PreprocessConfig.builder().jdkPath(temporaryFolder.toString()).build();
-
-        loader.getJDKBaseModule(config);
+        loader.getJDKBaseModule(temporaryFolder.toString());
     }
 }

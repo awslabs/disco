@@ -18,7 +18,7 @@ package software.amazon.disco.instrumentation.preprocess.util;
 import java.io.File;
 
 /**
- * Enum to denote the outcome of the Jar verification process performed by {@link software.amazon.disco.instrumentation.preprocess.util.JarFileUtils#verifyJar(File)}
+ * Enum to denote the outcome of the Jar verification process performed by {@link FileUtils#verifyJar(File)}
  * <p>
  * UNSIGNED
  * - The 'jarsigner' tool did not detect any Jar signing artifacts(certificate, signed manifest and so on...) after having scanned the Jar.

@@ -26,7 +26,7 @@ import software.amazon.disco.instrumentation.preprocess.TestUtils;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentationArtifact;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.SourceInfo;
-import software.amazon.disco.instrumentation.preprocess.util.JarFileUtils;
+import software.amazon.disco.instrumentation.preprocess.util.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -129,7 +129,7 @@ public class JarExportStrategyTest {
         while (entries.hasMoreElements()) {
             JarEntry entry = (JarEntry) entries.nextElement();
 
-            byte[] bytes = JarFileUtils.readEntryFromJar(outputJar, entry);
+            byte[] bytes = FileUtils.readEntryFromJar(outputJar, entry);
             assertArrayEquals(records.get(entry.getName()), bytes);
             records.remove(entry.getName());
         }

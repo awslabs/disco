@@ -40,7 +40,7 @@ val pluginDirWithConfigFile = "${discoDir}/plugins"
 val standardOutputLoggerFactoryFQN: String by rootProject.extra
 
 // create a 'disco' dir where Disco plugins and the config override file will reside in
-val setupPluginsDir = task<Copy>("setupPluginsDir"){
+val setupPluginsDir = task<Copy>("setupPluginsDir") {
     from(pluginDir)
     into(pluginDirWithConfigFile)
 
@@ -49,8 +49,8 @@ val setupPluginsDir = task<Copy>("setupPluginsDir"){
 
 // create the config file under the same path supplied to the agent via the 'pluginsPath' arg.
 val configFilePath = "${pluginDirWithConfigFile}/disco.config"
-val createConfigFile = task("CreateConfigFile"){
-    doLast{
+val createConfigFile = task("CreateConfigFile") {
+    doLast {
         var file = file(configFilePath)
         file.writeText("runtimeonly=true")
     }
@@ -60,6 +60,10 @@ val createConfigFile = task("CreateConfigFile"){
 
 // statically instrument the integ-test source package using the integ-test plugin and save the result to a temp folder
 val testDependenciesPreprocess = tasks.register<JavaExec>("testDependenciesPreprocess") {
+    doFirst {
+        // make sure that this is a fresh run
+        file(outDir + "/disco-java-agent-instrumentation-preprocess-test-target-${project.version}.jar").delete();
+    }
     val preprocessTestInstrumentationTargetPath = project(preprocessTestInstrumentationTargetProject).buildDir.absolutePath +
             "/libs/disco-java-agent-instrumentation-preprocess-test-target-${project.version}.jar"
 
@@ -70,7 +74,9 @@ val testDependenciesPreprocess = tasks.register<JavaExec>("testDependenciesPrepr
         "-sps", preprocessTestInstrumentationTargetPath,
         "-out", outDir,
         "-arg", "verbose:loggerfactory=${standardOutputLoggerFactoryFQN}:pluginPath=$pluginDir",
-        "--verbose"
+        "--verbose",
+        "--cachestrategy",
+        "checksum"
     )
 
     //we need the agent and plugins to be built first
@@ -79,6 +85,49 @@ val testDependenciesPreprocess = tasks.register<JavaExec>("testDependenciesPrepr
     dependsOn("$preprocessTestInstrumentationTargetProject:build")
     dependsOn("$preprocessTestPluginProject:build")
     dependsOn(setupPluginsDir)
+}
+
+// Attempt to reprocess the same Jar that has already been transformed in the "testDependenciesPreprocess" task to test that cashing is working as intended and prevents the Jar from
+// being processed again.
+val cachingTest = tasks.register<JavaExec>("cachingTest") {
+    val tempWorkerArgsDir = file("$outDir/tmp/worker_args");
+
+    doFirst {
+        // Sanity check that the expected build artifact has been created.
+        val artifact = file("$outDir/disco-java-agent-instrumentation-preprocess-test-target-${project.version}.jar");
+        if (!artifact.exists()) {
+            throw GradleException("Instrumentation artifact was not generated as pre-requisite for testing caching.");
+        }
+
+        // Sanity check that worker arg files have been generated.
+        if (!tempWorkerArgsDir.exists() || tempWorkerArgsDir.listFiles().size == 0) {
+            throw GradleException("Worker args files generated prior are missing.");
+        }
+    }
+
+    val preprocessTestInstrumentationTargetPath = project(preprocessTestInstrumentationTargetProject).buildDir.absolutePath +
+            "/libs/disco-java-agent-instrumentation-preprocess-test-target-${project.version}.jar"
+
+    main = "software.amazon.disco.instrumentation.preprocess.cli.Driver";
+    classpath = files(preprocessorExecutablePath)
+    args = listOf(
+        "-ap", discoAgentPath,
+        "-sps", preprocessTestInstrumentationTargetPath,
+        "-out", outDir,
+        "-arg", "verbose:loggerfactory=${standardOutputLoggerFactoryFQN}:pluginPath=$pluginDir",
+        "--verbose",
+        "--cachestrategy",
+        "checksum"
+    )
+
+    doLast {
+        // validate that the Jar supplied to the preprocessor has been skipped.
+        if (!tempWorkerArgsDir.exists() || (tempWorkerArgsDir.exists() && tempWorkerArgsDir.listFiles().size > 0)) {
+            throw GradleException("Preprocessor failed to skip already cached Jar.")
+        }
+    }
+
+    dependsOn(testDependenciesPreprocess)
 }
 
 // invoke the tests with the 'runtimeonly' agent arg which will set the agent to a 'dependency provider' only state to avoid duplicate instrumentations of statically instrumented classes
@@ -96,7 +145,7 @@ tasks.test {
 
 // invoke the tests with the config override file present under the supplied 'pluginPath' directory. Test cases executed in this task are sensitive to excessive instrumentation
 // where a statically instrumented class being instrumented again at runtime would trigger test failures due to more than expected number of events published.
-val configFileOverrideTest = task<Test>("configFileOverrideTest"){
+val configFileOverrideTest = task<Test>("configFileOverrideTest") {
     // use the same classpath and tests as the 'test' target
     classpath = sourceSets["test"].runtimeClasspath
         .plus(layout.files("$outDir/disco-java-agent-instrumentation-preprocess-test-target-${project.version}.jar"))

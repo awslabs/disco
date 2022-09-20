@@ -45,7 +45,7 @@ public class JarExportStrategy extends ExportStrategy {
      * {@inheritDoc}
      */
     @Override
-    public void export(final SourceInfo sourceInfo, final Map<String, InstrumentationArtifact> instrumented, final PreprocessConfig config, final String relativeOutputPath) {
+    public File export(final SourceInfo sourceInfo, final Map<String, InstrumentationArtifact> instrumented, final PreprocessConfig config, final String relativeOutputPath) {
         final String jarName = sourceInfo.getSourceFile().getName();
 
         if (!instrumented.isEmpty()) {
@@ -56,13 +56,15 @@ public class JarExportStrategy extends ExportStrategy {
             try (JarOutputStream jarOS = new JarOutputStream(new FileOutputStream(file)); JarFile jarFile = new JarFile(sourceInfo.getSourceFile())) {
                 copyExistingJarEntries(jarOS, jarFile, instrumented);
                 saveInstrumentationArtifactsToJar(jarOS, instrumented);
+
+                log.debug(String.format(PreprocessConstants.MESSAGE_PREFIX + "Exporting completed for %s", jarName));
+                return file;
             } catch (IOException e) {
                 throw new ExportException("Failed to create output Jar file", e);
             }
-
-            log.debug(String.format(PreprocessConstants.MESSAGE_PREFIX + "Exporting completed for %s", jarName));
         } else {
             log.debug(String.format(PreprocessConstants.MESSAGE_PREFIX + "No classes instrumented for %s, skipping to next Jar", jarName));
+            return null;
         }
     }
 
@@ -75,7 +77,7 @@ public class JarExportStrategy extends ExportStrategy {
      * @param artifacts a map of instrumentation artifacts with their bytecode
      */
     protected void copyExistingJarEntries(final JarOutputStream jarOS, final JarFile jarFile, final Map<String, InstrumentationArtifact> artifacts) {
-        log.info(PreprocessConstants.MESSAGE_PREFIX + "Copying existing entries from file: " + jarFile.getName());
+        log.debug(PreprocessConstants.MESSAGE_PREFIX + "Copying existing entries from file: " + jarFile.getName());
         final Enumeration entries = jarFile.entries();
         while (entries.hasMoreElements()) {
             final JarEntry entry = (JarEntry) entries.nextElement();
