@@ -55,6 +55,9 @@ subprojects {
     pluginManager.withPlugin("com.github.johnrengelman.shadow") {
         tasks {
             named<ShadowJar>("shadowJar") {
+                //manually exclude module-info.class. This class is only relevant to the shadowed lib (bytebuddy-agent, asm-commons) and of no use to the resulting jar
+                //this is an open bug: https://github.com/johnrengelman/shadow/issues/729
+                exclude("**/module-info.class")
 
                 //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-web-plugin-x.y.z.jar)
                 archiveClassifier.set(null as String?)
