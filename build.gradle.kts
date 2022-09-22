@@ -62,9 +62,10 @@ subprojects {
                 //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (disco-java-agent-web-plugin-x.y.z.jar)
                 archiveClassifier.set(null as String?)
 
-                //Must relocate both of these inner dependencies of the Disco agent, to avoid conflicts in your customer's application
+                //Must relocate three of these inner dependencies of the Disco agent, to avoid conflicts in your customer's application
                 relocate("org.objectweb.asm", "software.amazon.disco.agent.jar.asm")
                 relocate("net.bytebuddy", "software.amazon.disco.agent.jar.bytebuddy")
+                relocate("net.java.dev.jna", "software.amazon.disco.agent.jar.jna") 
             }
 
             //once gradle has made its default jar, follow up by producing the shadow/uber jar
