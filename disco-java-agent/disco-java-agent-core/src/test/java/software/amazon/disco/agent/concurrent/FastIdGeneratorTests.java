@@ -17,22 +17,23 @@ package software.amazon.disco.agent.concurrent;
 
 import org.junit.Assert;
 import org.junit.Test;
+import software.amazon.disco.agent.util.FastIdGenerator;
 
-public class TransactionIdentifierTests {
+public class FastIdGeneratorTests {
     private static final String HEX_ALPHABET = "0123456789abcdef";
 
     @Test
     public void testLength() {
-        Assert.assertEquals(24, TransactionIdentifier.generate().length());
+        Assert.assertEquals(24, FastIdGenerator.generate().length());
     }
 
     @Test
     public void testBitDistribution() {
         final int samples = 1_000_000;
         final double tolerance = 0.01;
-        final int[] bits = new int[4 * TransactionIdentifier.LENGTH];
+        final int[] bits = new int[4 * FastIdGenerator.LENGTH];
         for (int sample = 0; sample < samples; sample++) {
-            final String id = TransactionIdentifier.generate();
+            final String id = FastIdGenerator.generate();
             for (int i = 0; i < id.length(); i++) {
                 int c = HEX_ALPHABET.indexOf(id.charAt(i));
                 for (int k = 0; k < 4; k++) {
