@@ -21,6 +21,7 @@ import software.amazon.disco.agent.event.TransactionBeginEvent;
 import software.amazon.disco.agent.event.TransactionEndEvent;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
+import software.amazon.disco.agent.util.FastIdGenerator;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -93,7 +94,7 @@ public class TransactionContext {
         // create a new Transaction Context.
         if (getReferenceCounter() == null || getReferenceCounter().get() <= 0) {
             clear();
-            set(TransactionIdentifier.generate());
+            set(FastIdGenerator.generate());
             putMetadata(TRANSACTION_OWNING_THREAD_KEY, Long.valueOf(Thread.currentThread().getId()));
             transactionContext.get().put(REFERENCE_COUNTER_KEY, new MetadataItem(new AtomicInteger(0)));
             EventBus.publish(new TransactionBeginEvent("Core"));

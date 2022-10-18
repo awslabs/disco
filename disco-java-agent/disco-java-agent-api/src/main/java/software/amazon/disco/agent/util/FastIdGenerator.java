@@ -13,14 +13,14 @@
  *   permissions and limitations under the License.
  */
 
-package software.amazon.disco.agent.concurrent;
+package software.amazon.disco.agent.util;
 
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * A sufficiently random number formatted as a hex string.
  */
-public class TransactionIdentifier {
+public class FastIdGenerator {
     public static final int LENGTH = 24;
     private static final String HEX_ALPHABET = "0123456789abcdef";
     private static final char[] HEX_ENCODING = buildEncodingArray();
