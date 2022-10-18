@@ -34,10 +34,10 @@ public class FastIdGenerator {
     }
 
     /**
-     * Randomly generate a transaction ID.
+     * Randomly generate an ID.
      * Uses thread local random to avoid performance bottlenecks with secure random.
      * Implementation adapted from AWS X-Ray SDK FastIdGenerator.java
-     * @return a new transaction ID
+     * @return a new random ID
      */
     public static String generate() {
         final byte[] bytes = new byte[LENGTH / 2];
