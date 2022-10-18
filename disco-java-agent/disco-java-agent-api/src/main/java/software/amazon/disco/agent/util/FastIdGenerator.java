@@ -18,7 +18,8 @@ package software.amazon.disco.agent.util;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * A sufficiently random number formatted as a hex string.
+ * Generates random alphanumeric strings, uniformly randomly selected from a set of at least 2^96 possible strings.
+ * Not suitable for generating secret values in cryptographic applications.
  */
 public class FastIdGenerator {
     public static final int LENGTH = 24;
