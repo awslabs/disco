@@ -45,7 +45,7 @@ public abstract class ExportStrategy {
      * @param info               Information of the original source file
      * @param artifacts          a map of instrumentation artifacts with their bytecode
      * @param config             configuration file containing instructions to instrument a module
-     * @param relativeOutputPath relative output path where the BTI artifact will be stored.
+     * @param relativeOutputPath relative output path where the preprocessing artifact will be stored.
      */
     public abstract void export(final SourceInfo info, final Map<String, InstrumentationArtifact> artifacts, final PreprocessConfig config, final String relativeOutputPath);
 
@@ -53,13 +53,13 @@ public abstract class ExportStrategy {
      * Creates the output file at the specified location. The resulting artifact will be saved under the root output directory extracted from the config file. The relative path
      * of the parent directory' contents should be identical to their relative path on the deployed host.
      * <p>
-     * For instance, 'aws-java-sdk-core' should be saved to 'outputDir/lib/aws-java-sdk-core-1.x.jar' during Build-Time Instrumentation so that its relative path, 'lib/aws-java-sdk-core-1.x.jar'
+     * For instance, 'aws-java-sdk-core' should be saved to 'outputDir/lib/aws-java-sdk-core-1.x.jar' during preprocessing so that its relative path, 'lib/aws-java-sdk-core-1.x.jar'
      * is identical to its corresponding relative path on the deployed host.
-     *
+     * <p>
      * In the case of individual class files under a parent directory, for instance 'tomcat/software/amazon/toplevelpackage/ClassA.class', the relativeParentPath param would be 'tomcat',
      * whereas 'software/amazon/toplevelpackage/ClassA.class' would be the filePath.
      *
-     * @param rootOutputDir      root directory where all the BTI artifacts will be stored
+     * @param rootOutputDir      root directory where all the preprocessing artifacts will be stored
      * @param relativeParentPath relative path of the parent directory in relation to the root output directory
      * @param filePath           relative path to the source file in relation to the source's parent directory
      * @return a created file at the specified location

@@ -4,7 +4,7 @@
 
 ### Major new features
 
-* Introduced build-time instrumentation (BTI) feature under disco-java-agent-instrumentation-preprocess. BTI addresses issues caused by runtime instrumentation overhead such as longer startup time by instrumenting the JDK and all the dependencies at build-time instead.
+* Introduced instrumentation preprocess feature under disco-java-agent-instrumentation-preprocess. Instrumentation preprocess addresses issues caused by runtime instrumentation overhead such as longer startup time by instrumenting the JDK and all the dependencies at build-time instead.
 * Added `PluginClassLoader`. This is the new default class loader for loading Disco plugins.
 * Added a new plugin to support transaction context (TX) propagation for Kotlin coroutines.
 

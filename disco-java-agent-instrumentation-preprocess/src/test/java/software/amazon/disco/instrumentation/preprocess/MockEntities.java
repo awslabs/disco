@@ -22,8 +22,11 @@ import software.amazon.disco.instrumentation.preprocess.export.ExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.export.JarExportStrategy;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentationArtifact;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.SourceInfo;
+import software.amazon.disco.instrumentation.preprocess.multipreprocessor.MultiPreprocessorScheduler;
+import software.amazon.disco.instrumentation.preprocess.pojo.PreprocessorOutcome;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -128,5 +131,13 @@ public class MockEntities {
         Mockito.lenient().when(info.getClassByteCodeMap()).thenReturn(Collections.singletonMap("SomeClass", "SomeClass".getBytes()));
 
         return info;
+    }
+
+    public static MultiPreprocessorScheduler.PreprocessorInvoker mockPreprocessorInvoker(int exitCode, String processOutput) throws InterruptedException, IOException {
+        MultiPreprocessorScheduler.PreprocessorInvoker preprocessorInvoker = Mockito.mock(MultiPreprocessorScheduler.PreprocessorInvoker.class);
+        PreprocessorOutcome preprocessorOutcome = PreprocessorOutcome.builder().exitCode(exitCode).preprocessorOutput(processOutput).commandlineArgs(new String[]{"command-line", "arguments"}).build();
+
+        Mockito.doReturn(preprocessorOutcome).when(preprocessorInvoker).call();
+        return preprocessorInvoker;
     }
 }

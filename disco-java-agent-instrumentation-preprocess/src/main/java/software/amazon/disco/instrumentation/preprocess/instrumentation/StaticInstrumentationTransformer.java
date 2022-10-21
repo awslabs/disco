@@ -33,7 +33,6 @@ import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.Class
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.DirectoryLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JDKModuleLoader;
 import software.amazon.disco.instrumentation.preprocess.loaders.classfiles.JarLoader;
-import software.amazon.disco.instrumentation.preprocess.util.JarSigningVerificationOutcome;
 import software.amazon.disco.instrumentation.preprocess.util.PreprocessConstants;
 
 import java.nio.file.Files;
@@ -96,7 +95,7 @@ public class StaticInstrumentationTransformer {
     /**
      * Process all sources to be statically instrumented, including the JDK itself if path to java home is supplied.
      */
-    protected void processAllSources(){
+    protected void processAllSources() {
         final List<InstrumentationTask> tasks = new ArrayList<>();
 
         // each map entry represents a collection of sources to be processed that share the same relative output path. For example, a collection of Jars
@@ -149,30 +148,30 @@ public class StaticInstrumentationTransformer {
     }
 
     /**
-     * Log Build-Time Instrumentation summary
+     * Log preprocessor's summary
      */
     protected void logInstrumentationSummary() {
-        log.info(PreprocessConstants.MESSAGE_PREFIX + "Build-Time Instrumentation summary:");
-        log.info(PreprocessConstants.MESSAGE_PREFIX + "Sources processed: " + allOutcomes.size());
-        log.info(PreprocessConstants.MESSAGE_PREFIX + "Sources instrumented: " + sourcesInstrumented.size());
+        log.info(PreprocessConstants.MESSAGE_PREFIX + "Preprocessor summary:");
+        log.info(PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SOURCES_PROCESSED + allOutcomes.size());
+        log.info(PreprocessConstants.MESSAGE_PREFIX +  PreprocessConstants.SUMMARY_ITEM_SOURCES_INSTRUMENTED + sourcesInstrumented.size());
 
         for (InstrumentationOutcome outcome : sourcesInstrumented) {
             log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
         }
 
-        log.info(PreprocessConstants.MESSAGE_PREFIX + "Signed jars discovered: " + signedJarsDiscovered.size());
+        log.info(PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SIGNED_JARS_DISCOVERED + signedJarsDiscovered.size());
 
         for (InstrumentationOutcome outcome : signedJarsDiscovered) {
             log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
         }
 
-        log.info(PreprocessConstants.MESSAGE_PREFIX + "Signed jars instrumented: " + signedJarsInstrumented.size());
+        log.info(PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SIGNED_JARS_INSTRUMENTED + signedJarsInstrumented.size());
 
         for (InstrumentationOutcome outcome : signedJarsInstrumented) {
             log.debug("\t+ " + PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());
         }
 
-        log.info(PreprocessConstants.MESSAGE_PREFIX + "Sources containing classes with unresolvable dependencies: " + sourcesFailedToBeInstrumented.size());
+        log.info(PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SOURCES_WITH_UNRESOLVABLE_DEPENDENCIES + sourcesFailedToBeInstrumented.size());
 
         for (InstrumentationOutcome outcome : sourcesFailedToBeInstrumented) {
             log.debug(PreprocessConstants.MESSAGE_PREFIX + outcome.getSource());

@@ -48,7 +48,7 @@ tasks.register<Zip>("createTestJar") {
 }
 
 // This Jar will be statically instrumented by the Preprocess sub-project so that existing integ tests authored
-// to test concurrency runtime instrumentation can be reused for testing build-time instrumentation.
+// to test concurrency runtime instrumentation can be reused for testing preprocessing.
 tasks.register<Zip>("createDiscoCoreIntegTestsJar") {
     from("build/classes/java/integ"){}
 

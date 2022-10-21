@@ -134,7 +134,7 @@ subprojects {
 
             val originalTestDir = file(project.buildDir.absolutePath + "/classes/java/test")
 
-            // task to statically instrument all required sources to run plugin integ tests with BTI enabled.
+            // task to statically instrument all required sources to run plugin integ tests with preprocessing enabled.
             val preprocess = tasks.register<JavaExec>("preprocess") {
                 onlyIf {
                     originalTestDir.exists() && originalTestDir.isDirectory && originalTestDir.listFiles().isNotEmpty()
@@ -161,8 +161,8 @@ subprojects {
                 dependsOn(tasks["test"])
             }
 
-            // Configure integ tests to run with BTI enabled
-            val btiTest = tasks.register<Test>("bti_test") {
+            // Configure integ tests to run with preprocessing enabled
+            val preprocessingTest = tasks.register<Test>("preprocessing_test") {
                 onlyIf {
                     originalTestDir.exists() && originalTestDir.isDirectory && originalTestDir.listFiles().isNotEmpty()
                 }
@@ -204,7 +204,7 @@ subprojects {
                 dependsOn(preprocess)
             }
 
-            tasks["build"].dependsOn(btiTest)
+            tasks["build"].dependsOn(preprocessingTest)
         }
     }
 

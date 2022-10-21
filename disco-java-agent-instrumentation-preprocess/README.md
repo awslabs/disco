@@ -2,7 +2,7 @@
 This folder contains the source code of the instrumentation preprocess library. The library can be invoked directly via the CLI 
 or imported as a dependency for additional extensibility. 
 
-# Build-time instrumentation vs. runtime instrumentation
+# Instrumentation preprocess vs. runtime instrumentation
 The purpose of this library is to shift instrumentation overhead from runtime to build-time. This is due to the fact that a
 large of number of comparisons take place during service startup as a result of the jvm matching every single class to be loaded
 against every single Installable installed. 
