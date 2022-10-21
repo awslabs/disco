@@ -17,18 +17,22 @@ package software.amazon.disco.instrumentation.preprocess.cli;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.Singular;
 import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentSignedJarHandlingStrategy;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.SignedJarHandlingStrategy;
+import software.amazon.disco.instrumentation.preprocess.instrumentation.SkipSignedJarHandlingStrategy;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
  * Container for the config created from the command line args
  */
-@Builder
+@Builder(toBuilder = true)
 @Getter
 public class PreprocessConfig {
     /**
@@ -36,9 +40,9 @@ public class PreprocessConfig {
      * possible map entry is the paths to 'aws-java-sdk-core' as value and 'lib' as key.
      */
     @Singular
-    private final Map<String, Set<String>> sourcePaths;
+    @Setter
+    private Map<String, Set<String>> sourcePaths;
     private SignedJarHandlingStrategy signedJarHandlingStrategy;
-
     private final String outputDir;
     private final String agentPath;
     private final String suffix;
@@ -71,5 +75,94 @@ public class PreprocessConfig {
             this.signedJarHandlingStrategy = new InstrumentSignedJarHandlingStrategy();
         }
         return signedJarHandlingStrategy;
+    }
+
+    /**
+     * Convert config file to command-line arguments
+     *
+     * @return command-line arguments String array
+     */
+    public String[] toCommandlineArguments() {
+        List<String> commandlineArguments = new ArrayList<>();
+
+        //sourcePaths
+        for (final Map.Entry<String, Set<String>> entry : sourcePaths.entrySet()) {
+            commandlineArguments.add("--sourcepaths");
+            commandlineArguments.add(String.join(":", entry.getValue()) + "@" + entry.getKey());
+        }
+
+        //signedJarHandlingStrategy
+        if(signedJarHandlingStrategy instanceof SkipSignedJarHandlingStrategy) {
+            commandlineArguments.add("--signedjarhandlingstrategy");
+            commandlineArguments.add("skip");
+        }
+        if(signedJarHandlingStrategy instanceof InstrumentSignedJarHandlingStrategy) {
+            commandlineArguments.add("--signedjarhandlingstrategy");
+            commandlineArguments.add("instrument");
+        }
+
+        //outputDir
+        if(outputDir != null) {
+            commandlineArguments.add("--outputdir");
+            commandlineArguments.add(outputDir);
+        }
+
+        //agentPath
+        if(agentPath != null) {
+            commandlineArguments.add("--agentpath");
+            commandlineArguments.add(agentPath);
+        }
+
+        //suffix
+        if(suffix != null) {
+            commandlineArguments.add("--suffix");
+            commandlineArguments.add(suffix);
+        }
+
+        //logLevel
+        if(logLevel != null) {
+            switch (logLevel) {
+                case DEBUG:
+                    commandlineArguments.add("--verbose");
+                    break;
+                case TRACE:
+                    commandlineArguments.add("--extraverbose");
+                    break;
+                case FATAL:
+                    commandlineArguments.add("--silent");
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        //serializationJarPath
+        if(serializationJarPath != null) {
+            commandlineArguments.add("--serializationpath");
+            commandlineArguments.add(serializationJarPath);
+        }
+
+        //javaVersion
+        if(javaVersion != null) {
+            commandlineArguments.add("--javaversion");
+            commandlineArguments.add(javaVersion);
+        }
+
+        //agentArg
+        if(agentArg != null) {
+            commandlineArguments.add("--agentarg");
+            commandlineArguments.add(agentArg);
+        }
+
+        //jdkPath
+        if(jdkPath != null) {
+            commandlineArguments.add("--jdksupport");
+            commandlineArguments.add(jdkPath);
+        }
+
+        //failOnUnresolvableDependency
+        if (failOnUnresolvableDependency) commandlineArguments.add("--failonunresolvabledependency");
+
+        return commandlineArguments.toArray(new String[0]);
     }
 }

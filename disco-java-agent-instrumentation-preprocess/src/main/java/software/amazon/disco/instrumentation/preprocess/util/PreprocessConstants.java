@@ -21,4 +21,12 @@ package software.amazon.disco.instrumentation.preprocess.util;
 public class PreprocessConstants {
     public static final String MESSAGE_PREFIX = "Disco(Instrumentation preprocess) - ";
     public static final String JAR_EXTENSION = ".jar";
+    public static final String SUMMARY_TITLE = "Preprocessing summary";
+    public static final String SUMMARY_ITEM_SOURCES_PROCESSED = "Sources processed: ";
+    public static final String SUMMARY_ITEM_SOURCES_INSTRUMENTED = "Sources instrumented: ";
+    public static final String SUMMARY_ITEM_SIGNED_JARS_DISCOVERED = "Signed jars discovered: ";
+    public static final String SUMMARY_ITEM_SIGNED_JARS_INSTRUMENTED = "Signed jars instrumented: ";
+    public static final String SUMMARY_ITEM_SOURCES_WITH_UNRESOLVABLE_DEPENDENCIES = "Sources containing classes with unresolvable dependencies: ";
+    public static final String PREPROCESSOR_ARGS_TEMP_FOLDER = "tmp-worker-args";
+
 }

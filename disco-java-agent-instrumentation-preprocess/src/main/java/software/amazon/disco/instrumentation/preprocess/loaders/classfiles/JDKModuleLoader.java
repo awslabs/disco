@@ -72,7 +72,7 @@ public class JDKModuleLoader extends JarLoader {
     /**
      * Retrieves the Java base module file from the java home directory.
      *
-     * @param config a PreprocessConfig containing information to perform Build-Time Instrumentation
+     * @param config a PreprocessConfig containing information to perform preprocessing
      * @return file object of the Java base module
      */
     protected File getJDKBaseModule(final PreprocessConfig config) {

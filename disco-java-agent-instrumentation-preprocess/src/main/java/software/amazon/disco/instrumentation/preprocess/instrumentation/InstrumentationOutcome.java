@@ -23,7 +23,7 @@ import lombok.Getter;
 import java.util.List;
 
 /**
- * Class which holds the outcome of the Build-Time Instrumentation process of a given source.
+ * Class which holds the outcome of the preprocessing of a given source.
  */
 @Builder
 @Getter
@@ -32,7 +32,7 @@ public class InstrumentationOutcome {
      * 'COMPLETED' means at least one class file was transformed and saved to a file and that no failures occurred.
      * 'WARNING_OCCURRED' means at least one class file failed to be transformed and triggered an exception that was caught and ignored.
      * 'NO_OP' means no failure occurred and no classes were transformed.
-     *
+     * <p>
      * Uncaught exceptions are considered as fatal and will be propagated upwards, effectively short-circuiting the entire Build-Time
      * Instrumentation process.
      */

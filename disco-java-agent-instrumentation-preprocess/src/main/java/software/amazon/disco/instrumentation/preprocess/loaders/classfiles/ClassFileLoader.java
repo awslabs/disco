@@ -28,7 +28,7 @@ public interface ClassFileLoader {
      * a Symbolic link, the passed in 'path' param is the resolved file that the link was pointing to.
      *
      * @param path               path to the source to be statically instrumented
-     * @param config             a PreprocessConfig containing information to perform Build-Time Instrumentation
+     * @param config             a PreprocessConfig containing information to perform preprocessing
      * @return an instance of {@link SourceInfo} loaded by this loader. null if no classes found.
      */
     SourceInfo load(Path path, PreprocessConfig config);
