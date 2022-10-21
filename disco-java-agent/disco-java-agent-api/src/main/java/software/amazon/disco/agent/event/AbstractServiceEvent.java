@@ -16,6 +16,8 @@
 package software.amazon.disco.agent.event;
 
 
+import software.amazon.disco.agent.util.FastIdGenerator;
+
 /**
  * Base class for service events both Activities (my service is handling a request) and Downstream (I am calling another Service)
  * A 'Service' in the downstream sense may not necessarily be a remote endpoint in the sense of a REST service etc. It
@@ -36,19 +38,27 @@ public abstract class AbstractServiceEvent extends AbstractEvent implements Serv
         /**
          * The operation name e.g. 'getWeather'
          */
-        OPERATION
+        OPERATION,
+
+        /**
+         * ServiceEvent ID e.g. "c875d050159cceaba6824a77"
+         */
+        EVENT_ID,
+
     }
 
     /**
      * Constructor for a ServiceEvent
-     * @param origin the origin of this event e.g. 'Web' or 'gRPC'
-     * @param service the service name e.g. WeatherService
+     *
+     * @param origin    the origin of this event e.g. 'Web' or 'gRPC'
+     * @param service   the service name e.g. WeatherService
      * @param operation the operation name e.g getWeather
      */
     public AbstractServiceEvent(String origin, String service, String operation) {
         super(origin);
         withData(DataKey.SERVICE.name(), service);
         withData(DataKey.OPERATION.name(), operation);
+        withData(DataKey.EVENT_ID.name(), FastIdGenerator.generate());
     }
 
     /**
@@ -66,6 +76,12 @@ public abstract class AbstractServiceEvent extends AbstractEvent implements Serv
     public String getOperation() {
         return String.class.cast(getData(DataKey.OPERATION.name()));
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getServiceEventId() { return String.class.cast(getData(DataKey.EVENT_ID.name())); }
 
     /**
      * {@inheritDoc}

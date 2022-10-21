@@ -52,4 +52,11 @@ public interface ServiceEvent extends Event {
      * @return either ACTIVITY or DOWNSTREAM
      */
     Type getType();
+
+    /**
+     * Get the ID of this ServiceEvent
+     *
+     * @return ServiceEvent's ID
+     */
+    String getServiceEventId();
 }

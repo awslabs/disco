@@ -90,9 +90,28 @@ public class ServiceEventTests {
         Assert.assertEquals(-1L, responseEvent.getContentLength());
     }
 
+    @Test
+    public  void testDownstreamServiceRequestEventGenerateEventId() {
+        AbstractServiceRequestEvent event = new ServiceDownstreamRequestEvent("Origin", "Service", "Operation")
+                .withRequest(request);
+        test(event);
+        String serviceEventId = event.getServiceEventId();
+        Assert.assertNotNull(serviceEventId);
+    }
+
+    @Test
+    public  void testDownstreamServiceResponseEventGetRequestEventEventId() {
+        AbstractServiceRequestEvent requestEvent = new ServiceDownstreamRequestEvent("Origin", "Service", "Operation")
+                .withRequest(request);
+        String serviceEventId = requestEvent.getServiceEventId();
+        ServiceDownstreamResponseEvent responseEvent = new ServiceDownstreamResponseEvent("Origin", "Service", "Operation", requestEvent);
+        Assert.assertEquals(serviceEventId, responseEvent.getRequest().getServiceEventId());
+    }
+
     private void test(AbstractServiceEvent event) {
         Assert.assertEquals("Origin", event.getOrigin());
         Assert.assertEquals("Service", event.getService());
         Assert.assertEquals("Operation", event.getOperation());
     }
+
 }
