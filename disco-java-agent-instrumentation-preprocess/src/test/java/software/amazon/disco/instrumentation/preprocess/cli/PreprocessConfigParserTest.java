@@ -204,7 +204,7 @@ public class PreprocessConfigParserTest {
 
     @Test
     public void testParseCommandLineWorksWithDuplicatePaths() {
-        String[] args = new String[]{"-sps", "/d1:/d1:/d2@lib",};
+        String[] args = new String[]{"-sps", "/d1:/d1:/d2@lib"};
 
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
 
@@ -217,6 +217,25 @@ public class PreprocessConfigParserTest {
         String[] args = new String[]{"-sps", "/d1:/d1:/d2@lib@tomcat",};
 
         preprocessConfigParser.parseCommandLine(args);
+    }
+
+    @Test
+    public void testParseCommandLineWorksWithAllEmptyPaths() {
+        String[] args = new String[]{"-sps", ":@lib"};
+
+        PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
+
+        assertFalse(config.getSourcePaths().containsKey("lib"));
+    }
+
+    @Test
+    public void testParseCommandLineWorksAndFilteredEmptyPaths() {
+        String[] args = new String[]{"-sps", "::/d1@lib"};
+
+        PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
+
+        assertEquals(1, config.getSourcePaths().get("lib").size());
+        assertEquals(new HashSet<>(Arrays.asList("/d1")), config.getSourcePaths().get("lib"));
     }
 
     @Test

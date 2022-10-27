@@ -89,6 +89,29 @@ public class PreprocessConfigTest {
     }
 
     @Test
+    public void testToCommandlineArguments_convertSourcesPathsWithEmptyEntryKeyCorrectly() {
+        Map<String, Set<String>> sourcePaths = new LinkedHashMap<String, Set<String>>() {{
+            put("lib1", new LinkedHashSet<>(Arrays.asList("/d1", "/d2", "/d3", "/d4", "/d5")));
+            put("", new LinkedHashSet<>(Arrays.asList("/d11", "/d22", "/d33")));
+        }};
+        PreprocessConfig config = preprocessConfigBuilder.sourcePaths(sourcePaths).build();
+        String[] commandlineArguments = config.toCommandlineArguments();
+        assertArrayEquals(new String[]{"--sourcepaths", "/d1:/d2:/d3:/d4:/d5@lib1", "--sourcepaths", "/d11:/d22:/d33"}, commandlineArguments);
+    }
+
+    @Test
+    public void testToCommandlineArguments_convertSourcesPathsWithEmptyEntryValueCorrectly() {
+        Map<String, Set<String>> sourcePaths = new LinkedHashMap<String, Set<String>>() {{
+            put("lib1", new LinkedHashSet<>(Arrays.asList("/d1", "/d2", "/d3", "/d4", "/d5")));
+            put("lib2", new LinkedHashSet<>(Arrays.asList()));
+            put("lib3", new LinkedHashSet<>(Arrays.asList("")));
+        }};
+        PreprocessConfig config = preprocessConfigBuilder.sourcePaths(sourcePaths).build();
+        String[] commandlineArguments = config.toCommandlineArguments();
+        assertArrayEquals(new String[]{"--sourcepaths", "/d1:/d2:/d3:/d4:/d5@lib1"}, commandlineArguments);
+    }
+
+    @Test
     public void testToCommandlineArguments_convertSignedJarHandlingStrategyCorrectly() {
         PreprocessConfig configWithSkipSignedJarHandlingStrategy = preprocessConfigBuilder.signedJarHandlingStrategy(skipSignedJarHandlingStrategy).build();
         PreprocessConfig configWithInstrumentSignedJarHandlingStrategy = preprocessConfigBuilder.signedJarHandlingStrategy(instrumentSignedJarHandlingStrategy).build();
