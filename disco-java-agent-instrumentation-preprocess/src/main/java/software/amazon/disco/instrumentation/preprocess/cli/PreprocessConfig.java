@@ -87,40 +87,49 @@ public class PreprocessConfig {
 
         //sourcePaths
         for (final Map.Entry<String, Set<String>> entry : sourcePaths.entrySet()) {
-            commandlineArguments.add("--sourcepaths");
-            commandlineArguments.add(String.join(":", entry.getValue()) + "@" + entry.getKey());
+            Set<String> sources = entry.getValue();
+            sources.remove("");
+
+            if (!sources.isEmpty()) {
+                commandlineArguments.add("--sourcepaths");
+                final StringBuilder builder = new StringBuilder();
+                builder.append(String.join(":", sources))
+                       .append(entry.getKey().isEmpty() ? "" : "@")
+                       .append(entry.getKey());
+                commandlineArguments.add(builder.toString());
+            }
         }
 
         //signedJarHandlingStrategy
-        if(signedJarHandlingStrategy instanceof SkipSignedJarHandlingStrategy) {
+        if (signedJarHandlingStrategy instanceof SkipSignedJarHandlingStrategy) {
             commandlineArguments.add("--signedjarhandlingstrategy");
             commandlineArguments.add("skip");
         }
-        if(signedJarHandlingStrategy instanceof InstrumentSignedJarHandlingStrategy) {
+        if (signedJarHandlingStrategy instanceof InstrumentSignedJarHandlingStrategy) {
             commandlineArguments.add("--signedjarhandlingstrategy");
             commandlineArguments.add("instrument");
         }
 
         //outputDir
-        if(outputDir != null) {
+        if (outputDir != null) {
             commandlineArguments.add("--outputdir");
             commandlineArguments.add(outputDir);
         }
 
         //agentPath
-        if(agentPath != null) {
+        if (agentPath != null) {
             commandlineArguments.add("--agentpath");
             commandlineArguments.add(agentPath);
         }
 
         //suffix
-        if(suffix != null) {
+        if (suffix != null) {
             commandlineArguments.add("--suffix");
             commandlineArguments.add(suffix);
         }
 
         //logLevel
-        if(logLevel != null) {
+        if (logLevel != null) {
             switch (logLevel) {
                 case DEBUG:
                     commandlineArguments.add("--verbose");
@@ -137,25 +146,25 @@ public class PreprocessConfig {
         }
 
         //serializationJarPath
-        if(serializationJarPath != null) {
+        if (serializationJarPath != null) {
             commandlineArguments.add("--serializationpath");
             commandlineArguments.add(serializationJarPath);
         }
 
         //javaVersion
-        if(javaVersion != null) {
+        if (javaVersion != null) {
             commandlineArguments.add("--javaversion");
             commandlineArguments.add(javaVersion);
         }
 
         //agentArg
-        if(agentArg != null) {
+        if (agentArg != null) {
             commandlineArguments.add("--agentarg");
             commandlineArguments.add(agentArg);
         }
 
         //jdkPath
-        if(jdkPath != null) {
+        if (jdkPath != null) {
             commandlineArguments.add("--jdksupport");
             commandlineArguments.add(jdkPath);
         }

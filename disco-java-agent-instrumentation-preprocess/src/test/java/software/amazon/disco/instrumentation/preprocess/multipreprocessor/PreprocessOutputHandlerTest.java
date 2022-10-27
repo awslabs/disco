@@ -67,7 +67,6 @@ public class PreprocessOutputHandlerTest {
         preprocessOutputHandler.processAllOutputs();
         //invoke helper method
         Mockito.verify(preprocessOutputHandler, Mockito.times(preprocessorOutputs.size())).parsePreprocessorOutputAndUpdateSummary(Mockito.anyString());
-        System.out.println(preprocessOutputHandler.getSummary());
         //update summary correctly
         assertEquals(6, preprocessOutputHandler.getSummary().get(PreprocessConstants.SUMMARY_ITEM_SOURCES_PROCESSED).intValue());
         assertEquals(1, preprocessOutputHandler.getSummary().get(PreprocessConstants.SUMMARY_ITEM_SOURCES_INSTRUMENTED).intValue());

@@ -256,10 +256,16 @@ public class PreprocessConfigParser {
         // Needs to build the config file in order to retrieve the corresponding map entry due to the lack of getters for builder
         final Map<String, Set<String>> existingSources = builder.build().getSourcePaths();
 
-        if (existingSources.containsKey(key)) {
-            existingSources.get(key).addAll(Arrays.asList(sources));
-        } else {
-            builder.sourcePath(key, new HashSet<>(Arrays.asList(sources)));
+        Set<String> setToAdd = existingSources.containsKey(key) ? existingSources.get(key) : new HashSet<>();
+
+        for (String source : sources) {
+            if(!source.isEmpty()) {
+                setToAdd.add(source);
+            }
+        }
+
+        if(!existingSources.containsKey(key) && !setToAdd.isEmpty()) {
+            builder.sourcePath(key, setToAdd);
         }
     }
 
