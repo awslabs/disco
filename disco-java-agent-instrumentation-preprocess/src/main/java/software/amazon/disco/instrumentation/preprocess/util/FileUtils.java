@@ -18,7 +18,6 @@ package software.amazon.disco.instrumentation.preprocess.util;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.agent.plugin.PluginDiscovery;
-import software.amazon.disco.instrumentation.preprocess.exceptions.JarEntryCopyException;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -48,7 +47,7 @@ public class FileUtils {
      * @param jarfile JarFile where the binary data will be read
      * @param entry   JarEntry to be read
      * @return byte[] of the entry
-     * @throws JarEntryCopyException
+     * @throws IllegalArgumentException exception thrown when failed to extract the byte array of a Jar entry
      */
     public static byte[] readEntryFromJar(JarFile jarfile, JarEntry entry) {
         try (final InputStream entryStream = jarfile.getInputStream(entry)) {
@@ -61,7 +60,7 @@ public class FileUtils {
             return os.toByteArray();
 
         } catch (IOException e) {
-            throw new JarEntryCopyException(entry.getName(), e);
+            throw new IllegalArgumentException(entry.getName(), e);
         }
     }
 
@@ -119,7 +118,7 @@ public class FileUtils {
     }
 
     /**
-     * Convenience method to create a temporary file named after the output of {@link ManagementFactory#getRuntimeMXBean().getName()} to uniquely
+     * Convenience method to create a temporary file named after the output of 'ManagementFactory.getRuntimeMXBean().getName()' to uniquely
      * identify this file across multiple concurrent instances of preprocessors.
      *
      * @param temporaryManifestDir dir where the temporary manifest file will be created under

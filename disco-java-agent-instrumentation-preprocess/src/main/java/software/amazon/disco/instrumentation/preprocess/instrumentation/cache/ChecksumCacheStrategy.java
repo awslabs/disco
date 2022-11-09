@@ -44,7 +44,7 @@ import java.util.Properties;
 import java.util.Set;
 
 /**
- * Implementation of {@CacheStrategy} which relies on the 'md5' algorithm to compute the checksum of processed sources for caching purposes. The data structure elected to store
+ * Implementation of {@link CacheStrategy} which relies on the 'md5' algorithm to compute the checksum of processed sources for caching purposes. The data structure elected to store
  * caching related data is an instance of {@link Properties} which can be easily serialized and de-serialized.
  */
 public class ChecksumCacheStrategy implements CacheStrategy {
