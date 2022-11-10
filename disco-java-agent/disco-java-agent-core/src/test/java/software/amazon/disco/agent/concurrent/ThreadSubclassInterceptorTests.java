@@ -28,6 +28,8 @@ import software.amazon.disco.agent.event.Listener;
 import software.amazon.disco.agent.event.ThreadEnterEvent;
 import software.amazon.disco.agent.event.ThreadExitEvent;
 
+import static software.amazon.disco.agent.concurrent.TransactionContext.TRANSACTION_OWNING_THREAD_KEY;
+
 public class ThreadSubclassInterceptorTests {
     MyListener listener;
 
@@ -97,22 +99,22 @@ public class ThreadSubclassInterceptorTests {
     public void testRunAdviceEnterSameThread() {
         DecoratedThread d = new DecoratedThread();
         d.before();
-        Assert.assertNull(listener.enter);
+        Assert.assertNotNull(listener.enter);
         Assert.assertNull(listener.exit);
     }
 
     @Test
     public void testRunAdviceExitSameThread() {
         DecoratedThread d = new DecoratedThread();
-        d.before();
+        d.after();
         Assert.assertNull(listener.enter);
-        Assert.assertNull(listener.exit);
+        Assert.assertNotNull(listener.exit);
     }
 
     @Test
     public void testRunAdviceEnterDifferentThread() {
-        MyDecoratedThread d = new MyDecoratedThread();
-        d.setThreadId(-1);
+        TransactionContext.putMetadata(TRANSACTION_OWNING_THREAD_KEY, -1);
+        DecoratedThread d = new DecoratedThread();
         ThreadSubclassInterceptor.RunAdvice.onMethodEnter(d);
         Assert.assertTrue(listener.enter instanceof ThreadEnterEvent);
         Assert.assertNull(listener.exit);
@@ -120,8 +122,8 @@ public class ThreadSubclassInterceptorTests {
 
     @Test
     public void testRunAdviceExitDifferentThread() {
-        MyDecoratedThread d = new MyDecoratedThread();
-        d.setThreadId(-1);
+        TransactionContext.putMetadata(TRANSACTION_OWNING_THREAD_KEY, -1);
+        DecoratedThread d = new DecoratedThread();
         ThreadSubclassInterceptor.RunAdvice.onMethodExit(d);
         Assert.assertNull(listener.enter);
         Assert.assertTrue(listener.exit instanceof ThreadExitEvent);
@@ -155,12 +157,6 @@ public class ThreadSubclassInterceptorTests {
             } else if (e instanceof ThreadExitEvent) {
                 exit = e;
             }
-        }
-    }
-
-    static class MyDecoratedThread extends DecoratedThread {
-        public void setThreadId(long threadId) {
-            this.ancestralThreadId = threadId;
         }
     }
 }

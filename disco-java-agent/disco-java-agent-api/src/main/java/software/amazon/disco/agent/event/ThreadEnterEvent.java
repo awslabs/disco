@@ -16,7 +16,13 @@
 package software.amazon.disco.agent.event;
 
 /**
- * Concrete ThreadEvent for when a worker thread is entered
+ * Concrete event published when a worker thread enters a Disco transaction. The same worker thread can enter a particular
+ * transaction multiple times. For instance, consider the following scenario where 2 pairs of enter/exit events will be published.
+ * - t0: Thread 't_1' enters transaction 'tx_1':  ThreadEnterEvent published
+ * - t1: The same thread t1 exits 'tx_1':         ThreadExitEvent published
+ * - t2: Thread sitting idle for some time
+ * - t3: Thread 't1' re-enters 'tx_1':            ThreadEnterEvent published
+ * - t4: 't1' exits 'tx_1':                       ThreadExitEvent published
  */
 public class ThreadEnterEvent extends AbstractThreadEvent {
     /**

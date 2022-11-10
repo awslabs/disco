@@ -27,7 +27,6 @@ import java.util.concurrent.ConcurrentMap;
  */
 public abstract class Decorated {
     private boolean removeTransactionContext;
-    protected Long ancestralThreadId;
     protected long parentThreadId;
     ConcurrentMap<String, MetadataItem> parentTransactionContext;
 
@@ -37,8 +36,6 @@ public abstract class Decorated {
     protected Decorated() {
         this.removeTransactionContext = false;
         this.parentTransactionContext = TransactionContext.getPrivateMetadata();
-        MetadataItem data = parentTransactionContext.get(TransactionContext.TRANSACTION_OWNING_THREAD_KEY);
-        this.ancestralThreadId = (Long)data.get();
         this.parentThreadId = Thread.currentThread().getId();
     }
 
@@ -54,13 +51,13 @@ public abstract class Decorated {
      * Convenience method to call before the execution of the dispatched object method eg. run() or call()
      */
     public void before() {
-        ConcurrentUtils.enter(ancestralThreadId, parentThreadId, parentTransactionContext);
+        ConcurrentUtils.enter(parentThreadId, parentTransactionContext);
     }
 
     /**
      * Convenience method to call after the execution of the dispatched object method eg. run() or call()
      */
     public void after() {
-        ConcurrentUtils.exit(ancestralThreadId, parentThreadId, parentTransactionContext, removeTransactionContext);
+        ConcurrentUtils.exit(parentThreadId, parentTransactionContext, removeTransactionContext);
     }
 }
