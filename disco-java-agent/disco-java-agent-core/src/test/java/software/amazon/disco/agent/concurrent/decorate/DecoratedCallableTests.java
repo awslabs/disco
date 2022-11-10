@@ -71,7 +71,6 @@ public class DecoratedCallableTests {
     public void testCall() throws Exception {
         Callable c = Mockito.mock(Callable.class);
         DecoratedCallable d = (DecoratedCallable)DecoratedCallable.maybeCreate(c);
-        d.ancestralThreadId = -1L;
         d.call();
         Assert.assertNotNull(testListener.threadEnter);
         Assert.assertNotNull(testListener.threadExit);
@@ -81,7 +80,6 @@ public class DecoratedCallableTests {
     public void testCallWhenThrowsException() {
         Callable c = ()->{throw new RuntimeException();};
         DecoratedCallable d = (DecoratedCallable)DecoratedCallable.maybeCreate(c);
-        d.ancestralThreadId = -1L;
         Throwable thrown = null;
         try {
             d.call();
@@ -97,7 +95,6 @@ public class DecoratedCallableTests {
     public void testCallWhenThrowsError() {
         Callable c = ()->{throw new Error();};
         DecoratedCallable d = (DecoratedCallable)DecoratedCallable.maybeCreate(c);
-        d.ancestralThreadId = -1L;
         Throwable thrown = null;
         try {
             d.call();

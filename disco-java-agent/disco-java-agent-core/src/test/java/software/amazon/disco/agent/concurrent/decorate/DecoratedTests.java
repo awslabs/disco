@@ -15,16 +15,18 @@
 
 package software.amazon.disco.agent.concurrent.decorate;
 
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.Listener;
 import software.amazon.disco.agent.event.ThreadEnterEvent;
 import software.amazon.disco.agent.event.ThreadExitEvent;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import static software.amazon.disco.agent.concurrent.TransactionContext.TRANSACTION_OWNING_THREAD_KEY;
 
 public class DecoratedTests {
     MyListener listener;
@@ -45,7 +47,10 @@ public class DecoratedTests {
     public void testBeforeSameThread() {
         Decorated d = new MyDecorated();
         d.before();
-        Assert.assertNull(listener.enter);
+
+        // A thread enter event has been published as a consequence of invoking 'ConcurrentUtils.enter()' which signals that some thread
+        // will be performing some work under the propagated transaction context. For more information, see 'software.amazon.disco.agent.event.ThreadEnterEvent'.
+        Assert.assertNotNull(listener.enter);
         Assert.assertNull(listener.exit);
     }
 
@@ -54,13 +59,16 @@ public class DecoratedTests {
         Decorated d = new MyDecorated();
         d.after();
         Assert.assertNull(listener.enter);
-        Assert.assertNull(listener.exit);
+
+        // Thread exit event published as a consequence of invoking 'ConcurrentUtils.exit()' which signal that a thread operating under some
+        // transaction context is about to return. For more information, see 'software.amazon.disco.agent.event.ThreadExitEvent'.
+        Assert.assertNotNull(listener.exit);
     }
 
     @Test
     public void testBeforeDifferentThread() {
+        TransactionContext.putMetadata(TRANSACTION_OWNING_THREAD_KEY, -1);
         Decorated d = new MyDecorated();
-        d.ancestralThreadId = -1L;
         d.before();
         Assert.assertTrue(listener.enter instanceof ThreadEnterEvent);
         Assert.assertNull(listener.exit);
@@ -69,7 +77,7 @@ public class DecoratedTests {
     @Test
     public void testAfterDifferentThread() {
         Decorated d = new MyDecorated();
-        d.ancestralThreadId = -1L;
+        TransactionContext.putMetadata(TRANSACTION_OWNING_THREAD_KEY, -1);
         d.after();
         Assert.assertNull(listener.enter);
         Assert.assertTrue(listener.exit instanceof ThreadExitEvent);

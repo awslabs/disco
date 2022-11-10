@@ -211,7 +211,7 @@ val jdkTest = task<Test>("jdkTest") {
         .plus(layout.files(outputDir + "/discoCoreIntegTests.jar"))
 
     // attach the Disco agent in 'runtimeonly' mode
-    jvmArgs("-javaagent:${discoAgentPath}=pluginPath=${pluginDir}:runtimeonly:verbose:loggerfactory=${standardOutputLoggerFactoryFQN}")
+    jvmArgs("-javaagent:${discoAgentPath}=pluginPath=${pluginDir}:runtimeonly:loggerfactory=${standardOutputLoggerFactoryFQN}")
 
     if (JavaVersion.current().isJava9Compatible) {
         // configure module patching and create read link from java.base to all unnamed modules
