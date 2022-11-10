@@ -16,7 +16,8 @@
 package software.amazon.disco.agent.event;
 
 /**
- * Concrete ThreadEvent for when a worker thread is finished, and the inner FunctionalInterface is about to return
+ * Concrete ThreadEvent published when a worker thread exits a Disco transaction, and the inner FunctionalInterface is about to return.
+ * Under normal circumstances, a 'ThreadEnterEvent' should always be paired with a 'ThreadExitEvent'.
  */
 public class ThreadExitEvent extends AbstractThreadEvent {
     /**
