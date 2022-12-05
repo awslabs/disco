@@ -15,14 +15,9 @@
 package software.amazon.disco.agent.event;
 
 /**
- * @deprecated replaced by {@link ActivityRequestHeaderRetrievable}.
- * In the past HeaderRetrievable have only existed for 'incoming requests' and the plugins have a reliance on this implicit semantics.
- * So using this interface to retrieve 'outgoing' request headers would break the plugins that rely on this semantics.
- * The Activity/DownstreamHeaderRetrievable makes it explicit the direction of the headers and is a more concrete public contract.
- *
  * A composable interface that disco events can implement if consumers of those events should be able to
- * retrieve the headers of the request associated with the event.
+ * retrieve the headers of the activity request associated with the event.
  */
-@Deprecated
-public interface HeaderRetrievable extends ActivityRequestHeaderRetrievable {
+public interface ActivityRequestHeaderRetrievable extends BaseHeaderRetrievable {
 }
+
