@@ -313,6 +313,18 @@ public class ChecksumCacheStrategyTests {
     }
 
     @Test
+    public void testCacheSourceNotThrow_whenPathIsNull() throws PreprocessCacheException {
+        strategy.cacheSource(null);
+    }
+
+    @Test
+    public void testCacheSourceNotThrow_whenCheckSumComputedFromPathIsNull() throws PreprocessCacheException {
+        Path path = Paths.get("dummy_jar");
+        Mockito.doReturn(null).when(strategy).computeChecksum(path);
+        strategy.cacheSource(path);
+    }
+
+    @Test
     public void testComputeCheckSumReturnsNull_whenInputIsNull() throws PreprocessCacheException {
         Mockito.doCallRealMethod().when(strategy).computeChecksum(Mockito.any());
 
