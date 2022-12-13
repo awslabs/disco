@@ -153,10 +153,16 @@ public class ChecksumCacheStrategy implements CacheStrategy {
     public void cacheSource(final Path path) throws PreprocessCacheException {
         logger.debug(PreprocessConstants.MESSAGE_PREFIX + "Caching: " + path);
 
-        final String checksum = computeChecksum(path);
-        final String pathStr = path.toString();
+        if (path == null) {
+            return;
+        }
 
-        runtimeCache.setProperty(pathStr, checksum);
+        final String checksum = computeChecksum(path);
+
+        if (checksum == null) {
+            return;
+        }
+        runtimeCache.setProperty(path.toString(), checksum);
     }
 
     /**
