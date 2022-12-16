@@ -12,15 +12,12 @@
  *   express or implied. See the License for the specific language governing
  *   permissions and limitations under the License.
  */
-
 package software.amazon.disco.agent.web.apache.event;
 
 import org.apache.http.HttpRequest;
-import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.HttpResponse;
-
+import org.apache.http.client.methods.HttpRequestBase;
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
-import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
 
@@ -30,7 +27,8 @@ import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
 public class ApacheEventFactory {
     /**
      * Create our private events, so that listeners do not have public access to them
-     * @param origin the origin of the downstream call e.g. 'Web'
+     *
+     * @param origin  the origin of the downstream call e.g. 'Web'
      * @param request a HttpRequest to get uri and HTTP method
      * @return a {@link ApacheHttpServiceDownstreamRequestEvent}
      */
@@ -39,7 +37,7 @@ public class ApacheEventFactory {
         String method = null;
         if (request instanceof HttpRequestBase) {
             //we can retrieve the data in a streamlined way, avoiding internal production of the RequestLine
-            HttpRequestBase baseRequest = (HttpRequestBase)request;
+            HttpRequestBase baseRequest = (HttpRequestBase) request;
             if (baseRequest.getURI() != null) {
                 uri = baseRequest.getURI().toString();
             }
@@ -59,21 +57,22 @@ public class ApacheEventFactory {
 
     /**
      * Create response event with HttpResponse for apache client downstream call
-     * @param response a HttpResponse to get status code etc.
+     *
+     * @param response     a HttpResponse to get status code etc.
      * @param requestEvent Previously published ServiceDownstreamRequestEvent
-     * @param throwable The throwable if the request fails
-     * @return  a {@link HttpServiceDownstreamResponseEvent}.
+     * @param throwable    The throwable if the request fails
+     * @return a {@link ApacheHttpServiceDownstreamResponseEvent}.
      */
     public static ServiceDownstreamResponseEvent createServiceResponseEvent(final HttpResponse response, final ServiceDownstreamRequestEvent requestEvent, final Throwable throwable) {
-        HttpServiceDownstreamResponseEvent responseEvent = new HttpServiceDownstreamResponseEvent(requestEvent.getOrigin(), requestEvent.getService(), requestEvent.getOperation(), requestEvent);
+        ApacheHttpServiceDownstreamResponseEvent responseEvent = new ApacheHttpServiceDownstreamResponseEvent(requestEvent.getOrigin(), requestEvent.getService(), requestEvent.getOperation(), requestEvent, response);
         if (throwable != null) {
             responseEvent.withThrown(throwable);
         }
         if (response != null) {
-            if(response.getStatusLine() != null) {
+            if (response.getStatusLine() != null) {
                 responseEvent.withStatusCode(response.getStatusLine().getStatusCode());
             }
-            if(response.getEntity() != null) {
+            if (response.getEntity() != null) {
                 responseEvent.withContentLength(response.getEntity().getContentLength());
             }
         }

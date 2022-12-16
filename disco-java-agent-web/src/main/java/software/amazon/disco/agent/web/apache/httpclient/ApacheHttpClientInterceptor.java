@@ -49,7 +49,9 @@ public class ApacheHttpClientInterceptor implements Installable {
                             ApacheHttpClientInterceptor.class.getClassLoader(),
                             "software.amazon.disco.agent.web.apache.httpclient.ApacheHttpClientMethodDelegation",
                             "software.amazon.disco.agent.web.apache.event.ApacheEventFactory",
-                            "software.amazon.disco.agent.web.apache.event.ApacheHttpServiceDownstreamRequestEvent"
+                            "software.amazon.disco.agent.web.apache.event.ApacheHttpServiceDownstreamRequestEvent",
+                            "software.amazon.disco.agent.web.apache.event.ApacheHttpServiceDownstreamResponseEvent",
+                            "software.amazon.disco.agent.web.apache.event.ApacheHttpClientRetrievableHeaders"
                     );
 
                     try {

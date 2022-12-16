@@ -17,9 +17,14 @@ package software.amazon.disco.agent.web.apache.source;
 import org.apache.http.HttpEntity;
 import org.apache.http.ProtocolVersion;
 import org.apache.http.entity.BasicHttpEntity;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicHttpResponse;
 
+import java.util.HashMap;
+
 public class InterceptedBasicHttpResponse extends BasicHttpResponse {
+
+    private HashMap<String, BasicHeader> headers = new HashMap<>();
 
     public InterceptedBasicHttpResponse(final ProtocolVersion ver, final int code, final String reason) {
         super(ver, code, reason);
