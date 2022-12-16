@@ -38,5 +38,7 @@ ext.set("classesToMove", arrayOf(
         "software.amazon.disco.agent.web.servlet.HttpServletServiceMethodDelegation",
         "software.amazon.disco.agent.web.apache.event.ApacheEventFactory",
         "software.amazon.disco.agent.web.apache.event.ApacheHttpServiceDownstreamRequestEvent",
-        "software.amazon.disco.agent.web.apache.httpclient.ApacheHttpClientMethodDelegation"
+        "software.amazon.disco.agent.web.apache.httpclient.ApacheHttpClientMethodDelegation",
+        "software.amazon.disco.agent.web.apache.event.ApacheHttpServiceDownstreamResponseEvent",
+        "software.amazon.disco.agent.web.apache.event.ApacheHttpClientRetrievableHeaders"
 ))

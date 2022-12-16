@@ -26,26 +26,29 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHttpRequest;
 import org.apache.http.message.BasicRequestLine;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mockito;
+import software.amazon.disco.agent.event.DownstreamRequestHeaderRetrievable;
+import software.amazon.disco.agent.event.DownstreamResponseHeaderRetrievable;
+import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.HttpServiceDownstreamResponseEvent;
+import software.amazon.disco.agent.event.Listener;
 import software.amazon.disco.agent.event.ServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
+import software.amazon.disco.agent.event.ServiceRequestEvent;
+import software.amazon.disco.agent.event.ServiceResponseEvent;
 import software.amazon.disco.agent.integtest.web.apache.httpclient.source.FakeChainedExecuteCallHttpClientReturnResponse;
 import software.amazon.disco.agent.integtest.web.apache.httpclient.source.FakeChainedExecuteCallHttpClientThrowException;
 import software.amazon.disco.agent.reflect.concurrent.TransactionContext;
 import software.amazon.disco.agent.reflect.event.EventBus;
-import software.amazon.disco.agent.event.Event;
-import software.amazon.disco.agent.event.Listener;
-import software.amazon.disco.agent.event.ServiceRequestEvent;
-import software.amazon.disco.agent.event.ServiceResponseEvent;
-import org.junit.Assert;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,13 +59,18 @@ import static org.junit.Assert.assertTrue;
 public class ApacheHttpClientInterceptorTests {
     private TestListener testListener;
 
+    private HttpUriRequest request;
+
     private static final String SOME_URI = "http://amazon.com/explore/something";
     private static final String METHOD = "GET";
 
     @Before
-    public void before() {
+    public void before() throws URISyntaxException {
         TransactionContext.create();
         EventBus.addListener(testListener = new TestListener());
+        request = new HttpGet(new URI(SOME_URI));
+        request.addHeader("someheader", "somedata");
+        request.addHeader("someheader2", "somedata2");
     }
 
     @After
@@ -182,11 +190,11 @@ public class ApacheHttpClientInterceptorTests {
 
     @Test
     public void testExecuteInterceptionChained() throws Exception {
-        HttpUriRequest request = new HttpGet(new URI(SOME_URI));
-
         // Set up victim http client
         FakeChainedExecuteCallHttpClientReturnResponse httpClient = new FakeChainedExecuteCallHttpClientReturnResponse();
         httpClient.fakeResponse.setEntity(new StringEntity("123456"));
+        httpClient.fakeResponse.addHeader("someheader", "somedata");
+        httpClient.fakeResponse.addHeader("someheader2", "somedata2");
         httpClient.execute(request);
 
         // Verify only one of interceptions does the interceptor business logic even if there is a method chaining,
@@ -195,11 +203,13 @@ public class ApacheHttpClientInterceptorTests {
 
         // Verify the Request Event
         verifyServiceRequestEvent(testListener.requestEvents.get(0));
-
+        verifyRequestHeaderRetrievable((DownstreamRequestHeaderRetrievable) testListener.requestEvents.get(0));
         assertEquals(1, testListener.responseEvents.size());
 
         // Verify the Response Event
         verifyServiceResponseEvent(testListener.responseEvents.get(0));
+        verifyResponseHeaderRetrievable((DownstreamResponseHeaderRetrievable) testListener.responseEvents.get(0));
+
         assertNull(testListener.responseEvents.get(0).getResponse());
         assertNull(testListener.responseEvents.get(0).getThrown());
         assertEquals(200, testListener.responseEvents.get(0).getStatusCode());
@@ -210,8 +220,6 @@ public class ApacheHttpClientInterceptorTests {
 
     @Test(expected = IOException.class)
     public void testExecuteInterceptionException() throws Exception {
-        HttpUriRequest request = new HttpGet(new URI(SOME_URI));
-
         // Set up victim http client
         FakeChainedExecuteCallHttpClientThrowException httpClient = new FakeChainedExecuteCallHttpClientThrowException();
 
@@ -224,7 +232,7 @@ public class ApacheHttpClientInterceptorTests {
 
             // Verify the Request Event
             verifyServiceRequestEvent(testListener.requestEvents.get(0));
-
+            verifyRequestHeaderRetrievable((DownstreamRequestHeaderRetrievable) testListener.requestEvents.get(0));
             assertEquals(1, testListener.responseEvents.size());
 
             // Verify the Response Event
@@ -270,5 +278,17 @@ public class ApacheHttpClientInterceptorTests {
         assertEquals(METHOD, serviceDownstreamResponseEvent.getOperation());
         assertEquals(SOME_URI, serviceDownstreamResponseEvent.getService());
         assertEquals("ApacheHttpClient", serviceDownstreamResponseEvent.getOrigin());
+    }
+
+    public static void verifyRequestHeaderRetrievable(final DownstreamRequestHeaderRetrievable retrievable) {
+        assertEquals(retrievable.getFirstHeader("someheader"), "somedata");
+        assertEquals(retrievable.getFirstHeader("someheader2"), "somedata2");
+        assertNull(retrievable.getHeaders("nonexistentheader"));
+    }
+
+    public static void verifyResponseHeaderRetrievable(final DownstreamResponseHeaderRetrievable retrievable) {
+        assertEquals(retrievable.getFirstHeader("someheader"), "somedata");
+        assertEquals(retrievable.getFirstHeader("someheader2"), "somedata2");
+        assertNull(retrievable.getHeaders("nonexistentheader"));
     }
 }

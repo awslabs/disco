@@ -23,7 +23,9 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 
 public class InterceptedHttpRequestBase extends HttpRequestBase {
-    private HashMap<String,String> headers = new HashMap<String,String>();
+
+    private HashMap<String, BasicHeader> headers = new HashMap<>();
+
     @Override
     public String getMethod() {
         return ApacheTestConstants.METHOD;
@@ -37,22 +39,29 @@ public class InterceptedHttpRequestBase extends HttpRequestBase {
             return null;
         }
     }
+
     @Override
     public void removeHeaders(String name) {
         headers.remove(name);
     }
+
     @Override
     public void addHeader(String name, String value) {
-        headers.put(name,value);
+        headers.put(name, new BasicHeader(name, value));
     }
+
     @Override
     public Header getFirstHeader(String name) {
-        return new BasicHeader(name,headers.get(name));
+        return headers.get(name);
     }
 
     @Override
     public Header[] getHeaders(String name) {
-        String value = headers.get(name);
-        return new Header[]{new BasicHeader(name,value)};
+        return new Header[]{headers.get(name)};
+    }
+
+    @Override
+    public Header[] getAllHeaders() {
+        return headers.values().toArray(new BasicHeader[0]);
     }
 }
