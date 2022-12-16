@@ -12,7 +12,6 @@
  *   express or implied. See the License for the specific language governing
  *   permissions and limitations under the License.
  */
-
 package software.amazon.disco.agent.web.apache.event;
 
 import org.apache.http.HttpResponse;
@@ -22,6 +21,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import software.amazon.disco.agent.concurrent.TransactionContext;
+import software.amazon.disco.agent.event.DownstreamRequestHeaderRetrievable;
+import software.amazon.disco.agent.event.DownstreamResponseHeaderRetrievable;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.HeaderReplaceable;
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
@@ -33,7 +34,11 @@ import software.amazon.disco.agent.web.apache.source.InterceptedBasicHttpRespons
 import software.amazon.disco.agent.web.apache.source.InterceptedHttpRequestBase;
 import software.amazon.disco.agent.web.apache.source.MockEventBusListener;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 
 public class ApacheEventFactoryTests {
 
@@ -44,8 +49,12 @@ public class ApacheEventFactoryTests {
     @Before
     public void before() {
         accessor = new InterceptedBasicHttpRequest();
+        accessor.addHeader("someheader", "somedata");
+        accessor.addHeader("someheader2", "somedata2");
         mockEventBusListener = new MockEventBusListener();
         httpRequestBaseAccessor = new InterceptedHttpRequestBase();
+        httpRequestBaseAccessor.addHeader("someheader", "somedata");
+        httpRequestBaseAccessor.addHeader("someheader2", "somedata2");
         TransactionContext.create();
         EventBus.addListener(mockEventBusListener);
     }
@@ -58,36 +67,39 @@ public class ApacheEventFactoryTests {
 
     @Test
     public void testForRequestEventCreationForRequest() {
-        HttpServiceDownstreamRequestEvent event = ApacheEventFactory.createDownstreamRequestEvent(ApacheTestConstants.APACHE_HTTP_CLIENT_ORIGIN,
-                accessor);
+        HttpServiceDownstreamRequestEvent event = ApacheEventFactory.createDownstreamRequestEvent(ApacheTestConstants.APACHE_HTTP_CLIENT_ORIGIN, accessor);
         ApacheClientTestUtil.verifyServiceRequestEvent(event);
         assertNull(accessor.getFirstHeader("TEST").getValue());
         HeaderReplaceable replaceable = (HeaderReplaceable) event;
-        replaceable.replaceHeader("TEST","TEST");
+        replaceable.replaceHeader("TEST", "TEST");
         assertTrue(accessor.getFirstHeader("TEST").getValue().equalsIgnoreCase("TEST"));
+        ApacheClientTestUtil.verifyRequestHeaderRetrievable((DownstreamRequestHeaderRetrievable) event);
     }
 
     @Test
     public void testForRequestEventCreationForRequestBase() {
-        HttpServiceDownstreamRequestEvent event = ApacheEventFactory.createDownstreamRequestEvent(ApacheTestConstants.APACHE_HTTP_CLIENT_ORIGIN,
-                httpRequestBaseAccessor);
+        HttpServiceDownstreamRequestEvent event = ApacheEventFactory.createDownstreamRequestEvent(ApacheTestConstants.APACHE_HTTP_CLIENT_ORIGIN, httpRequestBaseAccessor);
         ApacheClientTestUtil.verifyServiceRequestEvent(event);
+        ApacheClientTestUtil.verifyRequestHeaderRetrievable((DownstreamRequestHeaderRetrievable) event);
     }
 
     @Test
     public void testForResponseEventCreationForSuccessfulResponse() {
-        HttpResponse expectedResponse =  new InterceptedBasicHttpResponse(new ProtocolVersion("protocol", 1, 1), 200, "");
-        HttpServiceDownstreamRequestEvent event = ApacheEventFactory.createDownstreamRequestEvent(ApacheTestConstants.APACHE_HTTP_CLIENT_ORIGIN,accessor);
-        ServiceDownstreamResponseEvent responseEvent = ApacheEventFactory.createServiceResponseEvent(expectedResponse,event,null);
+        HttpResponse expectedResponse = new InterceptedBasicHttpResponse(new ProtocolVersion("protocol", 1, 1), 200, "");
+        expectedResponse.addHeader("someheader", "somedata");
+        expectedResponse.addHeader("someheader2", "somedata2");
+        HttpServiceDownstreamRequestEvent event = ApacheEventFactory.createDownstreamRequestEvent(ApacheTestConstants.APACHE_HTTP_CLIENT_ORIGIN, accessor);
+        ServiceDownstreamResponseEvent responseEvent = ApacheEventFactory.createServiceResponseEvent(expectedResponse, event, null);
         ApacheClientTestUtil.verifyServiceResponseEvent(responseEvent);
         assertNull(responseEvent.getThrown());
+        ApacheClientTestUtil.verifyResponseHeaderRetrievable((DownstreamResponseHeaderRetrievable) responseEvent);
     }
 
     @Test
     public void testForRequestEventCreationWithNoRequestLine() {
-        InterceptedBasicHttpRequest request =  Mockito.mock(InterceptedBasicHttpRequest.class);
+        InterceptedBasicHttpRequest request = Mockito.mock(InterceptedBasicHttpRequest.class);
         Mockito.when(request.getRequestLine()).thenReturn(null);
-        HttpServiceDownstreamRequestEvent event = ApacheEventFactory.createDownstreamRequestEvent(ApacheTestConstants.APACHE_HTTP_CLIENT_ORIGIN,request);
+        HttpServiceDownstreamRequestEvent event = ApacheEventFactory.createDownstreamRequestEvent(ApacheTestConstants.APACHE_HTTP_CLIENT_ORIGIN, request);
         assertNotNull(event);
         assertNull(event.getUri());
     }
@@ -95,9 +107,9 @@ public class ApacheEventFactoryTests {
     @Test
     public void testForResponseEventCreationForFailureResponse() {
         Exception error = new Exception("CUSTOM EXCEPTION");
-        HttpServiceDownstreamRequestEvent event = ApacheEventFactory.createDownstreamRequestEvent(ApacheTestConstants.APACHE_HTTP_CLIENT_ORIGIN,accessor);
-        ServiceDownstreamResponseEvent responseEvent = ApacheEventFactory.createServiceResponseEvent(null,event,error);
+        HttpServiceDownstreamRequestEvent event = ApacheEventFactory.createDownstreamRequestEvent(ApacheTestConstants.APACHE_HTTP_CLIENT_ORIGIN, accessor);
+        ServiceDownstreamResponseEvent responseEvent = ApacheEventFactory.createServiceResponseEvent(null, event, error);
         ApacheClientTestUtil.verifyServiceResponseEvent(responseEvent);
-        assertEquals(responseEvent.getThrown(),error);
+        assertEquals(responseEvent.getThrown(), error);
     }
 }

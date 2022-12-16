@@ -14,6 +14,8 @@
  */
 package software.amazon.disco.agent.web.apache.source;
 
+import software.amazon.disco.agent.event.DownstreamRequestHeaderRetrievable;
+import software.amazon.disco.agent.event.DownstreamResponseHeaderRetrievable;
 import software.amazon.disco.agent.event.HttpServiceDownstreamRequestEvent;
 import software.amazon.disco.agent.event.ServiceDownstreamResponseEvent;
 
@@ -33,5 +35,17 @@ public class ApacheClientTestUtil {
         assertEquals(ApacheTestConstants.METHOD, serviceDownstreamResponseEvent.getOperation());
         assertEquals(ApacheTestConstants.URI, serviceDownstreamResponseEvent.getService());
         assertEquals(ApacheTestConstants.APACHE_HTTP_CLIENT_ORIGIN, serviceDownstreamResponseEvent.getOrigin());
+    }
+
+    public static void verifyRequestHeaderRetrievable(final DownstreamRequestHeaderRetrievable retrievable) {
+        assertEquals(retrievable.getFirstHeader("someheader"), "somedata");
+        assertEquals(retrievable.getFirstHeader("someheader2"), "somedata2");
+        assertNull(retrievable.getHeaders("nonexistentheader"));
+    }
+
+    public static void verifyResponseHeaderRetrievable(final DownstreamResponseHeaderRetrievable retrievable) {
+        assertEquals(retrievable.getFirstHeader("someheader"), "somedata");
+        assertEquals(retrievable.getFirstHeader("someheader2"), "somedata2");
+        assertNull(retrievable.getHeaders("nonexistentheader"));
     }
 }

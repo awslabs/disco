@@ -26,7 +26,7 @@ import org.mockito.Mockito;
 import java.util.HashMap;
 
 public class InterceptedBasicHttpRequest implements HttpRequest {
-    private HashMap<String,String> headers = new HashMap<String,String>();
+    private HashMap<String, BasicHeader> headers = new HashMap<>();
     private RequestLine requestLine = Mockito.mock(RequestLine.class);
 
     public InterceptedBasicHttpRequest(){
@@ -46,12 +46,12 @@ public class InterceptedBasicHttpRequest implements HttpRequest {
 
     @Override
     public Header[] getHeaders(String name) {
-        return null;
+        return new Header[]{headers.get(name)};
     }
 
     @Override
     public Header getFirstHeader(String name) {
-        return new BasicHeader(name,headers.get(name));
+        return headers.getOrDefault(name, new BasicHeader(name, null));
     }
 
     @Override
@@ -61,7 +61,7 @@ public class InterceptedBasicHttpRequest implements HttpRequest {
 
     @Override
     public Header[] getAllHeaders() {
-        return null;
+        return headers.values().toArray(new BasicHeader[0]);
     }
 
     @Override
@@ -69,7 +69,7 @@ public class InterceptedBasicHttpRequest implements HttpRequest {
 
     @Override
     public void addHeader(String name, String value) {
-        headers.put(name, value);
+        headers.put(name, new BasicHeader(name, value));
     }
 
     @Override

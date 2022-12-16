@@ -12,7 +12,6 @@
  *   express or implied. See the License for the specific language governing
  *   permissions and limitations under the License.
  */
-
 package software.amazon.disco.agent.web.apache.httpclient;
 
 import net.bytebuddy.agent.builder.AgentBuilder;
@@ -31,6 +30,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import software.amazon.disco.agent.concurrent.TransactionContext;
+import software.amazon.disco.agent.event.DownstreamRequestHeaderRetrievable;
+import software.amazon.disco.agent.event.DownstreamResponseHeaderRetrievable;
 import software.amazon.disco.agent.event.Event;
 import software.amazon.disco.agent.event.EventBus;
 import software.amazon.disco.agent.event.HeaderReplaceable;
@@ -48,7 +49,11 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -177,6 +182,7 @@ public class ApacheHttpClientInterceptorTests {
         }
         return matchedCount;
     }
+
     @Test
     public void testHeaderReplacement() throws Throwable {
         HttpUriRequest get = new InterceptedHttpRequestBase();
@@ -185,10 +191,10 @@ public class ApacheHttpClientInterceptorTests {
 
         SomeChainedExecuteMethodsHttpClient someHttpClient = new SomeChainedExecuteMethodsHttpClient();
         someHttpClient.setExpectedResponse(expectedResponse);
-        ApacheHttpClientMethodDelegation.intercept(new Object[] {get}, "origin", () -> someHttpClient.execute(get));
+        ApacheHttpClientMethodDelegation.intercept(new Object[]{get}, "origin", () -> someHttpClient.execute(get));
 
         List<Event> events = mockEventBusListener.getReceivedEvents();
-        HeaderReplaceable event = (HeaderReplaceable)events.get(0);
+        HeaderReplaceable event = (HeaderReplaceable) events.get(0);
         event.replaceHeader("foo", "bar3");
 
         assertEquals(1, get.getHeaders("foo").length);
@@ -201,12 +207,16 @@ public class ApacheHttpClientInterceptorTests {
     @Test
     public void testInterceptorSucceededOnChainedMethods() throws Throwable {
         HttpUriRequest request = new InterceptedHttpRequestBase();
+        request.addHeader("someheader", "somedata");
+        request.addHeader("someheader2", "somedata2");
 
         // Set up victim http client
         SomeChainedExecuteMethodsHttpClient someHttpClient = new SomeChainedExecuteMethodsHttpClient();
         expectedResponse = new InterceptedBasicHttpResponse(new ProtocolVersion("protocol", 1, 1), 200, "");
+        expectedResponse.addHeader("someheader", "somedata");
+        expectedResponse.addHeader("someheader2", "somedata2");
         someHttpClient.setExpectedResponse(expectedResponse);
-        ApacheHttpClientMethodDelegation.intercept(new Object[] {request}, "origin", () -> someHttpClient.execute(request));
+        ApacheHttpClientMethodDelegation.intercept(new Object[]{request}, "origin", () -> someHttpClient.execute(request));
 
         List<Event> events = mockEventBusListener.getReceivedEvents();
         // Verify only one of interceptions does the interceptor business logic even if there is a method chaining,
@@ -215,10 +225,12 @@ public class ApacheHttpClientInterceptorTests {
 
         // Verify the Request Event
         ApacheClientTestUtil.verifyServiceRequestEvent((HttpServiceDownstreamRequestEvent) events.get(0));
+        ApacheClientTestUtil.verifyRequestHeaderRetrievable((DownstreamRequestHeaderRetrievable) events.get(0));
 
         // Verify the Response Event
         HttpServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (HttpServiceDownstreamResponseEvent) events.get(1);
         ApacheClientTestUtil.verifyServiceResponseEvent(serviceDownstreamResponseEvent);
+        ApacheClientTestUtil.verifyResponseHeaderRetrievable((DownstreamResponseHeaderRetrievable) serviceDownstreamResponseEvent);
         assertNull(serviceDownstreamResponseEvent.getResponse());
         assertNull(serviceDownstreamResponseEvent.getThrown());
         assertEquals(200, serviceDownstreamResponseEvent.getStatusCode());
@@ -233,6 +245,8 @@ public class ApacheHttpClientInterceptorTests {
         // Set up victim http client
         expectedIOException = new IOException();
         InterceptedHttpRequestBase request = new InterceptedHttpRequestBase();
+        request.addHeader("someheader", "somedata");
+        request.addHeader("someheader2", "somedata2");
         SomeChainedExecuteMethodsHttpClient someHttpClient = new SomeChainedExecuteMethodsHttpClient();
         someHttpClient.setExpectedIOException(expectedIOException);
         try {
@@ -245,7 +259,7 @@ public class ApacheHttpClientInterceptorTests {
 
             // Verify the Request Event
             ApacheClientTestUtil.verifyServiceRequestEvent((HttpServiceDownstreamRequestEvent) events.get(0));
-
+            ApacheClientTestUtil.verifyRequestHeaderRetrievable((DownstreamRequestHeaderRetrievable) events.get(0));
             // Verify the Response Event
             ServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (ServiceDownstreamResponseEvent) events.get(1);
             ApacheClientTestUtil.verifyServiceResponseEvent(serviceDownstreamResponseEvent);
@@ -259,11 +273,12 @@ public class ApacheHttpClientInterceptorTests {
     @Test
     public void testInterceptorSucceedsOnResponseHandlerExecute() throws Throwable {
         HttpUriRequest get = new InterceptedHttpRequestBase();
-
+        get.addHeader("someheader", "somedata");
+        get.addHeader("someheader2", "somedata2");
         SomeChainedExecuteMethodsHttpClient someHttpClient = new SomeChainedExecuteMethodsHttpClient();
         ResponseHandler<Object> responseHandler = Mockito.mock(ResponseHandler.class);
         Mockito.when(responseHandler.handleResponse(Mockito.any())).thenReturn(new Object());
-        ApacheHttpClientMethodDelegation.intercept(new Object[] {get}, "origin", () -> someHttpClient.execute(get, responseHandler));
+        ApacheHttpClientMethodDelegation.intercept(new Object[]{get}, "origin", () -> someHttpClient.execute(get, responseHandler));
 
         List<Event> events = mockEventBusListener.getReceivedEvents();
 
@@ -273,6 +288,7 @@ public class ApacheHttpClientInterceptorTests {
 
         // Verify the Request Event
         ApacheClientTestUtil.verifyServiceRequestEvent((HttpServiceDownstreamRequestEvent) events.get(0));
+        ApacheClientTestUtil.verifyRequestHeaderRetrievable((DownstreamRequestHeaderRetrievable) events.get(0));
 
         // Verify the Response Event
         ServiceDownstreamResponseEvent serviceDownstreamResponseEvent = (ServiceDownstreamResponseEvent) events.get(1);
