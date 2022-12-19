@@ -63,35 +63,35 @@ public class PreprocessConfigParserTest {
     }
 
     @Test(expected = ArgumentParserException.class)
-    public void parseCommandLineReturnsNullWithNullArgs() {
+    public void testParseCommandLineReturnsNullWithNullArgs() {
         preprocessConfigParser.parseCommandLine(null);
     }
 
     @Test(expected = ArgumentParserException.class)
-    public void parseCommandLineFailsWithEmptyArgs() {
+    public void testParseCommandLineFailsWithEmptyArgs() {
         preprocessConfigParser.parseCommandLine(new String[]{});
     }
 
     @Test(expected = ArgumentParserException.class)
-    public void parseCommandLineFailsWithInvalidFlag() {
+    public void testParseCommandLineFailsWithInvalidFlag() {
         String[] args = new String[]{"--suff", suffix};
         preprocessConfigParser.parseCommandLine(args);
     }
 
     @Test(expected = ArgumentParserException.class)
-    public void parseCommandLineFailsWithUnmatchedFlagAsLastArg() {
+    public void testParseCommandLineFailsWithUnmatchedFlagAsLastArg() {
         String[] args = new String[]{"--suffix"};
         preprocessConfigParser.parseCommandLine(args);
     }
 
     @Test(expected = ArgumentParserException.class)
-    public void parseCommandLineFailsWithInvalidFormat() {
+    public void testParseCommandLineFailsWithInvalidFormat() {
         String[] args = new String[]{"--suffix", "--verbose"};
         preprocessConfigParser.parseCommandLine(args);
     }
 
     @Test
-    public void parseCommandLineWorksWithDifferentLogLevels() {
+    public void testParseCommandLineWorksWithDifferentLogLevels() {
         PreprocessConfig silentConfig = preprocessConfigParser.parseCommandLine(new String[]{"--silent"});
         PreprocessConfig verboseConfig = preprocessConfigParser.parseCommandLine(new String[]{"--verbose"});
         PreprocessConfig extraverboseConfig = preprocessConfigParser.parseCommandLine(new String[]{"--extraverbose"});
@@ -102,7 +102,7 @@ public class PreprocessConfigParserTest {
     }
 
     @Test
-    public void parseCommandLineWorks_whenCacheStrategyIsNone() {
+    public void testParseCommandLineWorksWhenCacheStrategyIsNone() {
         String[] args = new String[]{
             "--sourcepaths", "/d1:/d2:/d3",
             "--agentPath", agent,
@@ -113,8 +113,20 @@ public class PreprocessConfigParserTest {
         assertTrue(config.getCacheStrategy() instanceof NoOpCacheStrategy);
     }
 
+    @Test(expected = InvalidConfigEntryException.class)
+    public void testParseCommandLineFailsWithNonNumberFormatWorkersValue() {
+        String[] args = new String[]{"--workers", "NonNumberFormat"};
+        preprocessConfigParser.parseCommandLine(args);
+    }
+
+    @Test(expected = InvalidConfigEntryException.class)
+    public void testParseCommandLineFailsWithNonPositiveWorkersValue() {
+        String[] args = new String[]{"--workers", "-1"};
+        preprocessConfigParser.parseCommandLine(args);
+    }
+
     @Test
-    public void parseCommandLineWorksAndReturnsConfigWithDefaultValue() {
+    public void testParseCommandLineWorksAndReturnsConfigWithDefaultValue() {
         String[] args = new String[]{
             "--sourcepaths", "/d1:/d2:/d3",
             "--agentPath", agent
@@ -129,7 +141,7 @@ public class PreprocessConfigParserTest {
     }
 
     @Test
-    public void parseCommandLineWorksWithFullCommandNamesAndReturnsConfigFile() {
+    public void testParseCommandLineWorksWithFullCommandNamesAndReturnsConfigFile() {
         String[] args = new String[]{
             "--outputDir", outputDir,
             "--sourcepaths", "/d1:/d2:/d3@lib",
@@ -140,7 +152,8 @@ public class PreprocessConfigParserTest {
             "--jdksupport", jdkpath,
             "--failonunresolvabledependency",
             "--signedjarhandlingstrategy", "skip",
-            "--cachestrategy", "checksum"
+            "--cachestrategy", "checksum",
+            "--workers", "3"
         };
 
         PreprocessConfig config = preprocessConfigParser.parseCommandLine(args);
@@ -152,6 +165,7 @@ public class PreprocessConfigParserTest {
         assertEquals("11", config.getJavaVersion());
         assertEquals("arg", config.getAgentArg());
         assertEquals(jdkpath, config.getJdkPath());
+        assertEquals("3", config.getSubPreprocessors());
         assertTrue(config.isFailOnUnresolvableDependency());
         assertTrue(config.getSignedJarHandlingStrategy() instanceof SkipSignedJarHandlingStrategy);
         assertTrue(config.getCacheStrategy() instanceof ChecksumCacheStrategy);
@@ -236,7 +250,7 @@ public class PreprocessConfigParserTest {
     }
 
     @Test(expected = InvalidConfigEntryException.class)
-    public void testParseCommandLineFailsWithInvalidSourcePathOption(){
+    public void testParseCommandLineFailsWithInvalidSourcePathOption() {
         String[] args = new String[]{"-sps", "/d1:/d1:/d2@lib@tomcat",};
 
         preprocessConfigParser.parseCommandLine(args);

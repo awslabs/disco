@@ -31,8 +31,9 @@ import java.util.HashSet;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static software.amazon.disco.instrumentation.preprocess.MockEntities.mockPreprocessorInvoker;
+import static software.amazon.disco.instrumentation.preprocess.multipreprocessor.MultiPreprocessorScheduler.UNUSED_PROCESSORS;
 
 public class MultiPreprocessorSchedulerTest {
     @Rule
@@ -41,6 +42,7 @@ public class MultiPreprocessorSchedulerTest {
     private MultiPreprocessorScheduler.PreprocessorInvoker mockPreprocessorInvokerWithNormalTermination;
     private MultiPreprocessorScheduler.PreprocessorInvoker mockPreprocessorInvokerWithAbnormalTermination;
     private List<String[]> preprocessorRawCommandlineArgsList;
+    private Runtime mockRuntime;
 
     @Before
     public void before() throws IOException, InterruptedException {
@@ -52,6 +54,7 @@ public class MultiPreprocessorSchedulerTest {
                 .failOnUnresolvableDependency(false)
                 .build();
         preprocessorRawCommandlineArgsList = Arrays.asList(new String[]{"arg1", "arg2"}, new String[]{"arg1", "arg2"});
+        mockRuntime = Mockito.mock(Runtime.class);
     }
 
     @Test(expected = ProcessInstrumentationAbortedException.class)
@@ -70,11 +73,48 @@ public class MultiPreprocessorSchedulerTest {
     }
 
     @Test
-    public void testGetPreprocessorNumReturnNotSmallerThanOne() {
+    public void testConfigureSubPreprocessors_whenSubPreprocessorsIsNull() {
         MultiPreprocessorScheduler multiPreprocessorScheduler = configureMultiPreprocessorScheduler();
-        assertFalse(multiPreprocessorScheduler.getPreprocessorNum() < 1);
+        Mockito.doReturn(4).when(multiPreprocessorScheduler).calculateDefaultSubPreprocessors(Mockito.any(Runtime.class));
+        assertNull(config.getSubPreprocessors());
+
+        int subPreprocessors = multiPreprocessorScheduler.configureSubPreprocessors();
+
+        Mockito.verify(multiPreprocessorScheduler).calculateDefaultSubPreprocessors(Mockito.any(Runtime.class));
+        assertEquals(4, subPreprocessors);
     }
 
+    @Test
+    public void testConfigureSubPreprocessors_whenSubPreprocessorsIsNotNull() {
+        config = PreprocessConfig.builder().subPreprocessors("3").build();
+        MultiPreprocessorScheduler multiPreprocessorScheduler = configureMultiPreprocessorScheduler();
+
+        int subPreprocessors = multiPreprocessorScheduler.configureSubPreprocessors();
+
+        Mockito.verify(multiPreprocessorScheduler, Mockito.never()).calculateDefaultSubPreprocessors(Mockito.any(Runtime.class));
+        assertEquals(3, subPreprocessors);
+    }
+
+    @Test
+    public void testCalculateDefaultSubPreprocessors_whenAvailableProcessorsIsMoreThanUnusedProcessors() {
+        MultiPreprocessorScheduler multiPreprocessorScheduler = configureMultiPreprocessorScheduler();
+        int availableProcessors = UNUSED_PROCESSORS + 4;
+        Mockito.doReturn(availableProcessors).when(mockRuntime).availableProcessors();
+
+        int defaultSubPreprocessors = multiPreprocessorScheduler.calculateDefaultSubPreprocessors(mockRuntime);
+
+        assertEquals(4, defaultSubPreprocessors);
+    }
+
+    @Test
+    public void testCalculateDefaultSubPreprocessors_whenAvailableProcessorsIsNoMoreThanUnusedProcessors() {
+        MultiPreprocessorScheduler multiPreprocessorScheduler = configureMultiPreprocessorScheduler();
+        Mockito.doReturn(1).when(mockRuntime).availableProcessors();
+
+        int defaultSubPreprocessors = multiPreprocessorScheduler.calculateDefaultSubPreprocessors(mockRuntime);
+
+        assertEquals(1, defaultSubPreprocessors);
+    }
 
     private MultiPreprocessorScheduler configureMultiPreprocessorScheduler() {
         MultiPreprocessorScheduler multiPreprocessorScheduler = Mockito.spy(

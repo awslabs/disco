@@ -94,7 +94,7 @@ public class PreprocessorArgumentsExportStrategyTest {
         outputDir.mkdirs();
         for (int i = 0; i < preprocessorRawCommandlineArgsList.size(); i++) {
             String[] preprocessorCommandlineArgs = preprocessorRawCommandlineArgsList.get(i);
-            String argsFileRelativePath = "sub-preprocessor-" + i + "txt";
+            String argsFileRelativePath = "worker-" + i + "txt";
             String argsFilePath = strategy.saveArgsFileToDisk(preprocessorCommandlineArgs, outputDir.getAbsolutePath(), argsFileRelativePath);
             String content = new String(Files.readAllBytes(new File(argsFilePath).toPath()));
             String expectedArgsFileContent = String.join(" ", preprocessorCommandlineArgs);
@@ -106,6 +106,6 @@ public class PreprocessorArgumentsExportStrategyTest {
 
     @Test(expected = ExportException.class)
     public void testSaveArgsFileToDiskFailsAndThrowsException() {
-        strategy.saveArgsFileToDisk(preprocessorRawCommandlineArgsList.get(0), "/somePath", "sub-preprocessor-0.txt");
+        strategy.saveArgsFileToDisk(preprocessorRawCommandlineArgsList.get(0), "/somePath", "worker-0.txt");
     }
 }

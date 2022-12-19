@@ -125,6 +125,7 @@ public class PreprocessConfigParser {
         ACCEPTED_FLAGS.put("--jdksupport", new OptionToMatch("--jdksupport", true));
         ACCEPTED_FLAGS.put("--signedjarhandlingstrategy", new OptionToMatch("--signedjarhandlingstrategy", true));
         ACCEPTED_FLAGS.put("--cachestrategy", new OptionToMatch("--cachestrategy", true));
+        ACCEPTED_FLAGS.put("--workers", new OptionToMatch("--workers", true));
 
         ACCEPTED_FLAGS.put("-out", new OptionToMatch("-out", true));
         ACCEPTED_FLAGS.put("-sps", new OptionToMatch("-sps", true));
@@ -194,6 +195,12 @@ public class PreprocessConfigParser {
                 break;
             case "--signedjarhandlingstrategy":
                 builder.signedJarHandlingStrategy(parseSignedJarHandlingStrategyArg(argument));
+                break;
+            case "--workers":
+                if (!isWorkersArgValid(argument)) {
+                    throw new InvalidConfigEntryException("Invalid value provided for [workers]");
+                }
+                builder.subPreprocessors(argument);
                 break;
             default:
                 // will never be invoked since flags are already validated.
@@ -281,7 +288,7 @@ public class PreprocessConfigParser {
     }
 
     /**
-     * Helper method to parse the value supplied for the 'signedjarhandlingstrategy` argument.
+     * Helper method to parse the value supplied for the 'signedjarhandlingstrategy' argument.
      *
      * @param strategy value supplied for the 'signedjarhandlingstrategy' argument
      * @return an implementation of {@link SignedJarHandlingStrategy} determined by the argument value
@@ -295,6 +302,22 @@ public class PreprocessConfigParser {
             default:
                 // TODO: 2022-05-27 resign strategy to be implemented once we have enough data on how to re-sign Jars securely during build
                 throw new InvalidConfigEntryException("Invalid value provided for signedjarhandlingstrategy");
+        }
+    }
+
+    /**
+     * Checks whether the value supplied for the 'workers' argument is valid.
+     * 'workers' argument can be only positive integer in string format.
+     *
+     * @param workers value supplied for the 'workers' argument
+     * @return true if the argument is valid, otherwise false.
+     */
+    private boolean isWorkersArgValid(final String workers) {
+        try {
+            int numOfWorkers = Integer.parseInt(workers);
+            return numOfWorkers > 0;
+        } catch (Exception e) {
+            return false;
         }
     }
 

@@ -35,7 +35,7 @@ public class ConfigPartitioner {
      * where the preprocessing work are divided roughly equally among PreprocessConfig objects for sub-preprocessors.
      *
      * @param config       a PreprocessConfig containing information to perform preprocessing
-     * @param partitionNum number of preprocessors work in parallel
+     * @param partitionNum number of sub-preprocessors work in parallel
      * @return a list of PreprocessConfig objects
      */
     public static List<PreprocessConfig> partitionConfig(PreprocessConfig config, int partitionNum) {

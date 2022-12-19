@@ -44,7 +44,7 @@ public class PreprocessorArgumentsExportStrategy {
         setUp(preprocessorArgsTempFolder);
 
         for (int i = 0; i < preprocessorRawCommandlineArgsList.size(); i++) {
-            final String fileName = "sub-preprocessor-" + i + "-" + new Date().getTime() + ".txt";
+            final String fileName = "worker-" + i + "-" + new Date().getTime() + ".txt";
             //save txt file containing sub-preprocessor command-line arguments to tmp folder
             String preprocessorArgsFilePath = saveArgsFileToDisk(preprocessorRawCommandlineArgsList.get(i), preprocessorArgsTempFolder.getAbsolutePath(), fileName);
             argsFilePaths.add("@" + preprocessorArgsFilePath);
