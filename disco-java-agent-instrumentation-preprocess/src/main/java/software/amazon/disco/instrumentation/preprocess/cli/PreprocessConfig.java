@@ -45,6 +45,7 @@ public class PreprocessConfig {
     @Setter
     private Map<String, Set<String>> sourcePaths;
     private SignedJarHandlingStrategy signedJarHandlingStrategy;
+    private final String subPreprocessors;
     private final String outputDir;
     private final String agentPath;
     private final String suffix;

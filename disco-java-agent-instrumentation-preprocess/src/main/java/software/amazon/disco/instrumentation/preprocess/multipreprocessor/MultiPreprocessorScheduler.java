@@ -48,6 +48,7 @@ import java.util.stream.Collectors;
 public class MultiPreprocessorScheduler {
     private static final Logger log = LogManager.getLogger(MultiPreprocessorScheduler.class);
     private final PreprocessConfig config;
+    static final int UNUSED_PROCESSORS = 2;
 
     /**
      * Callable class that is responsible for invoking a preprocessor by starting a new process,
@@ -85,14 +86,15 @@ public class MultiPreprocessorScheduler {
      * print the outputs from preprocessors and summary of the whole preprocessing
      */
     public void execute() throws ExecutionException, InterruptedException {
-        int preprocessorNum = getPreprocessorNum();
+        // number of sub-preprocessors
+        int subPreprocessors = configureSubPreprocessors();
         // list of raw command line arguments for sub-preprocessors
-        List<String[]> preprocessorRawCommandlineArgsList = ConfigPartitioner.partitionConfig(config, preprocessorNum).stream().map(PreprocessConfig::toCommandlineArguments).collect(Collectors.toList());
+        List<String[]> preprocessorRawCommandlineArgsList = ConfigPartitioner.partitionConfig(config, subPreprocessors).stream().map(PreprocessConfig::toCommandlineArguments).collect(Collectors.toList());
         // store sub-preprocessors raw command-line arguments as txt file and get the file path as sub-preprocessor's command-line arguments
         List<String> preprocessorCommandlineArgsList = new PreprocessorArgumentsExportStrategy().exportArguments(preprocessorRawCommandlineArgsList, config, PreprocessConstants.PREPROCESSOR_ARGS_TEMP_FOLDER);
         // create preprocessor invokers
         List<PreprocessorInvoker> preprocessorInvokers = preprocessorCommandlineArgsList.stream().map(PreprocessorInvoker::new).collect(Collectors.toList());
-        log.info("Arranged " + preprocessorInvokers.size() + " sub-preprocessors to preprocess sources in parallel, this may take a few minutes to complete...");
+        log.info("Arranged " + preprocessorInvokers.size() + " workers to preprocess sources in parallel, this may take a few minutes to complete...");
         // execute preprocessor invokers
         List<String> preprocessorOutputs = executePreprocessorInvokers(preprocessorInvokers);
         // print output from preprocessors and summary of the whole preprocessing
@@ -130,14 +132,30 @@ public class MultiPreprocessorScheduler {
     }
 
     /**
-     * Calculate number of preprocessors that will be invoked to work in parallel.
-     * Currently, use maximum number of processors of VM minus 2 to prevent from using full power.
+     * Configure number of sub-preprocessors based on sub-preprocessors configuration supplied by {@link PreprocessConfig} file.
+     *
+     * @return number sub-preprocessors to be used in parallel preprocessing.
      */
-    protected int getPreprocessorNum() {
-        //the maximum number of processors available to the virtual machine, never smaller than one
-        int availableProcessors = Runtime.getRuntime().availableProcessors();
-        // number of processing parallels
-        return availableProcessors > 2 ? availableProcessors - 2 : availableProcessors;
+    protected int configureSubPreprocessors() {
+        String subPreprocessors = config.getSubPreprocessors();
+
+        if(subPreprocessors == null) {
+            return calculateDefaultSubPreprocessors(Runtime.getRuntime());
+        }
+
+        return Integer.parseInt(subPreprocessors);
+    }
+
+    /**
+     * Calculate number of sub-preprocessors to be used by default strategy.
+     * Currently, use maximum number of processors of VM minus number of processor that intended to be idle to prevent from using full power.
+     *
+     * @param runtime the current runtime.
+     * @return the number of sub-preprocessors calculated by default strategy.
+     */
+    protected int calculateDefaultSubPreprocessors(Runtime runtime) {
+        int availableProcessors = runtime.availableProcessors();
+        return availableProcessors > UNUSED_PROCESSORS ? availableProcessors - UNUSED_PROCESSORS : availableProcessors;
     }
 
     /**
