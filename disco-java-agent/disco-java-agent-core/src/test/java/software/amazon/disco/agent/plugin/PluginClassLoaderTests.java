@@ -26,7 +26,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.jar.JarOutputStream;
@@ -111,7 +110,8 @@ public class PluginClassLoaderTests {
     }
 
     private void addURL(PluginClassLoader classLoader, URL url) throws Exception {
-        Method addURL = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+        // Reflectively call addURL as inject-api's Injector.addURL() does
+        Method addURL = classLoader.getClass().getDeclaredMethod("addURL", URL.class);
         addURL.setAccessible(true);
         addURL.invoke(classLoader, url);
     }
