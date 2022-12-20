@@ -19,8 +19,8 @@ import java.net.URL;
 import java.net.URLClassLoader;
 
 /**
- * A custom URLClassLoader for loading plugins found inside of PluginDiscovery. This is the classloader used by default
- * when loading plugins, unless JAR manifest attributes specify otherwise.
+ * A custom URLClassLoader for loading plugins found inside of PluginDiscovery, exposing addURL for JDK 17 reflective access.
+ * This is the classloader used by default when loading plugins, unless JAR manifest attributes specify otherwise.
  */
 public class PluginClassLoader extends URLClassLoader {
     public static ClassLoader BOOTSTRAP_CLASSLOADER = null;
@@ -30,5 +30,13 @@ public class PluginClassLoader extends URLClassLoader {
      */
     public PluginClassLoader() {
         super(new URL[]{}, BOOTSTRAP_CLASSLOADER);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void addURL(URL url) {
+        super.addURL(url);
     }
 }
