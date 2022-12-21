@@ -51,13 +51,13 @@ public class ConfigPartitionerTest {
     }
 
     @Test
-    public void testPartitionConfigGeneratesCorrectNumberOfConfigs_WhenSourcesNoLessThanPartitionNum() {
+    public void testPartitionConfigGeneratesCorrectNumberOfConfigs_whenSourcesNoLessThanPartitionNum() {
         List<PreprocessConfig> preprocessorConfigs = ConfigPartitioner.partitionConfig(config, partitionNum);
         assertEquals(partitionNum, preprocessorConfigs.size());
     }
 
     @Test
-    public void testPartitionConfigGeneratesCorrectNumberOfConfigs_WhenSourcesLessThanPartitionNum(){
+    public void testPartitionConfigGeneratesCorrectNumberOfConfigs_whenSourcesLessThanPartitionNum(){
         Map<String, Set<String>> smallSourcePaths = new LinkedHashMap<String, Set<String>>() {{
             put("lib1", new LinkedHashSet<>(Arrays.asList("/d1", "/d2")));
             put("lib2", new LinkedHashSet<>(Arrays.asList("/d11", "/d22")));
@@ -73,7 +73,7 @@ public class ConfigPartitionerTest {
     }
 
     @Test
-    public void testPartitionConfig_GeneratesConfigsWithCorrectSourcePathsPartition() {
+    public void testPartitionConfigGeneratesConfigsWithCorrectSourcePathsPartition() {
         List<PreprocessConfig> preprocessorConfigs = ConfigPartitioner.partitionConfig(config, partitionNum);
         assertEquals(partitionNum, preprocessorConfigs.size());
         //each preprocessor config should get correct source paths partition
@@ -125,7 +125,7 @@ public class ConfigPartitionerTest {
     }
 
     @Test
-    public void testPartitionConfigGeneratesConfigsWithNullJdkPath_WhenJdkPathIsNull() {
+    public void testPartitionConfigGeneratesConfigsWithNullJdkPath_whenJdkPathIsNull() {
         List<PreprocessConfig> preprocessorConfigs = ConfigPartitioner.partitionConfig(config, partitionNum);
         assertNull(config.getJdkPath());
         //all preprocessors configs should have null jdkPath
@@ -135,7 +135,7 @@ public class ConfigPartitionerTest {
     }
 
     @Test
-    public void testPartitionConfigGeneratesOnlyFirstConfigWithJdkPath_WhenJdkPathNotNull() {
+    public void testPartitionConfigGeneratesOnlyLastConfigWithJdkPath_whenJdkPathNotNull() {
         PreprocessConfig config = PreprocessConfig.builder()
                 .sourcePaths(sourcePaths)
                 .outputDir(outputDir)
@@ -146,10 +146,42 @@ public class ConfigPartitionerTest {
         List<PreprocessConfig> preprocessorConfigs = ConfigPartitioner.partitionConfig(config, partitionNum);
 
         assertNotNull(config.getJdkPath());
-        //only first preprocessor config will have jdkPath set
-        assertEquals(config.getJdkPath(), preprocessorConfigs.get(0).getJdkPath());
-        //other preprocessor configs will have null jdkPath
+        assertNull(preprocessorConfigs.get(0).getJdkPath());
         assertNull(preprocessorConfigs.get(1).getJdkPath());
-        assertNull(preprocessorConfigs.get(2).getJdkPath());
+        //only last preprocessor config will have jdkPath set
+        assertEquals(config.getJdkPath(), preprocessorConfigs.get(2).getJdkPath());
     }
+
+    @Test
+    public void testPartitionSources_whenSourcesAreLessThanLessThanPartitionNum() {
+        List<String> sources = Arrays.asList("/d1", "/d2");
+        List<List<String>> sourcesPartitions = ConfigPartitioner.partitionSources(sources, partitionNum);
+
+        assertEquals(2, sourcesPartitions.size());
+        assertEquals(Arrays.asList("/d1"), sourcesPartitions.get(0));
+        assertEquals(Arrays.asList("/d2"), sourcesPartitions.get(1));
+    }
+
+    @Test
+    public void testPartitionSources_whenSourcesIsDivisibleByPartitionNum() {
+        List<String> sources = Arrays.asList("/d1", "/d2", "/d3", "/d4", "/d5", "/d6");
+        List<List<String>> sourcesPartitions = ConfigPartitioner.partitionSources(sources, partitionNum);
+
+        assertEquals(partitionNum, sourcesPartitions.size());
+        assertEquals(Arrays.asList("/d1", "/d2"), sourcesPartitions.get(0));
+        assertEquals(Arrays.asList("/d3", "/d4"), sourcesPartitions.get(1));
+        assertEquals(Arrays.asList("/d5", "/d6"), sourcesPartitions.get(2));
+    }
+
+    @Test
+    public void testPartitionSourcesDistributeRemainderCorrectly() {
+        List<String> sources = Arrays.asList("/d1", "/d2", "/d3", "/d4");
+        List<List<String>> sourcesPartitions = ConfigPartitioner.partitionSources(sources, partitionNum);
+
+        assertEquals(partitionNum, sourcesPartitions.size());
+        assertEquals(Arrays.asList("/d1", "/d2"), sourcesPartitions.get(0));
+        assertEquals(Arrays.asList("/d3"), sourcesPartitions.get(1));
+        assertEquals(Arrays.asList("/d4"), sourcesPartitions.get(2));
+    }
+
 }
