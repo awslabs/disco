@@ -23,8 +23,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * Partition config for preprocessing into configs supplied to sub-preprocessors
@@ -43,7 +41,7 @@ public class ConfigPartitioner {
         Map<String, Set<String>> sourcePaths = config.getSourcePaths();
         List<Map<String, Set<String>>> sourcePathsPartitions = partitionSourcePaths(sourcePaths, partitionNum);
         for (Map<String, Set<String>> sourcePathsPartition : sourcePathsPartitions) {
-            configs.add(generatePreprocessorConfig(config, sourcePathsPartition, sourcePathsPartitions.indexOf(sourcePathsPartition)));
+            configs.add(generatePreprocessorConfig(config, sourcePathsPartition, sourcePathsPartitions));
         }
         return configs;
     }
@@ -62,7 +60,7 @@ public class ConfigPartitioner {
         List<Map<String, Set<String>>> sourcePathsMaps = new ArrayList<>();
         Map<String, List<?>> partitionedSourcePaths = new HashMap<>();
         for (final Map.Entry<String, Set<String>> entry : sourcePaths.entrySet()) {
-            List<List<String>> sourcesPartitions = partitionSources(entry.getValue(), partitionNum);
+            List<List<String>> sourcesPartitions = partitionSources(new ArrayList<>(entry.getValue()), partitionNum);
             partitionedSourcePaths.put(entry.getKey(), sourcesPartitions);
         }
 
@@ -82,17 +80,32 @@ public class ConfigPartitioner {
     /**
      * Divides a set of sources into given number of sublist.
      *
-     * @param sources      set of sources to be partitioned
-     * @param partitionNum number of partitions
+     * @param sources      non-empty list of sources to be partitioned
+     * @param partitionNum intended non-zero number of partitions
      * @return a list of sources sublist.
      * For example, partitioning sources containing [/d1, /d2, /d3, /d4, /d5] into 2 partitions yields [[/d1, /d2, /d3], [/d4, /d5]]
      */
-    protected static List<List<String>> partitionSources(Set<String> sources, int partitionNum) {
-        int partitionSize = (sources.size() + partitionNum - 1) / partitionNum;
-        final AtomicInteger counter = new AtomicInteger();
-        List<List<String>> sourcesPartitions = new ArrayList<>(sources.stream()
-                .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / partitionSize))
-                .values());
+    protected static List<List<String>> partitionSources(List<String> sources, int partitionNum) {
+        List<List<String>> sourcesPartitions = new ArrayList<>();
+        int size = sources.size();
+        // actual number of partitions which will be number of sources if sources quantity is less than partitionNum
+        int numOfPartitions = Math.min(size, partitionNum);
+        int partitionSize = size / numOfPartitions;
+        int remainder = size % numOfPartitions;
+        int startIndex = 0;
+
+        while (startIndex < size) {
+            int endIndex = startIndex + partitionSize;
+            if (remainder > 0) {
+                //increase partitions by 1 until the remainder has been distributed cleanly
+                endIndex += 1;
+                remainder--;
+            }
+            endIndex = Math.min(endIndex, size);
+            sourcesPartitions.add(sources.subList(startIndex, endIndex));
+            startIndex = endIndex;
+        }
+
         return sourcesPartitions;
     }
 
@@ -102,10 +115,13 @@ public class ConfigPartitioner {
      *
      * @param config      a PreprocessConfig containing information to perform whole preprocessing
      * @param sourcePaths a set of sources to be processed by the preprocessor
-     * @param index       the index of the preprocessor
+     * @param sourcePathsPartitions       a list of source paths map for sub-preprocessors
      * @return an instance of PreprocessConfig for the preprocessor
      */
-    protected static PreprocessConfig generatePreprocessorConfig(PreprocessConfig config, Map<String, Set<String>> sourcePaths, int index) {
+    protected static PreprocessConfig generatePreprocessorConfig(PreprocessConfig config, Map<String, Set<String>> sourcePaths, List<Map<String, Set<String>>> sourcePathsPartitions) {
+        int index = sourcePathsPartitions.indexOf(sourcePaths);
+        int lastIndex = sourcePathsPartitions.size() - 1;
+
         //create a cloned preprocessing config
         PreprocessConfig clonedConfig = config.toBuilder().build();
         //clear the source paths of the cloned config
@@ -113,9 +129,13 @@ public class ConfigPartitioner {
         //create a new builder that starts out with all values of the cloned config
         //all these values are same with preprocessing config except sourcePaths that will be null
         PreprocessConfig.PreprocessConfigBuilder configBuilder = clonedConfig.toBuilder();
+
         configBuilder.sourcePaths(sourcePaths);
-        //if jdk path is not null, only allow first preprocessor to have jdk path set to prevent duplicate jdk instrumentation
-        if (config.getJdkPath() != null && index > 0) {
+        //if jdk path is not null, only allow last preprocessor to have jdk path for two reasons:
+        //1.The partition sources algorithm will distribute remainder(sources % numOfPartitions) to the first preprocessors
+        //and last preprocessor will get less/equal workload than other preprocessors. Assign jdk instrumentation job to it for fairness
+        //2.only allow one preprocessor to have jdk path set to prevent duplicate jdk instrumentation job
+        if (config.getJdkPath() != null && index < lastIndex) {
             configBuilder.jdkPath(null);
         }
         return configBuilder.build();
