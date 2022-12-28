@@ -43,6 +43,16 @@ tasks.shadowJar  {
                 "Boot-Class-Path" to archiveFileName.get()
         ))
     }
+
+    // Verify JAR contents don't contain any unshaded artifacts
+    doLast {
+        val jarFile = zipTree(archiveFile.get().asFile)
+        jarFile.visit {
+            if (this.path.endsWith(".class") && !this.path.startsWith("software/amazon/disco")) {
+                throw GradleException("Unshaded class " + this.path + " found in shaded JAR")
+            }
+        }
+    }
 }
 
 tasks.named<Test>("test") {
