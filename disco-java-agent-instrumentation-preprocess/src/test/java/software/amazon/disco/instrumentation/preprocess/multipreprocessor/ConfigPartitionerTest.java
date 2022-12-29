@@ -25,6 +25,7 @@ import java.util.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class ConfigPartitionerTest {
     private PreprocessConfig config;
@@ -105,6 +106,29 @@ public class ConfigPartitionerTest {
     }
 
     @Test
+    public void testPartitionConfigGeneratesConfigsCorrectly_whenSourcePathsHasEntryWithEmptySet() {
+        Map<String, Set<String>> sourcePathsHasEntryWithEmptySet = new LinkedHashMap<String, Set<String>>() {{
+            put("lib1", new LinkedHashSet<>(Arrays.asList("/d1", "/d2")));
+            put("lib2", new LinkedHashSet<>(Arrays.asList("/d11", "/d22", "/d33", "/d44")));
+            put("lib3", new LinkedHashSet<>());
+        }};
+        PreprocessConfig configWithSourcePathsHasEntryWithEmptySet = PreprocessConfig.builder()
+                .sourcePaths(sourcePathsHasEntryWithEmptySet)
+                .outputDir(outputDir)
+                .agentPath(agentPath)
+                .agentArg(agentArg)
+                .build();
+
+
+        List<PreprocessConfig> preprocessorConfigs = ConfigPartitioner.partitionConfig(configWithSourcePathsHasEntryWithEmptySet, partitionNum);
+        assertEquals(3, preprocessorConfigs.size());
+        assertNull(preprocessorConfigs.get(0).getSourcePaths().get("lib3"));
+        assertNull(preprocessorConfigs.get(1).getSourcePaths().get("lib3"));
+        assertNull(preprocessorConfigs.get(2).getSourcePaths().get("lib3"));
+    }
+
+
+    @Test
     public void testPartitionConfigGeneratesConfigsWithSameValuesAsOriginalConfigExceptSourcePathsAndJdkPath() {
         List<PreprocessConfig> preprocessorConfigs = ConfigPartitioner.partitionConfig(config, partitionNum);
         for (PreprocessConfig preprocessorConfig : preprocessorConfigs) {
@@ -171,6 +195,14 @@ public class ConfigPartitionerTest {
         assertEquals(Arrays.asList("/d1", "/d2"), sourcesPartitions.get(0));
         assertEquals(Arrays.asList("/d3", "/d4"), sourcesPartitions.get(1));
         assertEquals(Arrays.asList("/d5", "/d6"), sourcesPartitions.get(2));
+    }
+
+    @Test
+    public void testPartitionSources_whenSourcesIsEmpty() {
+        List<String> sources = new ArrayList<>();
+        List<List<String>> sourcesPartitions = ConfigPartitioner.partitionSources(sources, partitionNum);
+
+        assertTrue(sourcesPartitions.isEmpty());
     }
 
     @Test
