@@ -61,7 +61,9 @@ public class ConfigPartitioner {
         Map<String, List<?>> partitionedSourcePaths = new HashMap<>();
         for (final Map.Entry<String, Set<String>> entry : sourcePaths.entrySet()) {
             List<List<String>> sourcesPartitions = partitionSources(new ArrayList<>(entry.getValue()), partitionNum);
-            partitionedSourcePaths.put(entry.getKey(), sourcesPartitions);
+            if (!sourcesPartitions.isEmpty()) {
+                partitionedSourcePaths.put(entry.getKey(), sourcesPartitions);
+            }
         }
 
         for (int i = 0; i < partitionNum; i++) {
@@ -87,6 +89,10 @@ public class ConfigPartitioner {
      */
     protected static List<List<String>> partitionSources(List<String> sources, int partitionNum) {
         List<List<String>> sourcesPartitions = new ArrayList<>();
+        if (sources.isEmpty()) {
+            return sourcesPartitions;
+        }
+
         int size = sources.size();
         // actual number of partitions which will be number of sources if sources quantity is less than partitionNum
         int numOfPartitions = Math.min(size, partitionNum);
@@ -113,9 +119,9 @@ public class ConfigPartitioner {
      * Generate {@link PreprocessConfig} file for a preprocessor. The PreprocessConfig of the preprocessor will have same
      * values with the original config and with its own source paths partition.
      *
-     * @param config      a PreprocessConfig containing information to perform whole preprocessing
-     * @param sourcePaths a set of sources to be processed by the preprocessor
-     * @param sourcePathsPartitions       a list of source paths map for sub-preprocessors
+     * @param config                a PreprocessConfig containing information to perform whole preprocessing
+     * @param sourcePaths           a set of sources to be processed by the preprocessor
+     * @param sourcePathsPartitions a list of source paths map for sub-preprocessors
      * @return an instance of PreprocessConfig for the preprocessor
      */
     protected static PreprocessConfig generatePreprocessorConfig(PreprocessConfig config, Map<String, Set<String>> sourcePaths, List<Map<String, Set<String>>> sourcePathsPartitions) {
