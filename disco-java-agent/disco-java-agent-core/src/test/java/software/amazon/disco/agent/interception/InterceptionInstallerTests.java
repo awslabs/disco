@@ -39,7 +39,7 @@ public class InterceptionInstallerTests {
         //ForName is used to prevent warnings such as "warning: such-and-such-class is internal proprietary API and may be removed in a future release", or deprecation warnings.
         Assert.assertTrue(classMatches(Class.forName("sun.misc.Unsafe")));
         Assert.assertTrue(classMatches(Class.forName("com.sun.java.accessibility.util.EventID")));
-        Assert.assertTrue(classMatches(Class.forName("jdk.nashorn.api.scripting.AbstractJSObject")));
+        Assert.assertTrue(classMatches(Class.forName("jdk.internal.misc.TerminatingThreadLocal")));
     }
 
     @Test
