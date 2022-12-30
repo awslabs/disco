@@ -94,7 +94,7 @@ public class ExportStrategyTest {
         Mockito.doThrow(new ZipException()).when(mockJarOS).write(Mockito.any());
 
         // the configured 'ZipException' will be ignored since the duplicated file is under '/META-INF'
-        JarEntry entry = Mockito.spy(new JarEntry("META-INF/duplicate.txt"));
+        JarEntry entry = new JarEntry("META-INF/duplicate.txt");
         InputStream mockStream = Mockito.mock(InputStream.class);
 
         Mockito.when(mockJarFile.getInputStream(entry)).thenReturn(mockStream);
@@ -114,7 +114,7 @@ public class ExportStrategyTest {
         Mockito.doThrow(new ZipException()).when(mockJarOS).write(Mockito.any());
 
         // the configured 'ZipException' will NOT be ignored and will be wrapped inside a 'JarEntryCopyException' to be propagated
-        JarEntry entry = Mockito.spy(new JarEntry("duplicate.txt"));
+        JarEntry entry = new JarEntry("duplicate.txt");
         InputStream mockStream = Mockito.mock(InputStream.class);
 
         Mockito.when(mockJarFile.getInputStream(entry)).thenReturn(mockStream);
