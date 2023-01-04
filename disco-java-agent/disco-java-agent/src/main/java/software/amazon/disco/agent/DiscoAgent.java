@@ -17,6 +17,7 @@ package software.amazon.disco.agent;
 
 import software.amazon.disco.agent.concurrent.ConcurrencySupport;
 import software.amazon.disco.agent.config.AgentConfig;
+import software.amazon.disco.agent.interception.InstallationError;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.agent.metrics.DiscoAgentMetrics;
@@ -87,7 +88,8 @@ public class DiscoAgent {
         log.info("DiSCo(Agent) starting agent");
 
         if (agentPresent) {
-            logUrgentMessage("Disco(Agent) detected that this Disco agent is already loaded. Refusing to load again to prevent potentially harmful repeated instrumentation.\n" +
+            logUrgentMessage(Logger.Level.WARN,
+                    "Disco(Agent) detected that this Disco agent is already loaded. Refusing to load again to prevent potentially harmful repeated instrumentation.\n" +
                     "Please double check the arguments passed to java, and any use of the Injector.loadAgent() methods to ensure that the agent is specified exactly once.\n" +
                     "This instance of the Agent will now exit without side effects.");
             return;
@@ -110,7 +112,9 @@ public class DiscoAgent {
             File killswitchFile = new File(new URI(agentFolderPath + KILLSWITCH_FILENAME));
             attemptedLocation = killswitchFile.getAbsolutePath();
             if (killswitchFile.exists()) {
-                logUrgentMessage("DiSCo(Agent) killswitch from " + attemptedLocation + " applied. This instance of the Agent will now exit without side effects.");
+                logUrgentMessage(Logger.Level.WARN,
+                        "DiSCo(Agent) killswitch from " + attemptedLocation +
+                                " applied. This instance of the Agent will now exit without side effects.");
                 return;
             }
         } catch (Exception e) {
@@ -120,10 +124,11 @@ public class DiscoAgent {
         //if forking this canonical agent to build a site specific variant, you may wish to provide a custom ignore-matcher
         //to the install() method, if you have commonly used internal software which benefits from being 'avoided' by the
         //installed interceptions. e.g.:
-
         //ElementMatcher myIgnoreMatcher = ElementMatchers.named("com.my.organization.some.problematic.class.TheClass");
+
         Collection<PluginOutcome> outcomes = agent.install(instrumentation, new LinkedHashSet(new ConcurrencySupport().get())/*, myIgnoreMatcher */);
         dump(outcomes);
+        check(outcomes);
 
         log.info("DiSCo(Agent) agent startup complete in " + DiscoAgentMetrics.getAgentUptime());
     }
@@ -163,13 +168,32 @@ public class DiscoAgent {
     }
 
     /**
-     * For urgent messages during Agent startup, we log to the normal logger, but also to STDOUT. The rationale being that
-     * in many Disco installations, no Logger will be present since it is an optional plugin. Logging to STDOUT in addition
+     * Check whether any installation errors were reported and urgent-log them. If at least one error was reported,
+     * throw an Error, intended to terminate the customer's process.
+     *
+     * @param outcomes Collection of plugin outcomes to scan for installation errors.
+     */
+    private static void check(Collection<PluginOutcome> outcomes) {
+        boolean installationErrorsDetected = false;
+        for (PluginOutcome outcome : outcomes) {
+            for (InstallationError installationError : outcome.installationErrors) {
+                installationErrorsDetected = true;
+                logUrgentMessage(Logger.Level.FATAL, installationError.toString());
+            }
+        }
+        if (installationErrorsDetected) {
+            throw new Error("DiSCo(Agent): one or more Disco Installables failed to install. See STDERR for details.");
+        }
+    }
+
+    /**
+     * For urgent messages during Agent startup, we log to the normal logger, but also to STDERR. The rationale being that
+     * in many Disco installations, no Logger will be present since it is an optional plugin. Logging to STDERR in addition
      * gives the best chance of that message at least going somewhere, e.g. Cloudwatch logs.
      * @param message the message to log
      */
-    private static void logUrgentMessage(String message) {
-        log.warn(message);
+    private static void logUrgentMessage(Logger.Level level, String message) {
+        log.log(level, message);
         System.err.println(message);
     }
 }

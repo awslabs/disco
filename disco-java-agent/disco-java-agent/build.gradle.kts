@@ -30,6 +30,10 @@ configurations.testImplementation {
     exclude(module="disco-java-agent-core")
 }
 
+fun debuggerJvmArg(suspend: String): String {
+    return "-agentlib:jdwp=transport=dt_socket,address=localhost:1337,server=y,suspend=$suspend"
+}
+
 tasks.shadowJar  {
     //suppress the "-all" suffix on the jar name, simply replace the default built jar instead (e.g. disco-java-agent-0.1.jar)
     archiveClassifier.set(null as String?)
@@ -55,13 +59,17 @@ tasks.shadowJar  {
     }
 }
 
+fun getJarPath(jar: Jar): String {
+    return jar.archiveFile.get().asFile.path
+}
+
+val agentPath = getJarPath(tasks["shadowJar"] as Jar)
+
 tasks.named<Test>("test") {
     //load the agent TWICE for the tests for agent deduplication (and allow debugging on the usual socket)
     //we also communicate the full path to the agent in a System variable
-    val ver = project.version
-    var agentPath = "./build/libs/disco-java-agent-$ver.jar"
     val agentArg = "-javaagent:$agentPath=extraverbose"
-    jvmArgs("-agentlib:jdwp=transport=dt_socket,address=localhost:1337,server=y,suspend=n",
+    jvmArgs(debuggerJvmArg("n"),
             "$agentArg:loggerfactory=software.amazon.disco.agent.TestLoggerFactory",
             agentArg,
             "-DdiscoAgentPath=$agentPath"
@@ -70,43 +78,103 @@ tasks.named<Test>("test") {
 }
 
 sourceSets {
-    create("killswitchtest") {
+    create("killswitch-test") {
         java {
-            srcDir("src/killswitchtest/java")
+            srcDir("src/killswitch-test/java")
         }
     }
 }
 
-val killswitchtestImplementation: Configuration by configurations.getting {}
+val killswitchTestImplementation: Configuration by configurations.getting {}
 dependencies {
-    killswitchtestImplementation("junit", "junit", "4.12")
-    killswitchtestImplementation(project(":disco-java-agent:disco-java-agent-api"))
+    killswitchTestImplementation("junit", "junit", "4.12")
+    killswitchTestImplementation(project(":disco-java-agent:disco-java-agent-api"))
 }
-val ver = project.version
+
 val standardOutputLoggerFactoryFQN: String by rootProject.extra
-val killswitchtest = task<Test>("killswitchtest") {
-    testClassesDirs = sourceSets["killswitchtest"].output.classesDirs
-    classpath = sourceSets["killswitchtest"].runtimeClasspath
-    jvmArgs = listOf("-agentlib:jdwp=transport=dt_socket,address=localhost:1337,server=y,suspend=n",
-        "-javaagent:../disco-java-agent/build/libs/disco-java-agent-"+ver+".jar=verbose:loggerfactory=${standardOutputLoggerFactoryFQN}")
+val killswitchTest = task<Test>("killswitchTest") {
+    testClassesDirs = sourceSets["killswitch-test"].output.classesDirs
+    classpath = sourceSets["killswitch-test"].runtimeClasspath
+    jvmArgs = listOf(debuggerJvmArg("n"), "-javaagent:$agentPath=verbose:loggerfactory=${standardOutputLoggerFactoryFQN}")
 
     doFirst {
-        var killswitchFile = File(project.buildDir.absolutePath + "/libs/disco.kill")
+        val killswitchFile = File(project.buildDir.absolutePath + "/libs/disco.kill")
         killswitchFile.createNewFile()
     }
 
     dependsOn(tasks["shadowJar"])
 }
 
-val deletekillswitch = task("deletekillswitch") {
+val deleteKillswitch = task("deleteKillswitch") {
     doFirst {
         File( project.buildDir.absolutePath + "/libs/disco.kill").delete()
     }
-    mustRunAfter(killswitchtest)
+    mustRunAfter(killswitchTest)
+}
+
+sourceSets {
+    create("installation-error-test") {
+        java {
+            srcDir("src/installation-error-test/java")
+        }
+    }
+}
+
+val installationErrorTestJar = tasks.register<Jar>("installationErrorTestJar") {
+    archiveClassifier.set("installation-error-test")
+    // We release build/libs/*.jar, so to prevent the release of this test JAR we put it in build/test-libs/
+    destinationDirectory.set(project.buildDir.resolve("test-libs"))
+    from(sourceSets["installation-error-test"].output.classesDirs)
+    manifest {
+        attributes(mapOf(
+            // For simplicity of project structure, we package a trivial application and our "spoiler agent" into the same JAR.
+            "Premain-Class" to "software.amazon.disco.agent.SpoilerAgent",
+            "Main-Class" to "software.amazon.disco.agent.TrivialApplication",
+            "Boot-Class-Path" to archiveFileName.get()
+        ))
+    }
+}
+
+val javaHome: String = System.getenv("JAVA_HOME") ?: "/usr"
+val javaPath: String = "$javaHome/bin/java"
+
+fun runJava(javaArgs: List<String>): Pair<Int, String> {
+    val commandArgs = listOf(javaPath) + javaArgs
+    val process = ProcessBuilder(commandArgs).start()
+    return Pair(process.waitFor(), process.errorStream.bufferedReader().readText())
+}
+
+// Verify that Disco agent terminates the application process if it fails to instrument ScheduledFutureTask.
+// SpoilerAgent causes this class to be loaded, which prevents its instrumentation by Disco agent,
+// and thus if it's loaded before Disco agent, we should see the application fail (nonzero exit code).
+val installationErrorTest = task("installationErrorTest") {
+    doFirst {
+        val testAgentPath = getJarPath(installationErrorTestJar.get())
+        val agentArg = "-javaagent:$agentPath"
+        val testAgentArg = "-javaagent:$testAgentPath"
+        val testCases = listOf(
+            // Pairs of (Java arguments, whether to expect success)
+            Pair(listOf(agentArg, "-jar", testAgentPath), true),
+            Pair(listOf(agentArg, testAgentArg, "-jar", testAgentPath), true),
+            Pair(listOf(testAgentArg, agentArg, "-jar", testAgentPath), false)
+        )
+        testCases.forEach {
+            val (javaArgs, expectSuccess) = it
+            val (exitCode, stderr) = runJava(javaArgs)
+            val success = exitCode == 0
+            if (success != expectSuccess) {
+                throw AssertionError(
+                    "Test failed: javaArgs=$javaArgs, expectSuccess=$expectSuccess, success=$success, stderr=$stderr")
+            }
+        }
+    }
+    dependsOn(tasks["shadowJar"])
+    dependsOn(installationErrorTestJar)
 }
 
 tasks.build {
-    dependsOn(killswitchtest)
-    dependsOn(deletekillswitch)
+    dependsOn(tasks["shadowJar"]) // We want to build the agent, regardless of tests
+    dependsOn(killswitchTest)
+    dependsOn(deleteKillswitch)
+    dependsOn(installationErrorTest)
 }
-

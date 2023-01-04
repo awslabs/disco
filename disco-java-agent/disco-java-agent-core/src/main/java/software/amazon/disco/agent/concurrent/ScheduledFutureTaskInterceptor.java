@@ -15,19 +15,22 @@
 
 package software.amazon.disco.agent.concurrent;
 
-import net.bytebuddy.description.modifier.Visibility;
-import net.bytebuddy.implementation.FieldAccessor;
-import software.amazon.disco.agent.concurrent.decorate.DecoratedScheduledFutureTask;
-import software.amazon.disco.agent.interception.OneShotInstallable;
-import software.amazon.disco.agent.logging.LogManager;
-import software.amazon.disco.agent.logging.Logger;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.modifier.Visibility;
 import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.implementation.FieldAccessor;
 import net.bytebuddy.matcher.ElementMatcher;
+import software.amazon.disco.agent.concurrent.decorate.DecoratedScheduledFutureTask;
+import software.amazon.disco.agent.interception.InstallationError;
+import software.amazon.disco.agent.interception.OneShotInstallable;
+import software.amazon.disco.agent.logging.LogManager;
+import software.amazon.disco.agent.logging.Logger;
 
 import java.lang.reflect.Modifier;
+import java.util.LinkedList;
+import java.util.List;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
 import static software.amazon.disco.agent.concurrent.decorate.DecoratedScheduledFutureTask.DISCO_DECORATION_FIELD_NAME;
@@ -43,6 +46,37 @@ class ScheduledFutureTaskInterceptor implements OneShotInstallable {
     private static final String TARGET_CLASS_FQN = "java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask";
 
     private static final Logger log = LogManager.getLogger(ScheduledFutureTaskInterceptor.class);
+
+    /**
+     * Get the target class object. We opt to use reflection here as the class is private. The alternative to using
+     * reflection, creating a dummy ScheduledThreadPoolExecutor and scheduling a dummy task, is less explicit.
+     *
+     * @return ScheduledFutureTask class object
+     * @throws ReflectiveOperationException
+     */
+    static Class<?> getTargetClass() throws ReflectiveOperationException {
+        return Class.forName(TARGET_CLASS_FQN);
+    }
+
+    /**
+     * Creates a type matcher which matches against ScheduledFutureTask exclusively
+     * Note that this class is private, but we have no choice but to instrument it,
+     * other than making a big change in how we propagate transaction context in Java concurrency APIs.
+     *
+     * @return the type matcher per the above
+     */
+    static ElementMatcher.Junction<? super TypeDescription> createScheduledFutureTaskTypeMatcher() {
+        return named(TARGET_CLASS_FQN);
+    }
+
+    /**
+     * Creates a method matcher to match the run() method of ScheduledFutureTask
+     *
+     * @return the method matcher per the above
+     */
+    static ElementMatcher.Junction<? super MethodDescription> createRunMethodMatcher() {
+        return named("run").and(takesArguments(0));
+    }
 
     /**
      * {@inheritDoc}
@@ -76,16 +110,30 @@ class ScheduledFutureTaskInterceptor implements OneShotInstallable {
      */
     @Override
     public void beforeDisposal() {
-        Class<?> sftClass = null;
+        Class<?> clazz = null;
         try {
-            sftClass = getTargetClass();
+            clazz = getTargetClass();
+        } catch (ReflectiveOperationException e) {
+            log.error("DiSCo(Concurrency) failed to resolve ScheduledFutureTask class");
         }
-        catch (ReflectiveOperationException e) {
-            log.error("DiSCo(Core) failed to resolve Java's ScheduledFutureTask class");
+        if (clazz != null) {
+            OneShotInstallable.forceClassLoad(clazz);
         }
-        if (sftClass != null) {
-            OneShotInstallable.forceClassLoad(sftClass);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<InstallationError> verifyEffect() {
+        LinkedList<InstallationError> errors = new LinkedList<>();
+        try {
+            getTargetClass().getDeclaredField(DISCO_DECORATION_FIELD_NAME);
+        } catch (ReflectiveOperationException e) {
+            errors.add(new InstallationError(
+                    "DiSCo(Concurrency) failed to instrument class java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask"));
         }
+        return errors;
     }
 
     /**
@@ -99,14 +147,14 @@ class ScheduledFutureTaskInterceptor implements OneShotInstallable {
 
         /**
          * Trampoline method to ease debugging of advice on exit from ScheduledFutureTask constructors
+         *
          * @param task the ScheduledFutureTask
          */
         public static void methodExit(Object task) {
             try {
                 DecoratedScheduledFutureTask.Accessor accessor = (DecoratedScheduledFutureTask.Accessor) task;
                 accessor.setDiscoDecoration(DecoratedScheduledFutureTask.create());
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 log.error("DiSCo(Concurrency) unable to capture context in ScheduledFutureTask", e);
             }
         }
@@ -119,6 +167,7 @@ class ScheduledFutureTaskInterceptor implements OneShotInstallable {
 
         /**
          * Advice OnMethodEnter for the run() method
+         *
          * @param thiz the 'this' pointer of the ScheduledFutureTask
          */
         @Advice.OnMethodEnter
@@ -133,58 +182,30 @@ class ScheduledFutureTaskInterceptor implements OneShotInstallable {
 
         /**
          * Trampoline method to ease debugging of advice on entry to run() method
+         *
          * @param task the ScheduledFutureTask
          */
         public static void methodEnter(Object task) {
             try {
                 DecoratedScheduledFutureTask.Accessor accessor = (DecoratedScheduledFutureTask.Accessor) task;
                 accessor.getDiscoDecoration().before();
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 log.error("DiSCo(Concurrency) unable to propagate context in ScheduledFutureTask", e);
             }
         }
 
         /**
          * Trampoline method to ease debugging of advice on exit from run() method
+         *
          * @param task the ScheduledFutureTask
          */
         public static void methodExit(Object task) {
             try {
                 DecoratedScheduledFutureTask.Accessor accessor = (DecoratedScheduledFutureTask.Accessor) task;
                 accessor.getDiscoDecoration().after();
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 log.error("DiSCo(Concurrency) unable to propagate context in ScheduledFutureTask", e);
             }
         }
-    }
-
-    /**
-     * Get the target class object. We opt to use reflection here as the class is private. The alternative to using
-     * reflection, creating a dummy ScheduledThreadPoolExecutor and scheduling a dummy task, is less explicit.
-     * @return ScheduledFutureTask class object
-     * @throws ReflectiveOperationException
-     */
-    static Class<?> getTargetClass() throws ReflectiveOperationException {
-        return Class.forName(TARGET_CLASS_FQN);
-    }
-
-    /**
-     * Creates a type matcher which matches against ScheduledFutureTask exclusively
-     * Note that this class is private, but we have no choice but to instrument it,
-     * other than making a big change in how we propagate transaction context in Java concurrency APIs.
-     * @return the type matcher per the above
-     */
-    static ElementMatcher.Junction<? super TypeDescription> createScheduledFutureTaskTypeMatcher() {
-        return named(TARGET_CLASS_FQN);
-    }
-
-    /**
-     * Creates a method matcher to match the run() method of ScheduledFutureTask
-     * @return the method matcher per the above
-     */
-    static ElementMatcher.Junction<? super MethodDescription> createRunMethodMatcher() {
-        return named("run").and(takesArguments(0));
     }
 }

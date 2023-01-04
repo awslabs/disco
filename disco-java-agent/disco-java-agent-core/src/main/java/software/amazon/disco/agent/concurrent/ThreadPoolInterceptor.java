@@ -21,7 +21,6 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 import software.amazon.disco.agent.concurrent.decorate.DecoratedRunnable;
-import software.amazon.disco.agent.concurrent.decorate.DecoratedScheduledFutureTask;
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
@@ -167,11 +166,11 @@ public class ThreadPoolInterceptor implements Installable {
              * excluding STPE (and its subclasses) from interception, here we need to take this extra action to exclude
              * STPE.
              *
-             * If the Runnable `r' is actually a ScheduledFutureTask, then wrapping it here in a DecoratedRunnable
-             * will result in an `instanceof ScheduledFutureTask' check failing in the implementation of
-             * `ScheduledThreadPoolExecutor$DelayedWorkQueue.indexOf', which will result in a linear scan of the STPE's
-             * task queue instead of a constant-time lookup into the array backing that queue. This performance regression
-             * may be dangerous in some high-load service scenarios.
+             * STPE uses a member class ScheduledFutureTask to manage delayed work. If the Runnable `r' is actually
+             * a ScheduledFutureTask, then wrapping it here in a DecoratedRunnable will result in the check
+             * `instanceof ScheduledFutureTask' failing in the implementation of `ScheduledThreadPoolExecutor$DelayedWorkQueue.indexOf',
+             * which will result in a linear scan of the STPE's task queue instead of a constant-time lookup into
+             * the array backing that queue. This performance regression may be dangerous in high-load scenarios.
              */
             if (thiz instanceof ScheduledThreadPoolExecutor) {
                 return r;
