@@ -20,10 +20,13 @@ import software.amazon.disco.agent.concurrent.TransactionContext;
 import software.amazon.disco.agent.concurrent.decorate.DecoratedRunnable;
 import software.amazon.disco.agent.concurrent.preprocess.DiscoRunnableDecorator;
 import software.amazon.disco.agent.config.AgentConfig;
+import software.amazon.disco.agent.interception.EffectVerificationStrategy;
 import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.agent.interception.InstallationError;
 import software.amazon.disco.agent.interception.InterceptionInstaller;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
+import software.amazon.disco.agent.plugin.PluginOutcome;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import org.junit.After;
 import org.junit.Assert;
@@ -37,6 +40,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.lang.instrument.Instrumentation;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -61,6 +65,7 @@ public class DiscoAgentTemplateTests {
         MockitoAnnotations.initMocks(this);
         Mockito.doCallRealMethod().when(mockInterceptionInstaller).install(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
         TransactionContext.create();
+        DiscoAgentTemplate.setEffectVerificationStrategy(EffectVerificationStrategy.Standard.DELEGATE_TO_PLUGINS);
     }
 
     @After
@@ -135,6 +140,27 @@ public class DiscoAgentTemplateTests {
         Assert.assertTrue(DiscoRunnableDecorator.maybeDecorate(runnable) instanceof DecoratedRunnable);
     }
 
+    @Test
+    public void testInstallationErrorListing_delegateToPlugins() {
+        Collection<PluginOutcome> pluginOutcomes = createDiscoAgentTemplate()
+                .install(instrumentation, InstallableWithInstallationErrors.SINGLETON_SET);
+        Assert.assertEquals(pluginOutcomes.size(), 1);
+        PluginOutcome coreOutcome = pluginOutcomes.iterator().next();
+        Assert.assertEquals(coreOutcome.name, DiscoAgentTemplate.CORE_PSEUDO_PLUGIN_NAME);
+        Assert.assertEquals(coreOutcome.installationErrors, InstallableWithInstallationErrors.ERRORS);
+    }
+
+    @Test
+    public void testInstallationErrorListing_noVerification() {
+        DiscoAgentTemplate.setEffectVerificationStrategy(EffectVerificationStrategy.Standard.NO_VERIFICATION);
+        Collection<PluginOutcome> pluginOutcomes = createDiscoAgentTemplate()
+                .install(instrumentation, InstallableWithInstallationErrors.SINGLETON_SET);
+        Assert.assertEquals(pluginOutcomes.size(), 1);
+        PluginOutcome coreOutcome = pluginOutcomes.iterator().next();
+        Assert.assertEquals(coreOutcome.name, DiscoAgentTemplate.CORE_PSEUDO_PLUGIN_NAME);
+        Assert.assertTrue(coreOutcome.installationErrors.isEmpty());
+    }
+
     private DiscoAgentTemplate createDiscoAgentTemplate(String... args) {
         List<String> argsList = new LinkedList<>(Arrays.asList(args));
         argsList.add("domain=DOMAIN");
@@ -158,5 +184,25 @@ public class DiscoAgentTemplateTests {
         public AgentBuilder install(AgentBuilder agentBuilder) {
             return agentBuilder;
         }
+    }
+
+    static class InstallableWithInstallationErrors implements Installable {
+        static final List<InstallationError> ERRORS = new LinkedList<>();
+        static {
+            ERRORS.add(new InstallationError("Description #1."));
+            ERRORS.add(new InstallationError("Description #2."));
+        }
+        static final Set<Installable> SINGLETON_SET = new HashSet<>();
+        static {
+            SINGLETON_SET.add(new InstallableWithInstallationErrors());
+        }
+
+        @Override
+        public AgentBuilder install(AgentBuilder agentBuilder) {
+            return agentBuilder;
+        }
+
+        @Override
+        public List<InstallationError> verifyEffect() { return ERRORS; }
     }
 }

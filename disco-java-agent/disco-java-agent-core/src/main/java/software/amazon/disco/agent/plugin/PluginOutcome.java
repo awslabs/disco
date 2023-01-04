@@ -17,6 +17,7 @@ package software.amazon.disco.agent.plugin;
 
 import software.amazon.disco.agent.event.Listener;
 import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.agent.interception.InstallationError;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -31,6 +32,7 @@ public class PluginOutcome {
     public Class<?> initClass;
     public List<Listener> listeners;
     public List<Installable> installables;
+    public List<InstallationError> installationErrors;
 
     /**
      * Construct a PluginOutcome given the JarFile which was processed
@@ -40,5 +42,6 @@ public class PluginOutcome {
         this.name = name;
         this.listeners = new LinkedList<>();
         this.installables = new LinkedList<>();
+        this.installationErrors = new LinkedList<>();
     }
 }

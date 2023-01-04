@@ -17,7 +17,6 @@ package software.amazon.disco.agent.concurrent;
 
 import software.amazon.disco.agent.concurrent.decorate.DecoratedRunnable;
 import software.amazon.disco.agent.interception.Installable;
-import software.amazon.disco.agent.interception.MethodInterceptionCounter;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 import net.bytebuddy.agent.builder.AgentBuilder;

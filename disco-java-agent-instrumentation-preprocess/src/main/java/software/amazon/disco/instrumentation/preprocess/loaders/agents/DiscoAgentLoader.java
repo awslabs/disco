@@ -23,6 +23,7 @@ import software.amazon.disco.agent.DiscoAgentTemplate;
 import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.config.AgentConfigParser;
 import software.amazon.disco.agent.inject.Injector;
+import software.amazon.disco.agent.interception.EffectVerificationStrategy;
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
@@ -63,6 +64,10 @@ public class DiscoAgentLoader implements AgentLoader {
 
             return coreConfig;
         });
+
+        // We're loading the agent with an Instrumentation that doesn't actually instrument anything, thus any
+        // attempts to verify effects of installation will fail.
+        DiscoAgentTemplate.setEffectVerificationStrategy(EffectVerificationStrategy.Standard.NO_VERIFICATION);
 
         // AgentConfig passed here as String will be ignored by Disco core if AgentConfigFactory is set
         Injector.loadAgent(
