@@ -24,6 +24,7 @@ import software.amazon.disco.agent.config.AgentConfig;
 import software.amazon.disco.agent.config.AgentConfigParser;
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.interception.InterceptionInstaller;
+import software.amazon.disco.agent.interception.EffectVerificationStrategy;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.agent.logging.LoggerFactory;
@@ -31,8 +32,9 @@ import software.amazon.disco.agent.plugin.PluginDiscovery;
 import software.amazon.disco.agent.plugin.PluginOutcome;
 
 import java.lang.instrument.Instrumentation;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -42,8 +44,14 @@ import java.util.function.Supplier;
  * agent able to configure which actual Installable hooks are present in the Agent instance.
  */
 public class DiscoAgentTemplate {
+    /**
+     * A name for the pseudo-plugin comprising installables built into the agent.
+     */
+    public static final String CORE_PSEUDO_PLUGIN_NAME = "(Core)";
+
     private static final Logger log = LogManager.getLogger(DiscoAgentTemplate.class);
     private static Supplier<AgentConfig> agentConfigFactory = null;
+    private static EffectVerificationStrategy effectVerificationStrategy = EffectVerificationStrategy.Standard.DELEGATE_TO_PLUGINS;
 
     protected final AgentConfig config;
     private InterceptionInstaller interceptionInstaller = InterceptionInstaller.getInstance();
@@ -127,9 +135,10 @@ public class DiscoAgentTemplate {
         }
 
         //give the Plugin Discovery subsystem the chance to scan any configured plugin folder.
+        Set<Installable> allInstallables = new LinkedHashSet<>(installables);
         if (allowPlugins) {
             PluginDiscovery.scan(instrumentation, config);
-            installables.addAll(PluginDiscovery.processInstallables());
+            allInstallables.addAll(PluginDiscovery.processInstallables());
         } else {
             if (config.getPluginPath() != null) {
                 log.warn("DiSCo(Core) plugin path set but agent is disallowing plugins. No plugins will be loaded");
@@ -137,22 +146,32 @@ public class DiscoAgentTemplate {
         }
 
         //give each installable the chance to handle command line args
-        for (Installable installable : installables) {
+        for (Installable installable : allInstallables) {
             log.info("DiSCo(Core) passing arguments to " + installable.getClass().getSimpleName() + " to process");
             installable.handleArguments(config.getArgs());
         }
 
-        interceptionInstaller.install(instrumentation, installables, config, customIgnoreMatcher);
+        // Install all installables (plugin and non-plugin)
+        interceptionInstaller.install(instrumentation, allInstallables, config, customIgnoreMatcher);
 
         // sets the BiFunction to be indirectly invoked by Thread's intercepted 'start()' method to decorate its Runnable target.
         DiscoRunnableDecorator.setDecorateFunction(new DecoratedRunnable.RunnableDecorateFunction());
 
-        //after Installables have been installed, process the remaining plugin behaviour
+        // Reflect outcome for non-plugin (built-in) installables as a special PluginOutcome
+        PluginOutcome builtinOutcome = new PluginOutcome(CORE_PSEUDO_PLUGIN_NAME);
+        builtinOutcome.installables.addAll(installables);
+        Collection<PluginOutcome> pluginOutcomes = new LinkedList<>();
+        pluginOutcomes.add(builtinOutcome);
+
+        // After Installables have been installed, process other plugin entry points
         if (allowPlugins) {
-            return PluginDiscovery.apply();
-        } else {
-            return new ArrayList<>(0);
+            pluginOutcomes.addAll(PluginDiscovery.apply());
         }
+
+        // Verify effects of instrumentation done by Installables
+        effectVerificationStrategy.verify(pluginOutcomes);
+
+        return pluginOutcomes;
     }
 
     /**
@@ -193,5 +212,14 @@ public class DiscoAgentTemplate {
      */
     public static Supplier<AgentConfig> getAgentConfigFactory() {
         return agentConfigFactory;
+    }
+
+    /**
+     * Determine strategy for verifying that installing Installables had the intended effect.
+     *
+     * @param strategy Effect verification strategy, to be invoked after installing Installables.
+     */
+    public static void setEffectVerificationStrategy(EffectVerificationStrategy strategy) {
+        effectVerificationStrategy = strategy;
     }
 }

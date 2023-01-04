@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -141,7 +141,7 @@ public class PluginDiscovery {
      * @return a collection of discovered, but not-yet-installed, Installables
      */
     public static Set<Installable> processInstallables() {
-        Set<Installable> installables = new HashSet<>();
+        Set<Installable> installables = new LinkedHashSet<>();
         if (installableClasses != null && !installableClasses.isEmpty()) {
             for (ClassInfo info : installableClasses) {
                 if (Installable.class.isAssignableFrom(info.clazz)) {

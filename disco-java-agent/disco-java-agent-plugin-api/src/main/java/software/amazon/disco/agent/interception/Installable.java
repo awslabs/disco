@@ -17,7 +17,7 @@ package software.amazon.disco.agent.interception;
 
 import net.bytebuddy.agent.builder.AgentBuilder;
 
-import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -43,4 +43,12 @@ public interface Installable {
      * @param args command line arguments in the form ["key1=value1", "key2=value2,value3", "value4"]
      */
     default void handleArguments(List<String> args) {}
+
+    /**
+     * Verify that one or more classes appear instrumented as intended by this Installable. May cause those
+     * classes to be loaded if they weren't loaded before.
+     *
+     * @return A list of installation errors that describes all the problems found.
+     */
+    default List<InstallationError> verifyEffect() { return Collections.emptyList(); }
 }
