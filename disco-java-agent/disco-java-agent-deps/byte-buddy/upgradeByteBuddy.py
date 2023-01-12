@@ -14,6 +14,17 @@ def download_byte_buddy(version):
     check_call(["wget", f"https://github.com/raphw/byte-buddy/archive/refs/tags/byte-buddy-{version}.zip"])
     check_call(["unzip", "-q", f"byte-buddy-{version}.zip"])
 
+def patch_byte_buddy(version):
+    """
+    Applies patch files to ByteBuddy source
+
+    Parameters:
+        version (string): Version number for release being patched
+    """
+
+    for patch in os.listdir("patches"):
+        check_call(f"patch -p1 < ../patches/{patch}", cwd=f"./byte-buddy-byte-buddy-{version}", shell=True)
+
 def build_byte_buddy(version):
     """
     Builds local copy of ByteBuddy
@@ -54,6 +65,7 @@ if __name__ == "__main__":
         sys.exit(f'Usage: {sys.argv[0]} BB-VERSION\n  (BB-VERSION example: 1.12.6)')
 
     download_byte_buddy(version)
+    patch_byte_buddy(version)
     build_byte_buddy(version)
     copy_byte_buddy_artifacts(version)
     cleanup(version)
