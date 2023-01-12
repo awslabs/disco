@@ -20,7 +20,7 @@ plugins {
 
 dependencies {
     //TODO update BB and ASM to latest
-    api("net.bytebuddy", "byte-buddy-dep", "1.12.6")
+    api(files("../disco-java-agent-deps/byte-buddy/byte-buddy-dep-1.12.6.jar"))
     implementation("org.ow2.asm", "asm", "9.2")
     implementation("org.ow2.asm", "asm-commons", "9.2")
     implementation("org.ow2.asm", "asm-tree", "9.2")
