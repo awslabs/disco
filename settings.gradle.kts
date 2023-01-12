@@ -21,6 +21,7 @@ include("disco-java-agent:disco-java-agent-api")
 include("disco-java-agent:disco-java-agent-core")
 include("disco-java-agent:disco-java-agent-inject-api")
 include("disco-java-agent:disco-java-agent-inject-test")
+include("disco-java-agent:disco-java-agent-deps:byte-buddy")
 
 include("disco-java-agent-aws")
 include("disco-java-agent-aws:disco-java-agent-aws-api")

@@ -22,10 +22,10 @@ plugins {
 dependencies {
     //we use the ByteBuddyAgent for an install-after-startup injection strategy, but do not want to inadvertently
     //pull all of BB into the client's code.
-    implementation("net.bytebuddy", "byte-buddy-agent", "1.10.14")
+    implementation(files("../disco-java-agent-deps/byte-buddy/byte-buddy-agent-1.12.6.jar"))
     compileOnly(project(":disco-java-agent:disco-java-agent-api"))
 
-    testImplementation("net.bytebuddy", "byte-buddy-dep", "1.10.14")
+    testImplementation(files("../disco-java-agent-deps/byte-buddy/byte-buddy-dep-1.12.6.jar"))
     testImplementation(project(":disco-java-agent:disco-java-agent-api"))
 }
 
