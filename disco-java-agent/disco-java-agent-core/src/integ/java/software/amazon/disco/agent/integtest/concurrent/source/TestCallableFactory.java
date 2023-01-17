@@ -77,7 +77,6 @@ public class TestCallableFactory {
         return testableCallable;
     }
 
-
     public static NonThrowingTestableCallable createInheritedCallableWithConcreteBase() {
         NonThrowingTestableCallable testableCallable = new NonThrowingTestableCallable();
         class BaseCallable implements Callable<String> {

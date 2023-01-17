@@ -28,8 +28,6 @@ import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinTask;
 import java.util.function.Supplier;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
@@ -74,12 +72,12 @@ public class InterceptionInstaller {
                         ElementMatcher.Junction<? super TypeDescription> customIgnoreMatcher) {
         final ElementMatcher<? super TypeDescription> ignoreMatcher = createIgnoreMatcher(customIgnoreMatcher);
 
-        List<ClassFileTransformer> disposables = new ArrayList<>(3);
+        List<ClassFileTransformer> oneShotTransformers = new ArrayList<>();
+        List<OneShotInstallable> oneShotInstallables = new ArrayList<>();
         for (Installable installable: installables) {
             //We create a new Agent for each Installable, otherwise their matching rules can
             //compete with each other.
-            AgentBuilder agentBuilder = agentBuilderFactory.get()
-                    .ignore(ignoreMatcher);
+            AgentBuilder agentBuilder = agentBuilderFactory.get().ignore(ignoreMatcher);
 
             //The Interception listener is expensive during class loading, and limited value most of the time
             if (config.isExtraverbose()) {
@@ -88,33 +86,25 @@ public class InterceptionInstaller {
 
             agentBuilder = config.getAgentBuilderTransformer().apply(agentBuilder, installable);
 
-            log.info("DiSCo(Core) attempting to install "+installable.getClass().getName());
+            log.info("DiSCo(Core) attempting to install " + installable.getClass().getName());
             agentBuilder = installable.install(agentBuilder);
 
             if (agentBuilder != null) {
                 ClassFileTransformer transformer = agentBuilder.installOn(instrumentation);
-
-                //3 of our Core installables are special cases which are strictly one-shot. They each
-                //intercept a particular class (not 'any subclass of' style matching), and furthermore
-                //these are JDK classes and so can only be loaded a maximum of once, into the bootstrap classloader,
-                //therefore we know that once they have been applied, they are dead weight.
-                //In the case of Thread, it applies the transformation immediately as Thread has already been loaded.
-                //In the case of FJP and FJT we force the class to load before disposing of the interceptor.
-                //Better factoring of this might be to have a subclass of Installable like 'DisposableInstallable', but its
-                //use would be pretty dangerous - and generally wrong for any non-bootstrap class - because even when an
-                //interceptor appears to only type match one specific class, that class could be loaded multiple times into
-                //multiple loaders. So for now at least this coupling here makes it completely locked in and specific.
-                if (installable.getClass().getName().endsWith("ThreadInterceptor")
-                 || installable.getClass().getName().endsWith("ForkJoinPoolInterceptor")
-                 || installable.getClass().getName().endsWith("ForkJoinTaskInterceptor")) {
-                    disposables.add(transformer);
+                if (installable instanceof OneShotInstallable) {
+                    oneShotInstallables.add((OneShotInstallable) installable);
+                    oneShotTransformers.add(transformer);
                 }
             }
         }
 
-        ForkJoinPool.class.getClassLoader(); //force class to be loaded and transformed
-        ForkJoinTask.class.getClassLoader(); //force class to be loaded and transformed
-        for (ClassFileTransformer transformer: disposables) {
+        // Give all one-shot installers heads up before we remove their class transformers. To avoid potential
+        // non-obvious interactions between different one-shot installables' beforeDisposal(), we start removing
+        // class transformers only after all beforeDisposal() have been called.
+        for (OneShotInstallable oneShotInstallable: oneShotInstallables) {
+            oneShotInstallable.beforeDisposal();
+        }
+        for (ClassFileTransformer transformer: oneShotTransformers) {
             instrumentation.removeTransformer(transformer);
         }
     }

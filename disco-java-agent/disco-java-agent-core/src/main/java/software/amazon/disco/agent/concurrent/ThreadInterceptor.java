@@ -21,7 +21,7 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 import software.amazon.disco.agent.concurrent.preprocess.DiscoRunnableDecorator;
-import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.agent.interception.OneShotInstallable;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 
@@ -38,7 +38,7 @@ import static net.bytebuddy.matcher.ElementMatchers.noneOf;
  *
  * See https://github.com/raphw/byte-buddy/issues/228 for a discussion of intercepting java.lang.Thread
  */
-class ThreadInterceptor implements Installable {
+class ThreadInterceptor implements OneShotInstallable {
     public static Logger log = LogManager.getLogger(ThreadInterceptor.class);
 
     /**
@@ -55,6 +55,14 @@ class ThreadInterceptor implements Installable {
                     .visit(Advice.to(StartAdvice.class)
                         .on(createStartMethodMatcher()))
                 );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void beforeDisposal() {
+        // The Thread class has already been loaded by the time the installer installs us, so nothing to do here.
     }
 
     /**

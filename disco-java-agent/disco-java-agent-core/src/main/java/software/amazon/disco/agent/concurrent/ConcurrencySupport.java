@@ -37,7 +37,7 @@ public class ConcurrencySupport implements Package {
                 new ForkJoinTaskSubclassInterceptor(),
                 new ThreadInterceptor(),
                 new ThreadSubclassInterceptor(),
-                new ScheduledThreadPoolExecutorInterceptor(),
+                new ScheduledFutureTaskInterceptor(),
                 new ThreadPoolInterceptor()
         );
     }
