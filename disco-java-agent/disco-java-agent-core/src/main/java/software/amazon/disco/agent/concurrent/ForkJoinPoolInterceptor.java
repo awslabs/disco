@@ -18,7 +18,7 @@ package software.amazon.disco.agent.concurrent;
 import software.amazon.disco.agent.concurrent.decorate.DecoratedCallable;
 import software.amazon.disco.agent.concurrent.decorate.DecoratedForkJoinTask;
 import software.amazon.disco.agent.concurrent.decorate.DecoratedRunnable;
-import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.agent.interception.OneShotInstallable;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 import net.bytebuddy.agent.builder.AgentBuilder;
@@ -31,6 +31,7 @@ import net.bytebuddy.matcher.ElementMatcher;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ForkJoinPool;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
 
@@ -43,7 +44,7 @@ import static net.bytebuddy.matcher.ElementMatchers.*;
  * The call of such a method indicates an intention to dispatch work, potentially to a supplementary thread, or
  * (at the discretion of the runtime) to the same thread as the call site.
  */
-class ForkJoinPoolInterceptor implements Installable {
+class ForkJoinPoolInterceptor implements OneShotInstallable {
     public static Logger log = LogManager.getLogger(ForkJoinPoolInterceptor.class);
 
     /**
@@ -64,6 +65,14 @@ class ForkJoinPoolInterceptor implements Installable {
                         .method(createForkJoinTaskMethodsMatcher())
                             .intercept(Advice.to(ForkJoinTaskMethodsAdvice.class))
                 );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void beforeDisposal() {
+        OneShotInstallable.forceClassLoad(ForkJoinPool.class);
     }
 
     /**

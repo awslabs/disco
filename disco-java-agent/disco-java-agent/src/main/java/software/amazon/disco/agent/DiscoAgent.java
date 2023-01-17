@@ -25,13 +25,12 @@ import software.amazon.disco.agent.plugin.PluginOutcome;
 import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -123,7 +122,7 @@ public class DiscoAgent {
         //installed interceptions. e.g.:
 
         //ElementMatcher myIgnoreMatcher = ElementMatchers.named("com.my.organization.some.problematic.class.TheClass");
-        Collection<PluginOutcome> outcomes = agent.install(instrumentation, new HashSet<>(new ConcurrencySupport().get())/*, myIgnoreMatcher */);
+        Collection<PluginOutcome> outcomes = agent.install(instrumentation, new LinkedHashSet(new ConcurrencySupport().get())/*, myIgnoreMatcher */);
         dump(outcomes);
 
         log.info("DiSCo(Agent) agent startup complete in " + DiscoAgentMetrics.getAgentUptime());

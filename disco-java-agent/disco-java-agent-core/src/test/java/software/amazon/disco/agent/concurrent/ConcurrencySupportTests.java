@@ -32,7 +32,7 @@ public class ConcurrencySupportTests {
         Assert.assertEquals(ForkJoinTaskSubclassInterceptor.class, installables.get(3).getClass());
         Assert.assertEquals(ThreadInterceptor.class, installables.get(4).getClass());
         Assert.assertEquals(ThreadSubclassInterceptor.class, installables.get(5).getClass());
-        Assert.assertEquals(ScheduledThreadPoolExecutorInterceptor.class, installables.get(6).getClass());
+        Assert.assertEquals(ScheduledFutureTaskInterceptor.class, installables.get(6).getClass());
         Assert.assertEquals(ThreadPoolInterceptor.class, installables.get(7).getClass());
     }
 }
