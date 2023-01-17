@@ -21,11 +21,13 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 import software.amazon.disco.agent.concurrent.decorate.DecoratedRunnable;
+import software.amazon.disco.agent.concurrent.decorate.DecoratedScheduledFutureTask;
 import software.amazon.disco.agent.interception.Installable;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 
 import java.util.List;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
@@ -52,18 +54,23 @@ public class ThreadPoolInterceptor implements Installable {
                     .on(createBeforeExecuteMethodMatcher()))
                 .visit(Advice.to(AfterExecuteAdvice.class)
                     .on(createAfterExecuteMethodMatcher()))
+                .visit(Advice.to(RemoveAdvice.class)
+                    .on(createRemoveMethodMatcher()))
                 .visit(Advice.to(ShutdownNowAdvice.class)
                     .on(createShutdownNowMethodMatcher()))
             );
     }
 
     /**
-     * Create a type matcher for a ThreadPoolExecutor or any subclass.
+     * Create a type matcher for a ThreadPoolExecutor or any subclass, except ScheduledThreadPoolExecutor or any
+     * subclass.
      *
      * @return the type matcher
      */
     static ElementMatcher.Junction<? super TypeDescription> createTypeMatcher() {
-        return isSubTypeOf(ThreadPoolExecutor.class);
+        return isSubTypeOf(ThreadPoolExecutor.class)
+                // ScheduledThreadPoolExecutor is handled separately, via ScheduledFutureTaskInterceptor
+                .and(not(isSubTypeOf(ScheduledThreadPoolExecutor.class)));
     }
 
     /**
@@ -89,6 +96,17 @@ public class ThreadPoolInterceptor implements Installable {
     }
 
     /**
+     * Create a method matcher to match the remove method.
+     *
+     * @return a method matcher
+     */
+    static ElementMatcher.Junction<? super MethodDescription> createRemoveMethodMatcher() {
+        return named("remove")
+                .and(isOverriddenFrom(ThreadPoolExecutor.class))
+                .and(not(isAbstract()));
+    }
+
+    /**
      * Create a method matcher to match the shutdownNow method.
      *
      * @return a method matcher
@@ -101,7 +119,7 @@ public class ThreadPoolInterceptor implements Installable {
 
     public static class BeforeExecuteAdvice {
         /**
-         * Advice method un-decorate any DecoratedRunnable on entry to BeforeExecute.
+         * Advice method un-decorate any DecoratedRunnable on entry to beforeExecute method.
          *
          * @param r the runnable that is about to be executed by the ThreadPoolExecutor.
          */
@@ -113,13 +131,53 @@ public class ThreadPoolInterceptor implements Installable {
 
     public static class AfterExecuteAdvice {
         /**
-         * Advice method un-decorate any DecoratedRunnable on entry to AfterExecute.
+         * Advice method un-decorate any DecoratedRunnable on entry to afterExecute method.
          *
          * @param r the runnable that was executed by the ThreadPoolExecutor.
          */
         @Advice.OnMethodEnter
         public static void onMethodEnter(@Advice.Argument(value = 0, readOnly = false) Runnable r) {
             r = unDecorate(r);
+        }
+    }
+
+    public static class RemoveAdvice {
+        /**
+         * Advice method decorate any Runnable on entry to remove method.
+         *
+         * @param r the runnable that should be removed from the ThreadPoolExecutor's queue.
+         */
+        @Advice.OnMethodEnter
+        public static void onMethodEnter(@Advice.This ThreadPoolExecutor thiz,
+                                         @Advice.Argument(value = 0, readOnly = false) Runnable r) {
+            r = decorate(thiz, r);
+        }
+
+        /**
+         * A trampoline method to make debugging possible from within an Advice.
+         *
+         * @param r Runnable to decorate
+         * @return a decorated Runnable
+         */
+        public static Runnable decorate(ThreadPoolExecutor thiz, Runnable r) {
+            /*
+             * Here we handle the special case of this ThreadPoolExecutor (TPE) actually being an instance of
+             * ScheduledThreadPoolExecutor (STPE). STPE subclasses TPE and doesn't override its remove() method.
+             * When STPE.remove() is invoked, it actually invokes TPE.remove(). Thus despite ThreadPoolExecutorInterceptor
+             * excluding STPE (and its subclasses) from interception, here we need to take this extra action to exclude
+             * STPE.
+             *
+             * If the Runnable `r' is actually a ScheduledFutureTask, then wrapping it here in a DecoratedRunnable
+             * will result in an `instanceof ScheduledFutureTask' check failing in the implementation of
+             * `ScheduledThreadPoolExecutor$DelayedWorkQueue.indexOf', which will result in a linear scan of the STPE's
+             * task queue instead of a constant-time lookup into the array backing that queue. This performance regression
+             * may be dangerous in some high-load service scenarios.
+             */
+            if (thiz instanceof ScheduledThreadPoolExecutor) {
+                return r;
+            } else {
+                return DecoratedRunnable.maybeCreate(r);
+            }
         }
     }
 
@@ -130,7 +188,7 @@ public class ThreadPoolInterceptor implements Installable {
          * @param rs the list of runnable that were awaiting execution by the ThreadPoolExecutor.
          */
         @Advice.OnMethodExit
-        public static void OnMethodExit(@Advice.Return(readOnly = false) List<Runnable> rs) {
+        public static void onMethodExit(@Advice.Return(readOnly = false) List<Runnable> rs) {
             for (int i = 0; i < rs.size(); i++) {
                 rs.set(i, unDecorate(rs.get(i)));
             }

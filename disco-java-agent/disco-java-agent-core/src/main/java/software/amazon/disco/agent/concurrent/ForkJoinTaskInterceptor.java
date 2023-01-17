@@ -18,7 +18,7 @@ package software.amazon.disco.agent.concurrent;
 import net.bytebuddy.description.modifier.Visibility;
 import net.bytebuddy.implementation.FieldAccessor;
 import software.amazon.disco.agent.concurrent.decorate.DecoratedForkJoinTask;
-import software.amazon.disco.agent.interception.Installable;
+import software.amazon.disco.agent.interception.OneShotInstallable;
 import software.amazon.disco.agent.logging.LogManager;
 import software.amazon.disco.agent.logging.Logger;
 import net.bytebuddy.agent.builder.AgentBuilder;
@@ -27,8 +27,8 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
-
 import java.lang.reflect.Modifier;
+import java.util.concurrent.ForkJoinTask;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
 import static software.amazon.disco.agent.concurrent.decorate.DecoratedForkJoinTask.DISCO_DECORATION_FIELD_NAME;
@@ -41,7 +41,7 @@ import static software.amazon.disco.agent.concurrent.decorate.DecoratedForkJoinT
  *
  * We hook the fork() method, to populate the DiSCo metadata fields.
  */
-class ForkJoinTaskInterceptor implements Installable {
+class ForkJoinTaskInterceptor implements OneShotInstallable {
     public static Logger log = LogManager.getLogger(ForkJoinTaskInterceptor.class);
 
     /**
@@ -72,6 +72,14 @@ class ForkJoinTaskInterceptor implements Installable {
                         .method(createForkMethodMatcher())
                         .intercept(Advice.to(ForkAdvice.class))
                 );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void beforeDisposal() {
+        OneShotInstallable.forceClassLoad(ForkJoinTask.class);
     }
 
     /**
