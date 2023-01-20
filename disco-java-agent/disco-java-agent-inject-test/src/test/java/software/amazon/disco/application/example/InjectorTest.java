@@ -33,26 +33,37 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 
 public class InjectorTest {
+    // Ensure not to mistake disco-java-agent-x.y-sources.jar or disco-java-agent-x.y-javadoc.jar for the agent JAR
+    private static final Pattern agentJarNamePattern = Pattern.compile("disco-java-agent-[^-]+\\.jar");
+
     @BeforeClass
     public static void beforeClass() {
         Instrumentation instrumentation = Injector.createInstrumentation();
 
+        // Find the agent JAR file
+        File[] agentJarFiles = new File("../disco-java-agent/build/libs/")
+            .listFiles((dir1, name) -> agentJarNamePattern.matcher(name).matches());
+        assertNotNull("Failed to list agent JAR files", agentJarFiles);
+        assertEquals("Found zero, or more than one agent JAR file", agentJarFiles.length, 1);
+        File agentJarFile = agentJarFiles[0];
+
+        // Find the plugin directory
         File pluginDir = new File("../../disco-java-agent-web/disco-java-agent-web-plugin/build/libs/");
-        File agentPath = new File("../disco-java-agent/build/libs/")
-            .listFiles((dir1, name) -> name.startsWith("disco-java-agent-") && name.endsWith(".jar"))[0];
+        assertTrue("Failed to find plugin directory", pluginDir.isDirectory());
 
         assertFalse(ReflectiveCall.isAgentPresent());
 
         // loadAgent() will internally reset the cached result of 'isAgentPresent()' by invoking 'ReflectiveCall.resetCache()'.
-        Injector.loadAgent(instrumentation, agentPath.getPath(), "pluginpath=" + pluginDir.getAbsolutePath());
-
+        Injector.loadAgent(instrumentation, agentJarFile.getPath(), "pluginpath=" + pluginDir.getAbsolutePath());
         assertTrue(ReflectiveCall.isAgentPresent());
     }
 
