@@ -45,8 +45,6 @@ public interface EffectVerificationStrategy {
         /**
          * Delegate verification of effects to installables listed in {@code pluginOutcomes}. List any resulting installation
          * errors in {@code pluginOutcomes}.
-         *
-         * @param pluginOutcomes Plugin outcomes that list installables to verify and where we list installation errors.
          */
         DELEGATE_TO_PLUGINS {
             public void verify(Collection<PluginOutcome> pluginOutcomes) {

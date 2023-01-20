@@ -86,6 +86,9 @@ subprojects {
             add("testImplementation", "org.mockito:mockito-core:3.+")
         }
 
+        // Catch Javadoc errors in the "build" task of each subproject
+        tasks["build"].dependsOn(tasks["javadoc"])
+
         configure<JavaPluginConvention> {
             sourceCompatibility = JavaVersion.VERSION_1_8
         }
