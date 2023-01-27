@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -246,9 +246,14 @@ public class AsyncTransactionContextPropagationTests {
      * <p>
      * For instance, a long-running 'ThreadPoolExecutor.Worker' thread responsible for orchestrating tasks, which in turn will result
      * in the creation of a ThreadEnterEvent. This thread event is irrelevant to what's being tested and thus should be ignored.
+     *
+     * {@link ForkJoinPool} is being used here as the implementation of executor service because {@link ThreadExitEvent} resulted from
+     * executing a previously submitted task is guaranteed to be published before the associated future is marked as complete. This is especially
+     * important when asserting the order of thread events published and is not always guaranteed for other implementations such as
+     * {@link java.util.concurrent.ThreadPoolExecutor}.
      */
     private void prepareThreadPool(int size) throws InterruptedException {
-        executorService = Executors.newFixedThreadPool(size);
+        executorService = new ForkJoinPool(size);
         CountDownLatch latch = new CountDownLatch(size);
 
         List<Callable<Object>> runnables = new ArrayList();

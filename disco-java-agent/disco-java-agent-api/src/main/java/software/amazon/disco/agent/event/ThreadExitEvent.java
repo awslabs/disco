@@ -15,9 +15,16 @@
 
 package software.amazon.disco.agent.event;
 
+import java.util.concurrent.Future;
+
 /**
  * Concrete ThreadEvent published when a worker thread exits a Disco transaction, and the inner FunctionalInterface is about to return.
  * Under normal circumstances, a 'ThreadEnterEvent' should always be paired with a 'ThreadExitEvent'.
+ *
+ * Please note that when an application submits a task, e.g. {@link Runnable} to an executor service, e.g. {@link java.util.concurrent.ThreadPoolExecutor,
+ * the returned {@link java.util.concurrent.Future} object that tracks the completion of the submitted task may be marked as completed
+ * before the associated {@link ThreadExitEvent} is published. In other words, a call to {@link Future#get()} may unblock prior to
+ * the publication of the related {@link ThreadExitEvent}.
  */
 public class ThreadExitEvent extends AbstractThreadEvent {
     /**
