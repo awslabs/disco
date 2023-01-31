@@ -91,7 +91,7 @@ public class MultiPreprocessorScheduler {
         // list of raw command line arguments for sub-preprocessors
         List<String[]> preprocessorRawCommandlineArgsList = ConfigPartitioner.partitionConfig(config, subPreprocessors).stream().map(PreprocessConfig::toCommandlineArguments).collect(Collectors.toList());
         // store sub-preprocessors raw command-line arguments as txt file and get the file path as sub-preprocessor's command-line arguments
-        List<String> preprocessorCommandlineArgsList = new PreprocessorArgumentsExportStrategy().exportArguments(preprocessorRawCommandlineArgsList, config, PreprocessConstants.PREPROCESSOR_ARGS_TEMP_FOLDER);
+        List<String> preprocessorCommandlineArgsList = new PreprocessorArgumentsExporter().exportArguments(preprocessorRawCommandlineArgsList, config, PreprocessConstants.PREPROCESSOR_ARGS_TEMP_FOLDER);
         // create preprocessor invokers
         List<PreprocessorInvoker> preprocessorInvokers = preprocessorCommandlineArgsList.stream().map(PreprocessorInvoker::new).collect(Collectors.toList());
         log.info("Arranged " + preprocessorInvokers.size() + " workers to preprocess sources in parallel, this may take a few minutes to complete...");

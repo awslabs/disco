@@ -18,6 +18,7 @@ package software.amazon.disco.instrumentation.preprocess.multipreprocessor;
 import software.amazon.disco.instrumentation.preprocess.cli.PreprocessConfig;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -60,7 +61,10 @@ public class ConfigPartitioner {
         List<Map<String, Set<String>>> sourcePathsMaps = new ArrayList<>();
         Map<String, List<?>> partitionedSourcePaths = new HashMap<>();
         for (final Map.Entry<String, Set<String>> entry : sourcePaths.entrySet()) {
-            List<List<String>> sourcesPartitions = partitionSources(new ArrayList<>(entry.getValue()), partitionNum);
+            List<String> sourcesAsList = new ArrayList<>(entry.getValue());
+            // shuffle sources before partitioning to prevent some partitions having much larger total size of assigned sources
+            Collections.shuffle(sourcesAsList);
+            List<List<String>> sourcesPartitions = partitionSources(sourcesAsList, partitionNum);
             if (!sourcesPartitions.isEmpty()) {
                 partitionedSourcePaths.put(entry.getKey(), sourcesPartitions);
             }

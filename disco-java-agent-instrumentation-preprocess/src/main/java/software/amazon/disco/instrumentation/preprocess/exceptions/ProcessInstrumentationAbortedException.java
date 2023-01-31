@@ -29,7 +29,7 @@ public class ProcessInstrumentationAbortedException extends RuntimeException {
      * @param outputWithErrorMsg process's output with error message
      */
     public ProcessInstrumentationAbortedException(int exitCode, String[] commandlineArgs, String outputWithErrorMsg) {
-        super("Process has abnormal termination " + "with exit code " + exitCode + System.lineSeparator()
+        super("Process has terminated with exit code " + exitCode + System.lineSeparator()
                 + " Commandline arguments: " + Arrays.toString(commandlineArgs) + System.lineSeparator()
                 + " Preprocessor output: " + outputWithErrorMsg
         );

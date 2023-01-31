@@ -31,6 +31,14 @@ import java.util.Scanner;
  */
 public class PreprocessOutputHandler {
     private static final Logger log = LogManager.getLogger(PreprocessOutputHandler.class);
+    /**
+     * sign for the start of the item name in summary
+     */
+    private static final String START_SEPARATOR = "- ";
+    /**
+     * sign for the end of the item name in summary
+     */
+    private static final String END_SEPARATOR = ": ";
     private final List<String> preprocessorOutputs;
 
     @Getter
@@ -84,15 +92,24 @@ public class PreprocessOutputHandler {
      */
     protected void parsePreprocessorOutputAndUpdateSummary(String preprocessorOutput) {
         try {
-            Scanner scanner = new Scanner(preprocessorOutput);
+            int indexOfSummaryTitle = preprocessorOutput.indexOf(PreprocessConstants.SUMMARY_TITLE);
+            String summaryContent = preprocessorOutput.substring(indexOfSummaryTitle);
+            Scanner scanner = new Scanner(summaryContent);
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
-                for (String item : summary.keySet()) {
-                    int itemIndex = line.indexOf(item);
-                    if (itemIndex == -1) continue;
-                    int startIndex = line.indexOf(":");
-                    int itemData = Integer.parseInt(line.substring(startIndex + 1).trim());
-                    summary.put(item, summary.get(item) + itemData);
+                // if it is the line for summary title, or it doesn't contain these separators, skip the line
+                if (line.contains(PreprocessConstants.SUMMARY_TITLE) || !line.contains(START_SEPARATOR) || !line.contains(END_SEPARATOR)) {
+                    continue;
+                }
+                // the start index of the item name, e.g. index of "Sources processed"
+                int indexOfItemName = line.indexOf(START_SEPARATOR) + START_SEPARATOR.length();
+                // the start index of the item value, which is also the end index of the item name
+                int indexOfItemValue = line.indexOf(END_SEPARATOR) + END_SEPARATOR.length();
+                // the output string that an item used in the actual summary, e.g. "Sources processed: "
+                String item = line.substring(indexOfItemName, indexOfItemValue);
+                if (summary.containsKey(item)) {
+                    int itemValue = Integer.parseInt(line.substring(indexOfItemValue));
+                    summary.put(item, summary.get(item) + itemValue);
                 }
             }
         } catch (Exception e) {
