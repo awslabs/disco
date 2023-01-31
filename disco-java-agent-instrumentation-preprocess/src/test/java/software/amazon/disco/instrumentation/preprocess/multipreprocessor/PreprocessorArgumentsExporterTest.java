@@ -36,11 +36,11 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class PreprocessorArgumentsExportStrategyTest {
+public class PreprocessorArgumentsExporterTest {
     @Rule
     public TemporaryFolder tempFolder = new TemporaryFolder();
     private PreprocessConfig config;
-    private PreprocessorArgumentsExportStrategy strategy;
+    private PreprocessorArgumentsExporter strategy;
     private static final List<String[]> preprocessorRawCommandlineArgsList = Arrays.asList(new String[]{"sub-preprocessor-1", "arg1", "arg2"}, new String[]{"sub-preprocessor-2", "arg1", "arg2"});
     private String outputPath;
     private File outputDir;
@@ -48,7 +48,7 @@ public class PreprocessorArgumentsExportStrategyTest {
     @Before
     public void before() {
         config = PreprocessConfig.builder().outputDir(tempFolder.getRoot().getAbsolutePath() + "/out").build();
-        strategy = Mockito.spy(new PreprocessorArgumentsExportStrategy());
+        strategy = Mockito.spy(new PreprocessorArgumentsExporter());
         outputPath = config.getOutputDir() + "/" + PreprocessConstants.PREPROCESSOR_ARGS_TEMP_FOLDER;
         outputDir = Paths.get(outputPath).toFile();
     }
@@ -71,13 +71,13 @@ public class PreprocessorArgumentsExportStrategyTest {
     }
 
     @Test
-    public void testSetupWorks_outputDirectoryNotExists() {
+    public void testSetupWhenOutputDirectoryNotExists() {
         strategy.setUp(outputDir);
         assertTrue(outputDir.exists());
     }
 
     @Test
-    public void testSetupWorks_outputDirectoryExists() throws IOException {
+    public void testSetupWhenOutputDirectoryExists() throws IOException {
         outputDir.mkdirs();
         final File previousFile = Paths.get(outputPath, "previous.txt").toFile();
         previousFile.createNewFile();
@@ -87,6 +87,14 @@ public class PreprocessorArgumentsExportStrategyTest {
         strategy.setUp(outputDir);
         //output directory has been cleared
         assertEquals(0, outputDir.listFiles().length);
+    }
+
+    @Test(expected = ExportException.class)
+    public void testSetupWhenFailsToCreateOutputDirectory() {
+        File mockedOutputDir = Mockito.mock(File.class);
+        Mockito.doReturn(false).when(mockedOutputDir).mkdirs();
+
+        strategy.setUp(mockedOutputDir);
     }
 
     @Test

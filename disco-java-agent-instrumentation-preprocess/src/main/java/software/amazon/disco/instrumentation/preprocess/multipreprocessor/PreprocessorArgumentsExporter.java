@@ -27,9 +27,9 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Strategy used to export sub-preprocessors command-line arguments as txt files to a directory.
+ * Exporter used to export sub-preprocessors command-line arguments as txt files to a directory.
  */
-public class PreprocessorArgumentsExportStrategy {
+public class PreprocessorArgumentsExporter {
     /**
      * Export sub-preprocessors command-line arguments as txt files to a directory.
      *
@@ -64,7 +64,9 @@ public class PreprocessorArgumentsExportStrategy {
                 subFile.delete();
             }
         } else {
-            preprocessorArgsTempFolder.mkdirs();
+            if (!preprocessorArgsTempFolder.mkdirs()) {
+                throw new ExportException("Failed to create folder to store command-line arguments files.");
+            }
         }
     }
 
@@ -77,9 +79,8 @@ public class PreprocessorArgumentsExportStrategy {
      */
     protected String saveArgsFileToDisk(String[] commandlineArguments, final String outputPath, final String relativePath) {
         final File destinationFile = Paths.get(outputPath, relativePath).toFile();
-        try {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(destinationFile))) {
             destinationFile.createNewFile();
-            BufferedWriter writer = new BufferedWriter(new FileWriter(destinationFile));
             writer.write(String.join(" ", commandlineArguments));
             writer.close();
             return destinationFile.getAbsolutePath();

@@ -31,4 +31,8 @@ public class ExportException extends RuntimeException {
     public ExportException(String message, Throwable cause) {
         super(PreprocessConstants.MESSAGE_PREFIX + message, cause);
     }
+
+    public ExportException(String message) {
+        super(PreprocessConstants.MESSAGE_PREFIX + message);
+    }
 }

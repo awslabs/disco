@@ -29,4 +29,12 @@ public interface SignedJarHandlingStrategy {
      * @return true if the Jar loading process should be short-circuited, false otherwise.
      */
     boolean skipJarLoading(final JarSigningVerificationOutcome outcome);
+
+    /**
+     * Get the simple name of the signed jar handling strategy. This name is also used to specify which strategy to instantiate when provided as the value for
+     * the '--signedjarhandlingstrategy' command line argument.
+     *
+     * @return string representing the simple name of this strategy.
+     */
+    String getSimpleName();
 }

@@ -27,13 +27,13 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 
 public class PreprocessOutputHandlerTest {
-    private static final String processOutputWithValidSummaryA = PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_TITLE + System.lineSeparator()
+    private static final String OUTPUT_WITH_VALID_SUMMARY_A = PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_TITLE + System.lineSeparator()
             + PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SOURCES_PROCESSED + "3" + System.lineSeparator()
             + PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SOURCES_INSTRUMENTED + "1" + System.lineSeparator()
             + PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SIGNED_JARS_DISCOVERED + "1" + System.lineSeparator()
             + PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SIGNED_JARS_INSTRUMENTED + "0" + System.lineSeparator()
             + PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SOURCES_WITH_UNRESOLVABLE_DEPENDENCIES + "0";
-    private static final String processOutputWithValidSummaryB = PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_TITLE + System.lineSeparator()
+    private static final String OUTPUT_WITH_VALID_SUMMARY_B = PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_TITLE + System.lineSeparator()
             + PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SOURCES_PROCESSED + "3" + System.lineSeparator()
             + PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SOURCES_INSTRUMENTED + "0" + System.lineSeparator()
             + PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SIGNED_JARS_DISCOVERED + "1" + System.lineSeparator()
@@ -46,14 +46,14 @@ public class PreprocessOutputHandlerTest {
         put(PreprocessConstants.SUMMARY_ITEM_SIGNED_JARS_INSTRUMENTED, 0);
         put(PreprocessConstants.SUMMARY_ITEM_SOURCES_WITH_UNRESOLVABLE_DEPENDENCIES, 0);
     }};
-    private static final String processOutputWithInvalidSummary = "Invalid summary";
-    private static final String processOutputWithEmptySummary = " ";
-    private static final String processOutputWithSummaryMissingItem = PreprocessConstants.MESSAGE_PREFIX + "3" + System.lineSeparator();
-    private static final String processOutputWithSummaryItemValueNotInt = PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SOURCES_PROCESSED + "Not parsable string" + System.lineSeparator();
+    private static final String OUTPUT_WITH_INVALID_SUMMARY = "Invalid summary";
+    private static final String OUTPUT_WITH_EMPTY_SUMMARY = " ";
+    private static final String OUTPUT_WITH_SUMMARY_MISSING_ITEM = PreprocessConstants.MESSAGE_PREFIX + "3" + System.lineSeparator();
+    private static final String OUTPUT_WITH_SUMMARY_HAS_NON_INT_ITEM = PreprocessConstants.MESSAGE_PREFIX + PreprocessConstants.SUMMARY_ITEM_SOURCES_PROCESSED + "Not parsable string" + System.lineSeparator();
 
     @Test
     public void testPrintPreprocessOutputWorksAndInvokesHelperMethods() {
-        List<String> preprocessorOutputs = Arrays.asList(processOutputWithValidSummaryA, processOutputWithValidSummaryB);
+        List<String> preprocessorOutputs = Arrays.asList(OUTPUT_WITH_VALID_SUMMARY_A, OUTPUT_WITH_VALID_SUMMARY_B);
         PreprocessOutputHandler preprocessOutputHandler = configurePreprocessOutputHandler(preprocessorOutputs);
         preprocessOutputHandler.printPreprocessOutput();
         Mockito.verify(preprocessOutputHandler).processAllOutputs();
@@ -62,7 +62,7 @@ public class PreprocessOutputHandlerTest {
 
     @Test
     public void testProcessAllOutputsWorksAndUpdateSummaryMap() {
-        List<String> preprocessorOutputs = Arrays.asList(processOutputWithValidSummaryA, processOutputWithValidSummaryB);
+        List<String> preprocessorOutputs = Arrays.asList(OUTPUT_WITH_VALID_SUMMARY_A, OUTPUT_WITH_VALID_SUMMARY_B);
         PreprocessOutputHandler preprocessOutputHandler = configurePreprocessOutputHandler(preprocessorOutputs);
         preprocessOutputHandler.processAllOutputs();
         //invoke helper method
@@ -76,40 +76,40 @@ public class PreprocessOutputHandlerTest {
 
     @Test
     public void testParsePreprocessorOutputWithInvalidSummary() {
-        List<String> preprocessorOutputs = Arrays.asList(processOutputWithInvalidSummary);
+        List<String> preprocessorOutputs = Arrays.asList(OUTPUT_WITH_INVALID_SUMMARY);
         PreprocessOutputHandler preprocessOutputHandler = configurePreprocessOutputHandler(preprocessorOutputs);
         //no exception will be thrown
-        preprocessOutputHandler.parsePreprocessorOutputAndUpdateSummary(processOutputWithInvalidSummary);
+        preprocessOutputHandler.parsePreprocessorOutputAndUpdateSummary(OUTPUT_WITH_INVALID_SUMMARY);
         //summary map will not get updated
         assertEquals(initialSummary, preprocessOutputHandler.getSummary());
     }
 
     @Test
     public void testParsePreprocessorOutputWithEmptySummary() {
-        List<String> preprocessorOutputs = Arrays.asList(processOutputWithEmptySummary);
+        List<String> preprocessorOutputs = Arrays.asList(OUTPUT_WITH_EMPTY_SUMMARY);
         PreprocessOutputHandler preprocessOutputHandler = configurePreprocessOutputHandler(preprocessorOutputs);
         //no exception will be thrown
-        preprocessOutputHandler.parsePreprocessorOutputAndUpdateSummary(processOutputWithEmptySummary);
+        preprocessOutputHandler.parsePreprocessorOutputAndUpdateSummary(OUTPUT_WITH_EMPTY_SUMMARY);
         //summary map will not get updated
         assertEquals(initialSummary, preprocessOutputHandler.getSummary());
     }
 
     @Test
     public void testParsePreprocessorOutputWithSummaryMissingItem() {
-        List<String> preprocessorOutputs = Arrays.asList(processOutputWithSummaryMissingItem);
+        List<String> preprocessorOutputs = Arrays.asList(OUTPUT_WITH_SUMMARY_MISSING_ITEM);
         PreprocessOutputHandler preprocessOutputHandler = configurePreprocessOutputHandler(preprocessorOutputs);
         //no exception will be thrown
-        preprocessOutputHandler.parsePreprocessorOutputAndUpdateSummary(processOutputWithSummaryMissingItem);
+        preprocessOutputHandler.parsePreprocessorOutputAndUpdateSummary(OUTPUT_WITH_SUMMARY_MISSING_ITEM);
         //summary map will not get updated
         assertEquals(initialSummary, preprocessOutputHandler.getSummary());
     }
 
     @Test
     public void testParsePreprocessorOutputWithSummaryItemValueNotInt() {
-        List<String> preprocessorOutputs = Arrays.asList(processOutputWithSummaryItemValueNotInt);
+        List<String> preprocessorOutputs = Arrays.asList(OUTPUT_WITH_SUMMARY_HAS_NON_INT_ITEM);
         PreprocessOutputHandler preprocessOutputHandler = configurePreprocessOutputHandler(preprocessorOutputs);
         //no exception will be thrown
-        preprocessOutputHandler.parsePreprocessorOutputAndUpdateSummary(processOutputWithSummaryItemValueNotInt);
+        preprocessOutputHandler.parsePreprocessorOutputAndUpdateSummary(OUTPUT_WITH_SUMMARY_HAS_NON_INT_ITEM);
         //summary map will not get updated
         assertEquals(initialSummary, preprocessOutputHandler.getSummary());
     }

@@ -32,4 +32,12 @@ public class SkipSignedJarHandlingStrategy implements SignedJarHandlingStrategy 
         // effectively preventing the signed Jar from being statically instrumented.
         return outcome.equals(JarSigningVerificationOutcome.SIGNED);
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getSimpleName() {
+        return "skip";
+    }
 }

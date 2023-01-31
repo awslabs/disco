@@ -31,4 +31,12 @@ public class InstrumentSignedJarHandlingStrategy implements SignedJarHandlingStr
     public boolean skipJarLoading(final JarSigningVerificationOutcome outcome) {
         return false;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getSimpleName(){
+        return "instrument";
+    }
 }

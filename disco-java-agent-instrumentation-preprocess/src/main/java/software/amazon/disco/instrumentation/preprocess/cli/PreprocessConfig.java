@@ -22,7 +22,6 @@ import lombok.Singular;
 import software.amazon.disco.agent.logging.Logger;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.InstrumentSignedJarHandlingStrategy;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.SignedJarHandlingStrategy;
-import software.amazon.disco.instrumentation.preprocess.instrumentation.SkipSignedJarHandlingStrategy;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.cache.CacheStrategy;
 import software.amazon.disco.instrumentation.preprocess.instrumentation.cache.NoOpCacheStrategy;
 
@@ -92,7 +91,6 @@ public class PreprocessConfig {
     public String[] toCommandlineArguments() {
         List<String> commandlineArguments = new ArrayList<>();
 
-        // sourcePaths
         for (final Map.Entry<String, Set<String>> entry : sourcePaths.entrySet()) {
             Set<String> sources = entry.getValue();
             sources.remove("");
@@ -107,35 +105,26 @@ public class PreprocessConfig {
             }
         }
 
-        // signedJarHandlingStrategy
-        if (signedJarHandlingStrategy instanceof SkipSignedJarHandlingStrategy) {
+        if (signedJarHandlingStrategy != null) {
             commandlineArguments.add("--signedjarhandlingstrategy");
-            commandlineArguments.add("skip");
-        }
-        if (signedJarHandlingStrategy instanceof InstrumentSignedJarHandlingStrategy) {
-            commandlineArguments.add("--signedjarhandlingstrategy");
-            commandlineArguments.add("instrument");
+            commandlineArguments.add(signedJarHandlingStrategy.getSimpleName());
         }
 
-        // outputDir
         if (outputDir != null) {
             commandlineArguments.add("--outputdir");
             commandlineArguments.add(outputDir);
         }
 
-        //agentPath
         if (agentPath != null) {
             commandlineArguments.add("--agentpath");
             commandlineArguments.add(agentPath);
         }
 
-        // suffix
         if (suffix != null) {
             commandlineArguments.add("--suffix");
             commandlineArguments.add(suffix);
         }
 
-        // logLevel
         if (logLevel != null) {
             switch (logLevel) {
                 case DEBUG:
@@ -152,30 +141,25 @@ public class PreprocessConfig {
             }
         }
 
-        // javaVersion
         if (javaVersion != null) {
             commandlineArguments.add("--javaversion");
             commandlineArguments.add(javaVersion);
         }
 
-        // agentArg
         if (agentArg != null) {
             commandlineArguments.add("--agentarg");
             commandlineArguments.add(agentArg);
         }
 
-        // jdkPath
         if (jdkPath != null) {
             commandlineArguments.add("--jdksupport");
             commandlineArguments.add(jdkPath);
         }
 
-        // failOnUnresolvableDependency
         if (failOnUnresolvableDependency) {
             commandlineArguments.add("--failonunresolvabledependency");
         }
 
-        // cache strategy
         if (!(getCacheStrategy() instanceof NoOpCacheStrategy)) {
             commandlineArguments.add("--cachestrategy");
             commandlineArguments.add(getCacheStrategy().getSimpleName());
