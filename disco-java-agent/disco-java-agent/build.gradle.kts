@@ -138,33 +138,39 @@ val installationErrorTestJar = tasks.register<Jar>("installationErrorTestJar") {
 val javaHome: String = System.getenv("JAVA_HOME") ?: "/usr"
 val javaPath: String = "$javaHome/bin/java"
 
-fun runJava(javaArgs: List<String>): Pair<Int, String> {
-    val commandArgs = listOf(javaPath) + javaArgs
-    val process = ProcessBuilder(commandArgs).start()
-    return Pair(process.waitFor(), process.errorStream.bufferedReader().readText())
-}
-
 // Verify that Disco agent terminates the application process if it fails to instrument ScheduledFutureTask.
 // SpoilerAgent causes this class to be loaded, which prevents its instrumentation by Disco agent,
-// and thus if it's loaded before Disco agent, we should see the application fail (nonzero exit code).
+// and thus if it's loaded before Disco agent, we should see ERROR in the application's stderr.
 val installationErrorTest = task("installationErrorTest") {
     doFirst {
+        val javaCommand = listOf(javaPath)
+        // With Java 11+, you can pass "-Xlog:class+resolve=debug,class+init=debug:stderr" option to include
+        // class resolution and initialization traces in result log files, useful for troubleshooting these tests.
         val testAgentPath = getJarPath(installationErrorTestJar.get())
         val agentArg = "-javaagent:$agentPath"
         val testAgentArg = "-javaagent:$testAgentPath"
+        val resultsDirPath = "${project.buildDir}/test-results/${this.name}"
+        mkdir(resultsDirPath)
         val testCases = listOf(
-            // Pairs of (Java arguments, whether to expect success)
-            Pair(listOf(agentArg, "-jar", testAgentPath), true),
-            Pair(listOf(agentArg, testAgentArg, "-jar", testAgentPath), true),
-            Pair(listOf(testAgentArg, agentArg, "-jar", testAgentPath), false)
+            // (test case name, java tool arguments, whether to expect ERROR in stderr)
+            Triple("testNoSpoiler", listOf(agentArg, "-jar", testAgentPath), false),
+            Triple("testSpoilerAfterDisco", listOf(agentArg, testAgentArg, "-jar", testAgentPath), false),
+            Triple("testSpoilerBeforeDisco", listOf(testAgentArg, agentArg, "-jar", testAgentPath), true)
         )
         testCases.forEach {
-            val (javaArgs, expectSuccess) = it
-            val (exitCode, stderr) = runJava(javaArgs)
-            val success = exitCode == 0
-            if (success != expectSuccess) {
-                throw AssertionError(
-                    "Test failed: javaArgs=$javaArgs, expectSuccess=$expectSuccess, success=$success, stderr=$stderr")
+            val (testCaseName, testArgs, expectError) = it
+            val commandArgs = javaCommand + testArgs
+            val errorFile = File("${resultsDirPath}/$testCaseName.err.txt")
+            errorFile.createNewFile()
+            val process = ProcessBuilder(commandArgs).redirectError(errorFile).start()
+            val exitCode = process.waitFor()
+            if (exitCode != 0) {
+                throw AssertionError("${this.name} $testCaseName: expected exit code 0, got $exitCode")
+            }
+            val errorOutput = errorFile.readText()
+            if (errorOutput.contains("ERROR") != expectError) {
+                val what = if (expectError) "to find" else "to not find"
+                throw AssertionError("${this.name} $testCaseName: expected $what ERROR in ${errorFile.path}")
             }
         }
     }
