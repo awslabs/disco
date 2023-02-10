@@ -168,8 +168,7 @@ public class DiscoAgent {
     }
 
     /**
-     * Check whether any installation errors were reported and urgent-log them. If at least one error was reported,
-     * throw an Error, intended to terminate the customer's process.
+     * Check whether any installation errors were reported and urgent-log them at ERROR log level.
      *
      * @param outcomes Collection of plugin outcomes to scan for installation errors.
      */
@@ -178,11 +177,11 @@ public class DiscoAgent {
         for (PluginOutcome outcome : outcomes) {
             for (InstallationError installationError : outcome.installationErrors) {
                 installationErrorsDetected = true;
-                logUrgentMessage(Logger.Level.FATAL, installationError.toString());
+                logUrgentMessage(Logger.Level.ERROR, installationError.toString());
             }
         }
         if (installationErrorsDetected) {
-            throw new Error("DiSCo(Agent): one or more Disco Installables failed to install. See STDERR for details.");
+            logUrgentMessage(Logger.Level.ERROR, "DiSCo(Agent): one or more Disco Installables failed to install");
         }
     }
 
@@ -194,6 +193,6 @@ public class DiscoAgent {
      */
     private static void logUrgentMessage(Logger.Level level, String message) {
         log.log(level, message);
-        System.err.println(message);
+        System.err.printf("[%s] %s\n", level, message);
     }
 }
