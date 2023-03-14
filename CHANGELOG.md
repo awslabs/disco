@@ -1,5 +1,27 @@
 # Change Log
 
+## Version 0.13.0 - 03/09/2023
+
+### Major new features
+
+* Introduced parallel instrumentation preprocessing to lower time spent preprocessing
+* Introduced instrumentation preprocessing artifact caching to enable configurable artifact caching strategies to prevent redundant preprocessing
+* Added support for JDK-17 by enabling building patched copy of ByteBuddy dependency
+
+### Minor new features
+
+* Deprecated HeaderRetrievable in favor of Activity/Downstream x Request/Response events and added corresponding Apache HttpClient downstream Request/Response header events
+* Implemented Killswitch file mechanism
+* Added additional logging to indicate when Signed Jars are preprocessed
+* Extended ServiceEvent API to support Event IDs
+* Implemented AgentConfig override via properties file
+
+### Bug fixes
+
+* Fixed mvn mysql-connector-java coordinates
+* Fixed (Scheduled)ThreadPoolExecutor task removal
+* Removed thread id comparison on thread enter to allow TX propagation during async workflows
+
 ## Version 0.12.0 - 04/25/2022
 
 ### Major new features
