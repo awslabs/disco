@@ -24,7 +24,7 @@ plugins {
 val standardOutputLoggerFactoryFQN by extra("software.amazon.disco.agent.reflect.logging.StandardOutputLoggerFactory")
 
 subprojects {
-    version = "0.12.0"
+    version = "0.13.0"
 
     repositories {
         mavenCentral()

@@ -180,7 +180,7 @@ Disco packages easier.
         <dependency>
             <groupId>software.amazon.disco</groupId>
             <artifactId>disco-toolkit-bom</artifactId>
-            <version>0.12.0</version>
+            <version>0.13.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -197,14 +197,14 @@ Disco packages easier.
 
 #### Using Gradle's default DSL
 ```groovy
-implementation platform('software.amazon.disco:disco-toolkit-bom:0.12.0')
+implementation platform('software.amazon.disco:disco-toolkit-bom:0.13.0')
 implementation 'software.amazon.disco:disco-java-agent-api'
 // Other disco dependencies
 ```
 
 #### Using Gradle's Kotlin DSL
 ```kotlin
-implementation(platform("software.amazon.disco:disco-toolkit-bom:0.12.0"))
+implementation(platform("software.amazon.disco:disco-toolkit-bom:0.13.0"))
 implementation("software.amazon.disco:disco-java-agent-api")
 // Other disco dependencies
 ```
